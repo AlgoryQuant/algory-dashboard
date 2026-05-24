@@ -55,7 +55,6 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white/90">
             {now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
-            {/* OPRAVENÉ SEKUNDY */}
             <span className="text-2xl text-white/40 ml-1">:{now.getSeconds().toString().padStart(2, '0')}</span>
           </div>
           <div className="text-xs font-medium text-white/40 uppercase tracking-widest flex items-center gap-3 mt-2">
@@ -116,7 +115,7 @@ export default function Home() {
   
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState<string | null>(null); // NOVÝ STAV PRO CHYBU E-MAILU
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -129,18 +128,19 @@ export default function Home() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // POKROČILÁ VALIDACE E-MAILU (Musí mít tečku a doménu)
+    // Validace E-mailu
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setEmailError("Please enter a valid email address (e.g., name@domain.com).");
       return;
     }
     
-    setEmailError(null); // Pokud je email správný, chybu vymažeme
+    setEmailError(null);
     if (!nickname || !email) return;
     
     setIsSubmitting(true);
     try {
+      // 1. ULOŽENÍ DO FIREBASE
       const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
       
       const userData = {
@@ -155,12 +155,20 @@ export default function Home() {
         body: JSON.stringify(userData)
       });
 
+      // 2. ODESLÁNÍ UVÍTACÍHO E-MAILU PŘES RESEND API ROUTU
+      await fetch('/api/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, nickname })
+      });
+
+      // Uložení přihlášení
       localStorage.setItem('algory_user', JSON.stringify(userData));
       setIsAuthenticated(true);
       setShowAuthGate(false);
       
     } catch (err) {
-      console.error("Error writing user to database:", err);
+      console.error("Error writing user to database or sending email:", err);
     } finally {
       setIsSubmitting(false);
     }
@@ -368,11 +376,9 @@ export default function Home() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              // OBARVENÍ RÁMEČKU NA ČERVENO PŘI CHYBĚ
               className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors`}
               placeholder="name@domain.com"
             />
-            {/* VYPSÁNÍ CHYBOVÉ HLÁŠKY */}
             {emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}
           </div>
 
