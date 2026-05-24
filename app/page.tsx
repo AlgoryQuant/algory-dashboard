@@ -150,8 +150,6 @@ export default function Home() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
   const [activePair, setActivePair] = useState<string>("EURUSD"); 
-  
-  // NOVÉ: Stav pro otevírání/zavírání skupin v levém menu (všechny jsou defaultně otevřené)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     'Major Liquidity': true,
     'Cross Pairs': true,
@@ -161,7 +159,6 @@ export default function Home() {
   const [showLanding, setShowLanding] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
-  
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -179,11 +176,9 @@ export default function Home() {
       setEmailError("Please enter a valid email address (e.g., name@domain.com).");
       return;
     }
-    
     setEmailError(null);
     if (!nickname || !email) return;
     setIsSubmitting(true);
-    
     try {
       const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
       const userData = { nickname, email, registeredAt: new Date().toISOString() };
@@ -225,19 +220,25 @@ export default function Home() {
     }
   }, [isAuthenticated, showAuthGate]);
 
-  // NOVÉ: Funkce na přepínání skupin
   const toggleGroup = (title: string) => {
     setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  // POMOCNÁ FUNKCE: Dynamické barvy pro různé weby se zprávami
+  const getPublisherStyle = (publisher: string) => {
+    const pub = publisher.toUpperCase();
+    if (pub === 'FXSTREET') return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+    if (pub === 'INVESTING') return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
+    return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'; // FOREXLIVE a výchozí
   };
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     const sortedPairs = Object.entries(pairs).sort((a, b) => b[1] - a[1]);
-    const isOpen = openGroups[title]; // Kontrola, zda je skupina otevřená
+    const isOpen = openGroups[title]; 
 
     return (
       <div className="mb-4">
-        {/* Tlačítko pro rozbalení / sbalení */}
         <button 
           onClick={() => toggleGroup(title)}
           className="w-full flex items-center justify-between px-6 py-2 mb-2 cursor-pointer group outline-none"
@@ -253,7 +254,6 @@ export default function Home() {
           </svg>
         </button>
 
-        {/* Samotný obsah, který se schovává/ukazuje */}
         <div className={`space-y-1 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
           {sortedPairs.map(([ticker, prob]) => {
             const isActive = activePair === ticker;
@@ -360,7 +360,6 @@ export default function Home() {
 
   return (
     <>
-      {/* NOVÉ: GLOBÁLNÍ CSS PRO TENKÝ, PRŮHLEDNÝ SCROLLBAR */}
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
@@ -379,7 +378,6 @@ export default function Home() {
 
       <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
         
-        {/* LEVÉ MENU S CUSTOM SCROLLBAREM */}
         <aside className="w-80 flex-shrink-0 border-r border-white/5 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
           <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4" onClick={() => setShowLanding(true)}>
             <h2 className="text-3xl font-semibold tracking-tighter text-white hover:opacity-80 transition-opacity">
@@ -401,7 +399,6 @@ export default function Home() {
           </nav>
         </aside>
 
-        {/* HLAVNÍ OBSAH S CUSTOM SCROLLBAREM */}
         <main className={`flex-1 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
           <div className="max-w-[1400px] mx-auto">
             
@@ -565,9 +562,12 @@ export default function Home() {
                               <span className="text-[9px] text-white/50 font-medium bg-black/40 px-2 py-1 rounded-md border border-white/5">
                                 {item.time}
                               </span>
-                              <span className="text-[10px] text-emerald-400/80 uppercase tracking-widest font-bold">
+                              
+                              {/* DYNAMICKÁ BARVA PODLE ZDROJE ZPRÁV */}
+                              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border ${getPublisherStyle(item.publisher)}`}>
                                 {item.publisher}
                               </span>
+
                             </div>
                             <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors">
                               {item.title}
