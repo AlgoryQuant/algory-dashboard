@@ -24,11 +24,7 @@ interface DashboardData {
   parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; aiAnalysis?: AIAnalysis }>;
 }
 
-type ViewType = 'OVERVIEW' | 'MAJORS' | 'MINORS' | 'METALS';
-
-// --- NOVÁ KOMPONENTA: TRADINGVIEW GRAF ---
 const TradingChart = ({ symbol }: { symbol: string }) => {
-  // Překlad našich tickerů do formátu, kterému rozumí TradingView (přes OANDA brokera)
   const getTVSymbol = (s: string) => {
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
@@ -38,7 +34,7 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
   const tvSymbol = getTVSymbol(symbol);
 
   return (
-    <div className="mb-10 w-full bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl h-[450px] relative">
+    <div className="w-full bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl h-[450px] relative">
       <div className="absolute top-0 left-0 w-full px-6 py-4 bg-white/[0.02] border-b border-white/[0.05] flex items-center justify-between z-10 pointer-events-none">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
@@ -53,7 +49,6 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
         </span>
       </div>
       
-      {/* Samotný TradingView Iframe (posunutý pod hlavičku) */}
       <div className="w-full h-full pt-[73px]">
         <iframe
           src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${tvSymbol}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`}
@@ -64,7 +59,6 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
     </div>
   );
 };
-// ------------------------------------------
 
 const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
   const [now, setNow] = useState(new Date());
@@ -147,14 +141,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  // Stav pro rozbalení řádku a AKTIVNÍ GRAF
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [activeChartSymbol, setActiveChartSymbol] = useState<string>("EURUSD"); 
+  // Změněný stav: Máme pouze jeden AKTIVNÍ PÁR pro celý dashboard
+  const [activePair, setActivePair] = useState<string>("EURUSD"); 
   
-  const [activeView, setActiveView] = useState<{ type: ViewType }>({ type: 'OVERVIEW' });
   const [showLanding, setShowLanding] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
+  
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -232,108 +225,41 @@ export default function Home() {
     }
   }, [isAuthenticated, showAuthGate]);
 
-  const toggleRow = (ticker: string) => {
-    setExpandedRow(expandedRow === ticker ? null : ticker);
-    setActiveChartSymbol(ticker); // KLÍČOVÉ: Kliknutí změní hlavní graf!
-  };
-
-  const renderTable = (pairsData: Record<string, number> | undefined, title: string, categoryId: ViewType) => {
-    if (!pairsData || Object.keys(pairsData).length === 0) return null;
-    if (activeView.type !== 'OVERVIEW' && activeView.type !== categoryId) return null;
-
-    let sortedPairs = Object.entries(pairsData).sort((a, b) => b[1] - a[1]);
+  // NOVÁ FUNKCE: Vykreslování seznamů v levém menu
+  const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
+    if (!pairs || Object.keys(pairs).length === 0) return null;
+    
+    // Seřadíme páry od nejlepší pravděpodobnosti k nejhorší
+    const sortedPairs = Object.entries(pairs).sort((a, b) => b[1] - a[1]);
 
     return (
-      <div className="mb-10 w-full bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl">
-        <div className="bg-white/[0.02] px-6 py-5 border-b border-white/[0.05] flex items-center gap-4">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]"></div>
-          </div>
-          <h3 className="font-semibold tracking-widest text-white/90 uppercase text-sm">{title}</h3>
+      <div className="mb-8">
+        <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
+          {title}
         </div>
-        
-        <div className="flex flex-col">
-          <div className="grid grid-cols-12 px-6 py-4 bg-black/20 text-[10px] uppercase tracking-widest text-white/40 font-medium">
-            <div className="col-span-7">Market Structure</div>
-            <div className="col-span-3 text-right">Probability</div>
-            <div className="col-span-2 text-right">Action</div>
-          </div>
-          
-          {sortedPairs.map(([ticker, accuracy]) => {
-            const isProfitable = accuracy > 0.52;
-            const displayTicker = ticker === "XAUUSD" ? "GOLD (XAUUSD)" : ticker;
-            const params = data.parameters?.[ticker];
-            const isExpanded = expandedRow === ticker;
-            
-            return (
-              <div key={ticker} className="border-b border-white/[0.02] last:border-0">
-                <div 
-                  onClick={() => toggleRow(ticker)}
-                  className={`grid grid-cols-12 px-6 py-5 items-center cursor-pointer transition-all duration-300 ${isExpanded ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'}`}
-                >
-                  <div className="col-span-7">
-                    <div className="flex items-center gap-4">
-                      <span className="font-bold text-lg text-white/90">{displayTicker}</span>
-                      {params?.KeyDriver && (
-                        <span className="px-2.5 py-1 bg-white/5 text-white/60 text-[9px] uppercase tracking-widest rounded-lg border border-white/10 font-medium">
-                          {params.KeyDriver}
-                        </span>
-                      )}
-                    </div>
-                    {params && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <span className="px-2 py-1 bg-black/40 text-white/40 text-[10px] rounded-md border border-white/5">SL: {params.SL}</span>
-                        <span className="px-2 py-1 bg-black/40 text-white/40 text-[10px] rounded-md border border-white/5">TP: {params.TP === 9999 ? 'OPEN' : params.TP}</span>
-                        <span className="px-2 py-1 bg-black/40 text-white/40 text-[10px] rounded-md border border-white/5">BE: {params.BE}</span>
-                        <span className="px-2 py-1 bg-black/40 text-white/40 text-[10px] rounded-md border border-white/5">Spread: {params.LiveSpread !== "N/A" ? params.LiveSpread : params.MaxSpread}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="col-span-3 text-right flex justify-end">
-                    <span className={`text-xl font-medium tracking-tight ${isProfitable ? "text-emerald-400 drop-shadow-[0_0_12px_rgba(52,211,153,0.3)]" : "text-white/40"}`}>
-                      {(accuracy * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  
-                  <div className="col-span-2 flex justify-end items-center gap-4">
-                    {isProfitable ? (
-                      <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-500/20">Trade</span>
-                    ) : (
-                      <span className="px-4 py-1.5 bg-black/40 text-white/30 text-[10px] font-bold uppercase tracking-widest rounded-full border border-white/10">Skip</span>
-                    )}
-                  </div>
-                </div>
+        <div className="space-y-1 px-3">
+          {sortedPairs.map(([ticker, prob]) => {
+            const isActive = activePair === ticker;
+            const displayTicker = ticker === "XAUUSD" ? "GOLD" : ticker;
+            const isProfitable = prob > 0.52;
 
-                {isExpanded && params?.aiAnalysis && (
-                  <div className="bg-black/20 p-8 border-t border-white/5">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6">
-                        <div className="text-[10px] text-white/40 uppercase tracking-widest mb-4 flex items-center justify-between">
-                          <span>Previous: {params.aiAnalysis.prev_session}</span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                        </div>
-                        <p className="text-sm text-white/60 leading-relaxed font-medium">
-                          {params.aiAnalysis.evaluation}
-                        </p>
-                      </div>
-                      <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-                        <div className="text-[10px] text-emerald-400/80 uppercase tracking-widest mb-4 flex items-center justify-between">
-                          <span>Prediction: {params.aiAnalysis.current_session}</span>
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                          </span>
-                        </div>
-                        <p className={`text-sm leading-relaxed font-medium relative z-10 ${isProfitable ? 'text-emerald-300/90' : 'text-white/60'}`}>
-                          {params.aiAnalysis.prediction}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+            return (
+              <button
+                key={ticker}
+                onClick={() => setActivePair(ticker)}
+                className={`w-full text-left px-4 py-3 rounded-2xl transition-all duration-300 flex justify-between items-center group ${
+                  isActive 
+                    ? 'bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.05)]' 
+                    : 'border border-transparent hover:bg-white/5'
+                }`}
+              >
+                <span className={`font-semibold tracking-wide ${isActive ? 'text-emerald-400' : 'text-white/60 group-hover:text-white/90'}`}>
+                  {displayTicker}
+                </span>
+                <span className={`text-[10px] font-bold tracking-widest ${isProfitable ? (isActive ? 'text-emerald-400/80' : 'text-emerald-500/60') : 'text-white/20'}`}>
+                  {(prob * 100).toFixed(0)}%
+                </span>
+              </button>
             );
           })}
         </div>
@@ -341,6 +267,7 @@ export default function Home() {
     );
   };
 
+  // ÚVODNÍ STRANA a AUTH GATE (Zůstávají beze změny)
   if (showLanding) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -423,11 +350,18 @@ export default function Home() {
     );
   }
 
+  // Příprava dat pro aktuálně vybraný pár
+  const activeProb = data.majors?.[activePair] ?? data.minors?.[activePair] ?? data.metals?.[activePair] ?? 0;
+  const isProfitable = activeProb > 0.52;
+  const activeParams = data.parameters?.[activePair];
+  const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
+
   return (
     <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
       
-      <aside className="w-72 flex-shrink-0 border-r border-white/5 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
-        <div className="p-8 pb-12 cursor-pointer" onClick={() => setShowLanding(true)}>
+      {/* LEVÉ MENU (Ovladač trhu) */}
+      <aside className="w-80 flex-shrink-0 border-r border-white/5 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
+        <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4" onClick={() => setShowLanding(true)}>
           <h2 className="text-3xl font-semibold tracking-tighter text-white hover:opacity-80 transition-opacity">
             Algory<span className="text-emerald-500">.</span>
           </h2>
@@ -440,28 +374,14 @@ export default function Home() {
           </div>
         </div>
 
-        <nav className="flex-1 px-6 space-y-2">
-          {[
-            { id: 'OVERVIEW', label: 'Dashboard' },
-            { id: 'MAJORS', label: 'Major Pairs' },
-            { id: 'MINORS', label: 'Cross Pairs' },
-            { id: 'METALS', label: 'Precious Metals' }
-          ].map((item) => (
-            <button 
-              key={item.id}
-              onClick={() => setActiveView({ type: item.id as ViewType })}
-              className={`w-full text-left px-5 py-4 rounded-2xl font-semibold text-xs tracking-widest uppercase transition-all duration-300 ${
-                activeView.type === item.id 
-                  ? 'bg-white/10 text-white shadow-sm' 
-                  : 'text-white/40 hover:bg-white/5 hover:text-white/70'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+        <nav className="flex-1 overflow-y-auto pb-10">
+          {renderSidebarGroup('Major Liquidity', data.majors)}
+          {renderSidebarGroup('Cross Pairs', data.minors)}
+          {renderSidebarGroup('Precious Metals', data.metals)}
         </nav>
       </aside>
 
+      {/* HLAVNÍ OBSAH (Fokusovaný Dashboard) */}
       <main className="flex-1 overflow-y-auto px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#050505]">
         <div className="max-w-[1400px] mx-auto">
           
@@ -479,16 +399,83 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
               
+              {/* LEVÁ ČÁST HLAVNÍ OBRAZOVKY (Graf + AI Analýza) */}
               <div className="xl:col-span-2 flex flex-col space-y-10">
                 
-                {/* VLOŽENÝ TRADINGVIEW GRAF */}
-                <TradingChart symbol={activeChartSymbol} />
+                {/* 1. TradingView Graf */}
+                <TradingChart symbol={activePair} />
                 
-                {renderTable(data.majors, "Major Liquidity", "MAJORS")}
-                {renderTable(data.minors, "Cross Pairs", "MINORS")}
-                {renderTable(data.metals, "Precious Metals", "METALS")}
+                {/* 2. Detailní Karta aktivního páru (Nahrazuje tabulku) */}
+                <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl p-8">
+                  
+                  {/* Hlavička s procenty */}
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/[0.05] pb-8">
+                    <div>
+                      <div className="flex items-center gap-4 mb-3">
+                        <h2 className="text-3xl font-bold text-white/90">{displayTicker}</h2>
+                        {activeParams?.KeyDriver && (
+                          <span className="px-3 py-1 bg-white/5 text-white/60 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-medium">
+                            {activeParams.KeyDriver}
+                          </span>
+                        )}
+                      </div>
+                      {activeParams && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">SL: {activeParams.SL}</span>
+                          <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">TP: {activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
+                          <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">BE: {activeParams.BE}</span>
+                          <span className="px-3 py-1 bg-black/40 text-emerald-400/50 text-[11px] rounded-md border border-emerald-500/10 font-mono">Spread: {activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-end gap-3">
+                      <span className={`text-5xl font-bold tracking-tight ${isProfitable ? "text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.3)]" : "text-white/40"}`}>
+                        {(activeProb * 100).toFixed(1)}%
+                      </span>
+                      {isProfitable ? (
+                        <span className="px-6 py-2 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-500/20">Execute Trade</span>
+                      ) : (
+                        <span className="px-6 py-2 bg-black/40 text-white/30 text-[10px] font-bold uppercase tracking-widest rounded-full border border-white/10">Skip Setup</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* AI Analýza Texty */}
+                  {activeParams?.aiAnalysis ? (
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6">
+                        <div className="text-[10px] text-white/40 uppercase tracking-widest mb-4 flex items-center justify-between">
+                          <span>Previous: {activeParams.aiAnalysis.prev_session}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
+                        </div>
+                        <p className="text-sm text-white/60 leading-relaxed font-medium">
+                          {activeParams.aiAnalysis.evaluation}
+                        </p>
+                      </div>
+                      <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="text-[10px] text-emerald-400/80 uppercase tracking-widest mb-4 flex items-center justify-between">
+                          <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                        </div>
+                        <p className={`text-sm leading-relaxed font-medium relative z-10 ${isProfitable ? 'text-emerald-300/90' : 'text-white/60'}`}>
+                          {activeParams.aiAnalysis.prediction}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-10 text-center text-xs text-white/30 font-medium uppercase tracking-widest">
+                      Processing AI Sentiment...
+                    </div>
+                  )}
+                </div>
               </div>
 
+              {/* PRAVÝ PANEL (News) */}
               <div className="xl:col-span-1">
                 <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden sticky top-8 shadow-xl">
                   <div className="px-6 py-5 border-b border-white/[0.05] flex items-center justify-between bg-white/[0.01]">
