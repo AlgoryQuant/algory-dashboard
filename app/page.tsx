@@ -29,12 +29,10 @@ interface DashboardData {
     MaxSpread: number; 
     LiveSpread: number | string; 
     KeyDriver: string; 
-    Direction?: string; // NOVÉ: Směr obchodu z Pythonu (BUY / SELL)
+    Direction?: string; 
     aiAnalysis?: AIAnalysis 
   }>;
 }
-
-type ViewType = 'OVERVIEW' | 'MAJORS' | 'MINORS' | 'METALS';
 
 const TradingChart = ({ symbol }: { symbol: string }) => {
   const getTVSymbol = (s: string) => {
@@ -49,14 +47,14 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
     <div className="w-full bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl h-[450px] relative">
       <div className="absolute top-0 left-0 w-full px-6 py-4 bg-white/[0.02] border-b border-white/[0.05] flex items-center justify-between z-10 pointer-events-none">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+            <svg className="w-4 h-4 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
             </svg>
           </div>
           <h3 className="font-semibold tracking-widest text-white/90 uppercase text-sm">Live Market Structure: {symbol}</h3>
         </div>
-        <span className="px-3 py-1 bg-black/40 text-emerald-400/80 text-[10px] font-bold uppercase tracking-widest rounded-md border border-white/5">
+        <span className="px-3 py-1 bg-black/40 text-white/60 text-[10px] font-bold uppercase tracking-widest rounded-md border border-white/5">
           M15 Timeframe
         </span>
       </div>
@@ -95,8 +93,6 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
 
   return (
     <div className="mb-10 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/[0.05] rounded-[2rem] shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-      
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white/90">
@@ -184,19 +180,8 @@ export default function Home() {
     try {
       const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
       const userData = { nickname, email, registeredAt: new Date().toISOString() };
-
-      await fetch(FIREBASE_USERS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-
-      await fetch('/api/welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, nickname })
-      });
-
+      await fetch(FIREBASE_USERS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userData) });
+      await fetch('/api/welcome', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nickname }) });
       localStorage.setItem('algory_user', JSON.stringify(userData));
       setIsAuthenticated(true);
       setShowAuthGate(false);
@@ -216,10 +201,7 @@ export default function Home() {
     const loadData = () => {
       const FIREBASE_DATA_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json";
       fetch(`${FIREBASE_DATA_URL}?t=${new Date().getTime()}`)
-        .then((res) => {
-          if (!res.ok) throw new Error('Network error');
-          return res.json();
-        })
+        .then((res) => res.json())
         .then((jsonData: DashboardData) => {
           setData(jsonData || {});
           setLastRefresh(new Date());
@@ -238,7 +220,6 @@ export default function Home() {
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
-    
     const sortedPairs = Object.entries(pairs).sort((a, b) => b[1] - a[1]);
 
     return (
@@ -250,7 +231,15 @@ export default function Home() {
           {sortedPairs.map(([ticker, prob]) => {
             const isActive = activePair === ticker;
             const displayTicker = ticker === "XAUUSD" ? "GOLD" : ticker;
-            const isProfitable = prob > 0.52;
+            
+            // Barva levého menu podle směru (BUY > 50%, SELL < 50%)
+            let pairDir = "NEUTRAL";
+            if (prob >= 0.52) pairDir = "BUY";
+            else if (prob <= 0.48 && prob > 0) pairDir = "SELL";
+
+            let probColor = "text-white/20";
+            if (pairDir === "BUY") probColor = isActive ? "text-emerald-400" : "text-emerald-500/60";
+            if (pairDir === "SELL") probColor = isActive ? "text-red-400" : "text-red-500/60";
 
             return (
               <button
@@ -258,14 +247,16 @@ export default function Home() {
                 onClick={() => setActivePair(ticker)}
                 className={`w-full text-left px-4 py-3 rounded-2xl transition-all duration-300 flex justify-between items-center group ${
                   isActive 
-                    ? 'bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.05)]' 
+                    ? pairDir === 'SELL' 
+                        ? 'bg-red-500/10 border border-red-500/20' 
+                        : 'bg-emerald-500/10 border border-emerald-500/20'
                     : 'border border-transparent hover:bg-white/5'
                 }`}
               >
-                <span className={`font-semibold tracking-wide ${isActive ? 'text-emerald-400' : 'text-white/60 group-hover:text-white/90'}`}>
+                <span className={`font-semibold tracking-wide ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white/90'}`}>
                   {displayTicker}
                 </span>
-                <span className={`text-[10px] font-bold tracking-widest ${isProfitable ? (isActive ? 'text-emerald-400/80' : 'text-emerald-500/60') : 'text-white/20'}`}>
+                <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>
                   {(prob * 100).toFixed(0)}%
                 </span>
               </button>
@@ -281,30 +272,14 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#050505] to-[#050505] pointer-events-none" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-
         <div className="relative z-10 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="flex items-center gap-3 mb-6">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
+            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span></span>
             <span className="text-xs font-bold text-emerald-400 tracking-[0.3em] uppercase">System Ready</span>
           </div>
-          
-          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">
-            Algory<span className="text-emerald-500">.</span>
-          </h1>
-          
-          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">
-            Institutional Grade <br/> <span className="text-white/80 font-bold">Quantitative Trading Engine</span>
-          </p>
-
-          <button 
-            onClick={handleLaunch}
-            className="mt-16 px-10 py-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.15)] hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:shadow-[0_0_50px_rgba(52,211,153,0.3)] hover:-translate-y-1"
-          >
-            Launch Terminal
-          </button>
+          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">Algory<span className="text-emerald-500">.</span></h1>
+          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">Institutional Grade <br/> <span className="text-white/80 font-bold">Quantitative Trading Engine</span></p>
+          <button onClick={handleLaunch} className="mt-16 px-10 py-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.15)] hover:bg-emerald-500/20 hover:-translate-y-1">Launch Terminal</button>
         </div>
       </div>
     );
@@ -313,59 +288,59 @@ export default function Home() {
   if (showAuthGate && !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#050505] to-[#050505] pointer-events-none" />
-        
         <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
           <div className="text-center mb-4">
             <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Request Access</h2>
             <p className="text-xs text-zinc-400 uppercase tracking-widest">Connect to Algory Engine</p>
           </div>
-
           <div className="flex flex-col gap-2">
             <label className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest ml-1">Trader Nickname</label>
-            <input 
-              type="text" 
-              required
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
-              placeholder="e.g. AlgoMaster99"
-            />
+            <input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors" placeholder="e.g. AlgoMaster99" />
           </div>
-
           <div className="flex flex-col gap-2">
             <label className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest ml-1">Email Address</label>
-            <input 
-              type="email" 
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors`}
-              placeholder="name@domain.com"
-            />
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors`} placeholder="name@domain.com" />
             {emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}
           </div>
-
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-xs tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 disabled:opacity-50"
-          >
-            {isSubmitting ? "Connecting..." : "Enter Terminal"}
-          </button>
+          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-xs tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 disabled:opacity-50">{isSubmitting ? "Connecting..." : "Enter Terminal"}</button>
         </form>
       </div>
     );
   }
 
+  // --- LOGIKA PRO VÝPOČET SMĚRU A ÚHLU RUČIČKY ---
   const activeProb = data.majors?.[activePair] ?? data.minors?.[activePair] ?? data.metals?.[activePair] ?? 0;
-  const isProfitable = activeProb > 0.52;
   const activeParams = data.parameters?.[activePair];
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
+
+  // Ohraničení pravděpodobnosti od 0 do 1 (pojistka)
+  const clampedProb = Math.max(0, Math.min(1, activeProb));
+  
+  // Převod pravděpodobnosti na úhel: 0% = -90 (vlevo), 50% = 0 (nahoře), 100% = +90 (vpravo)
+  const gaugeRotation = (clampedProb * 180) - 90; 
+
+  let inferredDirection = "NEUTRAL";
+  let isTradeActive = false;
+
+  if (clampedProb >= 0.52) {
+      inferredDirection = "BUY";
+      isTradeActive = true;
+  } else if (clampedProb <= 0.48 && clampedProb > 0) {
+      inferredDirection = "SELL";
+      isTradeActive = true;
+  }
+
+  // DYNAMICKÉ POZADÍ STRÁNKY PODLE SMĚRU TRADU
+  const getPageBackground = () => {
+    if (inferredDirection === 'BUY') return 'from-emerald-950/20 via-[#0a0a0a] to-[#050505]';
+    if (inferredDirection === 'SELL') return 'from-red-950/20 via-[#0a0a0a] to-[#050505]';
+    return 'from-[#050505] via-[#0a0a0a] to-[#050505]';
+  };
 
   return (
     <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
       
+      {/* LEVÉ MENU */}
       <aside className="w-80 flex-shrink-0 border-r border-white/5 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
         <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4" onClick={() => setShowLanding(true)}>
           <h2 className="text-3xl font-semibold tracking-tighter text-white hover:opacity-80 transition-opacity">
@@ -373,8 +348,8 @@ export default function Home() {
           </h2>
           <div className="flex items-center gap-3 mt-4">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
             </span>
             <p className="text-[10px] text-white/40 font-medium tracking-widest uppercase">Engine Online</p>
           </div>
@@ -387,7 +362,8 @@ export default function Home() {
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#050505]">
+      {/* HLAVNÍ OBSAH S DYNAMICKÝM POZADÍM */}
+      <main className={`flex-1 overflow-y-auto px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
         <div className="max-w-[1400px] mx-auto">
           
           <MarketMonitor lastRefresh={lastRefresh} />
@@ -415,16 +391,14 @@ export default function Home() {
                       <div className="flex items-center gap-4 mb-3">
                         <h2 className="text-3xl font-bold text-white/90">{displayTicker}</h2>
                         
-                        {/* NOVÉ: DYNAMICKÝ BUY / SELL ODZNAK */}
-                        {activeParams?.Direction && (
-                          <span className={`px-3 py-1 text-[11px] font-bold uppercase tracking-widest rounded-lg border ${
-                            activeParams.Direction.toUpperCase() === 'BUY' 
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                              : activeParams.Direction.toUpperCase() === 'SELL'
-                                ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                                : 'bg-white/5 text-white/60 border-white/10'
+                        {/* ODZNAK BUY NEBO SELL */}
+                        {isTradeActive && (
+                          <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
+                            inferredDirection === 'BUY' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/20' 
+                              : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/20'
                           }`}>
-                            {activeParams.Direction}
+                            {inferredDirection} PENDING
                           </span>
                         )}
 
@@ -436,23 +410,59 @@ export default function Home() {
                       </div>
                       
                       {activeParams && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">SL: {activeParams.SL}</span>
-                          <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">TP: {activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
-                          <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">BE: {activeParams.BE}</span>
-                          <span className="px-3 py-1 bg-black/40 text-emerald-400/50 text-[11px] rounded-md border border-emerald-500/10 font-mono">Spread: {activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <span className="px-3 py-1.5 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">SL: {activeParams.SL}</span>
+                          <span className="px-3 py-1.5 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">TP: {activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
+                          <span className="px-3 py-1.5 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">BE: {activeParams.BE}</span>
+                          <span className="px-3 py-1.5 bg-black/40 text-white/80 text-[11px] rounded-md border border-white/10 font-mono">Spread: {activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex flex-col items-end gap-3">
-                      <span className={`text-5xl font-bold tracking-tight ${isProfitable ? "text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.3)]" : "text-white/40"}`}>
-                        {(activeProb * 100).toFixed(1)}%
-                      </span>
-                      {isProfitable ? (
-                        <span className="px-6 py-2 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-500/20">Execute Trade</span>
+                    <div className="flex flex-col items-center gap-4">
+                      {/* --- VIZUÁLNÍ BUDÍK (SPEEDOMETER GAUGE) --- */}
+                      <div className="flex flex-col items-center justify-center relative w-44 h-24">
+                        <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
+                          {/* Podkres oblouků */}
+                          <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="currentColor" strokeWidth="12" className="text-red-500/10" strokeLinecap="round" />
+                          <path d="M 100 20 A 80 80 0 0 1 180 100" fill="none" stroke="currentColor" strokeWidth="12" className="text-emerald-500/10" strokeLinecap="round" />
+
+                          {/* Hlavní barevné oblouky */}
+                          <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="currentColor" strokeWidth="12" className="text-red-500/80" strokeLinecap="round" strokeDasharray="125" strokeDashoffset="0" />
+                          <path d="M 100 20 A 80 80 0 0 1 180 100" fill="none" stroke="currentColor" strokeWidth="12" className="text-emerald-500/80" strokeLinecap="round" strokeDasharray="125" strokeDashoffset="0" />
+
+                          {/* Středový čep ručičky */}
+                          <circle cx="100" cy="100" r="8" fill="#18181b" stroke="#3f3f46" strokeWidth="3" />
+
+                          {/* Animovaná ručička */}
+                          <g transform={`rotate(${gaugeRotation} 100 100)`} className="transition-transform duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                             <line x1="100" y1="100" x2="100" y2="25" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" className="drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                             <polygon points="96,100 104,100 100,20" fill="#ffffff" />
+                          </g>
+                        </svg>
+                        
+                        {/* Číslo pravděpodobnosti zasazené pod budík */}
+                        <div className={`absolute bottom-[-10px] text-2xl font-black tracking-tighter ${
+                            inferredDirection === 'BUY' ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)]' :
+                            inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' :
+                            'text-white/50'
+                        }`}>
+                          {(activeProb * 100).toFixed(1)}%
+                        </div>
+                      </div>
+
+                      {isTradeActive ? (
+                        <span className={`px-6 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-full border shadow-lg ${
+                            inferredDirection === 'BUY'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10'
+                            : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
+                        }`}>
+                            Execute {inferredDirection}
+                        </span>
                       ) : (
-                        <span className="px-6 py-2 bg-black/40 text-white/30 text-[10px] font-bold uppercase tracking-widest rounded-full border border-white/10">Skip Setup</span>
+                        <span className="px-6 py-2.5 bg-black/40 text-white/30 text-[10px] font-bold uppercase tracking-widest rounded-full border border-white/10">
+                            Skip Setup
+                        </span>
                       )}
                     </div>
                   </div>
@@ -468,16 +478,40 @@ export default function Home() {
                           {activeParams.aiAnalysis.evaluation}
                         </p>
                       </div>
-                      <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                        <div className="text-[10px] text-emerald-400/80 uppercase tracking-widest mb-4 flex items-center justify-between">
+                      
+                      {/* Kartička pro predikci - Barví se podle směru obchodu */}
+                      <div className={`border rounded-2xl p-6 relative overflow-hidden transition-colors duration-1000 ${
+                           inferredDirection === 'SELL' ? 'bg-red-500/5 border-red-500/20' : 
+                           inferredDirection === 'BUY' ? 'bg-emerald-500/5 border-emerald-500/20' : 
+                           'bg-white/5 border-white/10'
+                      }`}>
+                        <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl pointer-events-none transition-colors duration-1000 ${
+                            inferredDirection === 'SELL' ? 'bg-red-500/20' : 
+                            inferredDirection === 'BUY' ? 'bg-emerald-500/20' : 
+                            'bg-white/10'
+                        }`} />
+                        <div className={`text-[10px] uppercase tracking-widest mb-4 flex items-center justify-between transition-colors duration-1000 ${
+                            inferredDirection === 'SELL' ? 'text-red-400/80' : 
+                            inferredDirection === 'BUY' ? 'text-emerald-400/80' : 
+                            'text-white/50'
+                        }`}>
                           <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
                           <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                                inferredDirection === 'SELL' ? 'bg-red-400' : 
+                                inferredDirection === 'BUY' ? 'bg-emerald-400' : 'bg-white/50'
+                            }`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                                inferredDirection === 'SELL' ? 'bg-red-500' : 
+                                inferredDirection === 'BUY' ? 'bg-emerald-500' : 'bg-white/50'
+                            }`}></span>
                           </span>
                         </div>
-                        <p className={`text-sm leading-relaxed font-medium relative z-10 ${isProfitable ? 'text-emerald-300/90' : 'text-white/60'}`}>
+                        <p className={`text-sm leading-relaxed font-medium relative z-10 transition-colors duration-1000 ${
+                            inferredDirection === 'SELL' ? 'text-red-300/90' : 
+                            inferredDirection === 'BUY' ? 'text-emerald-300/90' : 
+                            'text-white/60'
+                        }`}>
                           {activeParams.aiAnalysis.prediction}
                         </p>
                       </div>
