@@ -49,11 +49,9 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
 
   return (
     <div className="mb-10 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/[0.05] rounded-[2rem] shadow-2xl relative overflow-hidden">
-      {/* Vznášející se gradient na pozadí boxu */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
       
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
-        
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white/90">
             {now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
@@ -110,6 +108,9 @@ export default function Home() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<{ type: ViewType }>({ type: 'OVERVIEW' });
+  
+  // --- NOVÝ STAV PRO ÚVODNÍ STRANU ---
+  const [showLanding, setShowLanding] = useState<boolean>(true);
 
   useEffect(() => {
     const loadData = () => {
@@ -214,7 +215,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Rozbalovací AI analýza */}
                 {isExpanded && params?.aiAnalysis && (
                   <div className="bg-black/20 p-8 border-t border-white/5">
                     <div className="grid md:grid-cols-2 gap-6">
@@ -252,12 +252,53 @@ export default function Home() {
     );
   };
 
+  // --- RENDEROVÁNÍ ÚVODNÍ STRANY ---
+  if (showLanding) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
+        {/* Glow efekty na pozadí úvodní strany */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#050505] to-[#050505] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+
+        <div className="relative z-10 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <span className="text-xs font-bold text-emerald-400 tracking-[0.3em] uppercase">System Ready</span>
+          </div>
+          
+          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">
+            Algory<span className="text-emerald-500">.</span>
+          </h1>
+          
+          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">
+            Institutional Grade <br/> <span className="text-white/80 font-bold">Quantitative Trading Engine</span>
+          </p>
+
+          <button 
+            onClick={() => setShowLanding(false)}
+            className="mt-16 px-10 py-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.15)] hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:shadow-[0_0_50px_rgba(52,211,153,0.3)] hover:-translate-y-1"
+          >
+            Launch Terminal
+          </button>
+        </div>
+        
+        <div className="absolute bottom-12 text-[10px] text-zinc-600 font-mono tracking-widest uppercase">
+          Powered by XGBoost Machine Learning
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDEROVÁNÍ HLAVNÍHO TERMINÁLU ---
   return (
-    <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
       
       <aside className="w-72 flex-shrink-0 border-r border-white/5 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
-        <div className="p-8 pb-12">
-          <h2 className="text-3xl font-semibold tracking-tighter text-white">
+        <div className="p-8 pb-12 cursor-pointer" onClick={() => setShowLanding(true)}>
+          <h2 className="text-3xl font-semibold tracking-tighter text-white hover:opacity-80 transition-opacity">
             Algory<span className="text-emerald-500">.</span>
           </h2>
           <div className="flex items-center gap-3 mt-4">
@@ -270,10 +311,12 @@ export default function Home() {
         </div>
 
         <nav className="flex-1 px-6 space-y-2">
+          {/* OPRAVA: Přidány drahé kovy (METALS) */}
           {[
             { id: 'OVERVIEW', label: 'Dashboard' },
             { id: 'MAJORS', label: 'Major Pairs' },
-            { id: 'MINORS', label: 'Cross Pairs' }
+            { id: 'MINORS', label: 'Cross Pairs' },
+            { id: 'METALS', label: 'Precious Metals' }
           ].map((item) => (
             <button 
               key={item.id}
@@ -290,7 +333,6 @@ export default function Home() {
         </nav>
       </aside>
 
-      {/* Hlavní obsah - přidán obrovský padding nahoře (pt-12 až pt-20), aby to nebylo nalepené */}
       <main className="flex-1 overflow-y-auto px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#050505]">
         <div className="max-w-[1400px] mx-auto">
           
@@ -308,14 +350,12 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
               
-              {/* Tabulky (2/3 šířky) */}
               <div className="xl:col-span-2 flex flex-col space-y-10">
                 {renderTable(data.majors, "Major Liquidity", "MAJORS")}
                 {renderTable(data.minors, "Cross Pairs", "MINORS")}
                 {renderTable(data.metals, "Precious Metals", "METALS")}
               </div>
 
-              {/* News Feed - Bento Box styl (1/3 šířky) */}
               <div className="xl:col-span-1">
                 <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden sticky top-8 shadow-xl">
                   <div className="px-6 py-5 border-b border-white/[0.05] flex items-center justify-between bg-white/[0.01]">
