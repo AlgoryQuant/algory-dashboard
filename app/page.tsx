@@ -21,8 +21,20 @@ interface DashboardData {
   minors?: Record<string, number>;
   metals?: Record<string, number>;
   news?: NewsItem[];
-  parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; aiAnalysis?: AIAnalysis }>;
+  parameters?: Record<string, { 
+    SL: number; 
+    TP: number; 
+    Partial: number; 
+    BE: number; 
+    MaxSpread: number; 
+    LiveSpread: number | string; 
+    KeyDriver: string; 
+    Direction?: string; // NOVÉ: Směr obchodu z Pythonu (BUY / SELL)
+    aiAnalysis?: AIAnalysis 
+  }>;
 }
+
+type ViewType = 'OVERVIEW' | 'MAJORS' | 'MINORS' | 'METALS';
 
 const TradingChart = ({ symbol }: { symbol: string }) => {
   const getTVSymbol = (s: string) => {
@@ -141,7 +153,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  // Změněný stav: Máme pouze jeden AKTIVNÍ PÁR pro celý dashboard
   const [activePair, setActivePair] = useState<string>("EURUSD"); 
   
   const [showLanding, setShowLanding] = useState<boolean>(true);
@@ -225,11 +236,9 @@ export default function Home() {
     }
   }, [isAuthenticated, showAuthGate]);
 
-  // NOVÁ FUNKCE: Vykreslování seznamů v levém menu
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    // Seřadíme páry od nejlepší pravděpodobnosti k nejhorší
     const sortedPairs = Object.entries(pairs).sort((a, b) => b[1] - a[1]);
 
     return (
@@ -267,7 +276,6 @@ export default function Home() {
     );
   };
 
-  // ÚVODNÍ STRANA a AUTH GATE (Zůstávají beze změny)
   if (showLanding) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -350,7 +358,6 @@ export default function Home() {
     );
   }
 
-  // Příprava dat pro aktuálně vybraný pár
   const activeProb = data.majors?.[activePair] ?? data.minors?.[activePair] ?? data.metals?.[activePair] ?? 0;
   const isProfitable = activeProb > 0.52;
   const activeParams = data.parameters?.[activePair];
@@ -359,7 +366,6 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
       
-      {/* LEVÉ MENU (Ovladač trhu) */}
       <aside className="w-80 flex-shrink-0 border-r border-white/5 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
         <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4" onClick={() => setShowLanding(true)}>
           <h2 className="text-3xl font-semibold tracking-tighter text-white hover:opacity-80 transition-opacity">
@@ -381,7 +387,6 @@ export default function Home() {
         </nav>
       </aside>
 
-      {/* HLAVNÍ OBSAH (Fokusovaný Dashboard) */}
       <main className="flex-1 overflow-y-auto px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#050505]">
         <div className="max-w-[1400px] mx-auto">
           
@@ -399,26 +404,37 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
               
-              {/* LEVÁ ČÁST HLAVNÍ OBRAZOVKY (Graf + AI Analýza) */}
               <div className="xl:col-span-2 flex flex-col space-y-10">
                 
-                {/* 1. TradingView Graf */}
                 <TradingChart symbol={activePair} />
                 
-                {/* 2. Detailní Karta aktivního páru (Nahrazuje tabulku) */}
                 <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl p-8">
                   
-                  {/* Hlavička s procenty */}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/[0.05] pb-8">
                     <div>
                       <div className="flex items-center gap-4 mb-3">
                         <h2 className="text-3xl font-bold text-white/90">{displayTicker}</h2>
+                        
+                        {/* NOVÉ: DYNAMICKÝ BUY / SELL ODZNAK */}
+                        {activeParams?.Direction && (
+                          <span className={`px-3 py-1 text-[11px] font-bold uppercase tracking-widest rounded-lg border ${
+                            activeParams.Direction.toUpperCase() === 'BUY' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                              : activeParams.Direction.toUpperCase() === 'SELL'
+                                ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                                : 'bg-white/5 text-white/60 border-white/10'
+                          }`}>
+                            {activeParams.Direction}
+                          </span>
+                        )}
+
                         {activeParams?.KeyDriver && (
                           <span className="px-3 py-1 bg-white/5 text-white/60 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-medium">
                             {activeParams.KeyDriver}
                           </span>
                         )}
                       </div>
+                      
                       {activeParams && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           <span className="px-3 py-1 bg-black/40 text-white/50 text-[11px] rounded-md border border-white/5 font-mono">SL: {activeParams.SL}</span>
@@ -441,7 +457,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* AI Analýza Texty */}
                   {activeParams?.aiAnalysis ? (
                     <div className="grid md:grid-cols-2 gap-8">
                       <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-6">
@@ -475,7 +490,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* PRAVÝ PANEL (News) */}
               <div className="xl:col-span-1">
                 <div className="bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden sticky top-8 shadow-xl">
                   <div className="px-6 py-5 border-b border-white/[0.05] flex items-center justify-between bg-white/[0.01]">
