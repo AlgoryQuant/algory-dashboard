@@ -26,6 +26,46 @@ interface DashboardData {
 
 type ViewType = 'OVERVIEW' | 'MAJORS' | 'MINORS' | 'METALS';
 
+// --- NOVÁ KOMPONENTA: TRADINGVIEW GRAF ---
+const TradingChart = ({ symbol }: { symbol: string }) => {
+  // Překlad našich tickerů do formátu, kterému rozumí TradingView (přes OANDA brokera)
+  const getTVSymbol = (s: string) => {
+    if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
+    if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
+    return `OANDA:${s}`;
+  };
+
+  const tvSymbol = getTVSymbol(symbol);
+
+  return (
+    <div className="mb-10 w-full bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] overflow-hidden shadow-xl h-[450px] relative">
+      <div className="absolute top-0 left-0 w-full px-6 py-4 bg-white/[0.02] border-b border-white/[0.05] flex items-center justify-between z-10 pointer-events-none">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+            </svg>
+          </div>
+          <h3 className="font-semibold tracking-widest text-white/90 uppercase text-sm">Live Market Structure: {symbol}</h3>
+        </div>
+        <span className="px-3 py-1 bg-black/40 text-emerald-400/80 text-[10px] font-bold uppercase tracking-widest rounded-md border border-white/5">
+          M15 Timeframe
+        </span>
+      </div>
+      
+      {/* Samotný TradingView Iframe (posunutý pod hlavičku) */}
+      <div className="w-full h-full pt-[73px]">
+        <iframe
+          src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${tvSymbol}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`}
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          title={`TradingView Chart ${symbol}`}
+        />
+      </div>
+    </div>
+  );
+};
+// ------------------------------------------
+
 const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
   const [now, setNow] = useState(new Date());
 
@@ -106,13 +146,15 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<{ type: ViewType }>({ type: 'OVERVIEW' });
   
+  // Stav pro rozbalení řádku a AKTIVNÍ GRAF
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [activeChartSymbol, setActiveChartSymbol] = useState<string>("EURUSD"); 
+  
+  const [activeView, setActiveView] = useState<{ type: ViewType }>({ type: 'OVERVIEW' });
   const [showLanding, setShowLanding] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
-  
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -120,15 +162,11 @@ export default function Home() {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('algory_user');
-    if (savedUser) {
-      setIsAuthenticated(true);
-    }
+    if (savedUser) setIsAuthenticated(true);
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validace E-mailu
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setEmailError("Please enter a valid email address (e.g., name@domain.com).");
@@ -137,17 +175,11 @@ export default function Home() {
     
     setEmailError(null);
     if (!nickname || !email) return;
-    
     setIsSubmitting(true);
+    
     try {
-      // 1. ULOŽENÍ DO FIREBASE
       const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
-      
-      const userData = {
-        nickname,
-        email,
-        registeredAt: new Date().toISOString(),
-      };
+      const userData = { nickname, email, registeredAt: new Date().toISOString() };
 
       await fetch(FIREBASE_USERS_URL, {
         method: 'POST',
@@ -155,20 +187,17 @@ export default function Home() {
         body: JSON.stringify(userData)
       });
 
-      // 2. ODESLÁNÍ UVÍTACÍHO E-MAILU PŘES RESEND API ROUTU
       await fetch('/api/welcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, nickname })
       });
 
-      // Uložení přihlášení
       localStorage.setItem('algory_user', JSON.stringify(userData));
       setIsAuthenticated(true);
       setShowAuthGate(false);
-      
     } catch (err) {
-      console.error("Error writing user to database or sending email:", err);
+      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -176,15 +205,12 @@ export default function Home() {
 
   const handleLaunch = () => {
     setShowLanding(false);
-    if (!isAuthenticated) {
-      setShowAuthGate(true);
-    }
+    if (!isAuthenticated) setShowAuthGate(true);
   };
 
   useEffect(() => {
     const loadData = () => {
       const FIREBASE_DATA_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json";
-      
       fetch(`${FIREBASE_DATA_URL}?t=${new Date().getTime()}`)
         .then((res) => {
           if (!res.ok) throw new Error('Network error');
@@ -206,7 +232,10 @@ export default function Home() {
     }
   }, [isAuthenticated, showAuthGate]);
 
-  const toggleRow = (ticker: string) => setExpandedRow(expandedRow === ticker ? null : ticker);
+  const toggleRow = (ticker: string) => {
+    setExpandedRow(expandedRow === ticker ? null : ticker);
+    setActiveChartSymbol(ticker); // KLÍČOVÉ: Kliknutí změní hlavní graf!
+  };
 
   const renderTable = (pairsData: Record<string, number> | undefined, title: string, categoryId: ViewType) => {
     if (!pairsData || Object.keys(pairsData).length === 0) return null;
@@ -451,6 +480,10 @@ export default function Home() {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
               
               <div className="xl:col-span-2 flex flex-col space-y-10">
+                
+                {/* VLOŽENÝ TRADINGVIEW GRAF */}
+                <TradingChart symbol={activeChartSymbol} />
+                
                 {renderTable(data.majors, "Major Liquidity", "MAJORS")}
                 {renderTable(data.minors, "Cross Pairs", "MINORS")}
                 {renderTable(data.metals, "Precious Metals", "METALS")}
