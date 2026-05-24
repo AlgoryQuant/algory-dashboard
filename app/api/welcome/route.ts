@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-// Vercel build někdy padne, pokud mu chybí fallback pro API klíč
 const resend = new Resend(process.env.RESEND_API_KEY || 'chybejici_klic');
 
 export async function POST(request: Request) {
@@ -26,7 +25,6 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    // Správné rozbalení dat a chyb podle nejnovější Resend dokumentace
     const { data, error } = await resend.emails.send({
       from: 'Algory Engine <onboarding@resend.dev>', 
       to: email,
@@ -39,8 +37,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(data);
-  } catch (err: any) {
-    // Opravené typování pro TypeScript
-    return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 });
+  } catch (err: unknown) {
+    // Toto Vercel miluje: bezpečné zpracování chyby bez slovíčka 'any'
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
