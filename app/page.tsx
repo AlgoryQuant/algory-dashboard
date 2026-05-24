@@ -50,14 +50,16 @@ export default function Home() {
 
   useEffect(() => {
     const loadData = () => {
-      const timestamp = new Date().getTime();
-      fetch(`/results.json?t=${timestamp}`)
+      // Tvoja Firebase URL adresa pre čítanie dát
+      const FIREBASE_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json";
+      
+      fetch(`${FIREBASE_URL}?t=${new Date().getTime()}`)
         .then((res) => {
-          if (!res.ok) throw new Error('Error loading results file');
+          if (!res.ok) throw new Error('Error loading results from Cloud');
           return res.json();
         })
         .then((jsonData: DashboardData) => {
-          setData(jsonData);
+          setData(jsonData || {});
           setError(null);
         })
         .catch((err) => {
@@ -70,7 +72,7 @@ export default function Home() {
     };
 
     loadData();
-    const interval = setInterval(loadData, 15 * 60 * 1000);
+    const interval = setInterval(loadData, 15 * 60 * 1000); // Auto-refresh každých 15 minút
     return () => clearInterval(interval);
   }, []);
 
@@ -89,7 +91,7 @@ export default function Home() {
     }
 
     return (
-      <div className="mb-8 w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-8 w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
         <div className="bg-zinc-800/50 p-4 border-b border-zinc-800 font-bold tracking-widest text-zinc-300">
           {title}
         </div>
@@ -113,7 +115,6 @@ export default function Home() {
                   <td className="p-4">
                     <div className="font-mono text-lg text-white flex items-center gap-3">
                       {displayTicker}
-                      {/* VYSVĚTLITELNOST MODELU - KEY DRIVER */}
                       {params?.KeyDriver && (
                         <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] uppercase tracking-wider rounded border border-indigo-500/20 font-sans">
                           Driver: {params.KeyDriver}
@@ -137,7 +138,7 @@ export default function Home() {
                   </td>
                   <td className="p-4 text-right align-top pt-5">
                     {isProfitable ? (
-                      <span className="px-3 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                      <span className="px-3 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/20">
                         Tradeable
                       </span>
                     ) : (
@@ -246,8 +247,8 @@ export default function Home() {
             </header>
 
             {loading && !data.majors ? (
-              <div className="p-12 text-center text-zinc-500 font-mono animate-pulse border border-zinc-800/50 rounded-2xl bg-zinc-900/20">
-                Initializing live data feed...
+              <div className="p-12 text-center text-zinc-500 font-mono border border-zinc-800/50 rounded-2xl bg-zinc-900/20">
+                Initializing cloud data feed...
               </div>
             ) : error && !data.majors ? (
               <div className="p-6 text-center text-red-500 font-mono border border-red-500/30 bg-red-500/10 rounded-xl">
@@ -261,7 +262,7 @@ export default function Home() {
                 
                 {activeView.type !== 'TICKER' && (
                   <div className="mt-4 text-xs text-zinc-600 font-mono text-center pb-12">
-                    Live tracking active. Data refreshed automatically.
+                    Live cloud tracking active. Data refreshed automatically.
                   </div>
                 )}
               </div>
