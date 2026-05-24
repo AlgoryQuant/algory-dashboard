@@ -11,6 +11,93 @@ interface DashboardData {
 
 type ViewType = 'OVERVIEW' | 'MAJORS' | 'MINORS' | 'METALS' | 'TICKER';
 
+// --- NOVÁ KOMPONENTA: MARKET SESSIONS & CLOCK ---
+const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    // Časovač, který běží každou vteřinu (pohyblivá grafika)
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const hour = now.getHours();
+  
+  // Zjednodušená logika pro seance (středoevropský čas)
+  const sessions = [
+    { name: "Sydney", open: "22:00", close: "07:00", isActive: hour >= 22 || hour < 7 },
+    { name: "Tokyo", open: "00:00", close: "09:00", isActive: hour >= 0 && hour < 9 },
+    { name: "London", open: "09:00", close: "17:30", isActive: hour >= 9 && hour < 17 },
+    { name: "New York", open: "14:30", close: "22:00", isActive: hour >= 14 && hour < 22 },
+  ];
+
+  // Výpočet progresu aktuální 15minutové svíčky (pro plynulý animovaný bar)
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  const elapsedSeconds = (minutes % 15) * 60 + seconds;
+  const progressPercent = (elapsedSeconds / (15 * 60)) * 100;
+
+  return (
+    <div className="mb-10 bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+        
+        {/* Levá část: Živý čas a Poslední Refresh */}
+        <div className="flex flex-col gap-2 w-full md:w-auto">
+          <div className="text-3xl font-mono font-bold text-white tracking-widest">
+            {now.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+            Last Update: 
+            <span className="text-indigo-400">
+              {lastRefresh ? lastRefresh.toLocaleTimeString('cs-CZ') : "Waiting for data..."}
+            </span>
+          </div>
+        </div>
+
+        {/* Pravá část: Seance */}
+        <div className="flex flex-wrap justify-center md:justify-end gap-3 w-full md:w-auto">
+          {sessions.map((s) => (
+            <div key={s.name} className={`px-4 py-2 border rounded-lg flex flex-col items-center justify-center transition-all duration-500 ${
+              s.isActive 
+                ? 'bg-green-500/10 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.15)]' 
+                : 'bg-zinc-950 border-zinc-800/50 opacity-50'
+            }`}>
+              <div className="flex items-center gap-2 mb-1">
+                {s.isActive && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                )}
+                <span className={`text-xs font-bold uppercase tracking-wider ${s.isActive ? 'text-green-400' : 'text-zinc-500'}`}>
+                  {s.name}
+                </span>
+              </div>
+              <span className="text-[10px] text-zinc-400 font-mono">{s.open} - {s.close}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Plynulý 15m svíčkový progress bar */}
+      <div className="mt-6">
+        <div className="flex justify-between text-[10px] text-zinc-500 font-mono mb-1 uppercase tracking-widest">
+          <span>M15 Candle Progress</span>
+          <span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s remaining</span>
+        </div>
+        <div className="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-indigo-500/80 rounded-full transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+// --- KONEC NOVÉ KOMPONENTY ---
+
+
 const HeroSection = () => (
   <div className="relative border-b border-zinc-800 bg-zinc-950 p-12 overflow-hidden shrink-0">
     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800/20 via-black to-black pointer-events-none" />
@@ -40,6 +127,9 @@ export default function Home() {
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Přidán stav pro sledování času posledního refreshe
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     majors: true,
@@ -50,7 +140,6 @@ export default function Home() {
 
   useEffect(() => {
     const loadData = () => {
-      // Tvoja Firebase URL adresa pre čítanie dát
       const FIREBASE_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json";
       
       fetch(`${FIREBASE_URL}?t=${new Date().getTime()}`)
@@ -60,6 +149,7 @@ export default function Home() {
         })
         .then((jsonData: DashboardData) => {
           setData(jsonData || {});
+          setLastRefresh(new Date()); // Aktualizace času po úspěšném stažení
           setError(null);
         })
         .catch((err) => {
@@ -72,7 +162,7 @@ export default function Home() {
     };
 
     loadData();
-    const interval = setInterval(loadData, 15 * 60 * 1000); // Auto-refresh každých 15 minút
+    const interval = setInterval(loadData, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -236,6 +326,10 @@ export default function Home() {
         <HeroSection />
         <div className="flex-1 overflow-y-auto p-8 lg:p-12">
           <div className="max-w-5xl mx-auto">
+            
+            {/* VLOŽENÍ NOVÉHO MARKET MONITORU ZDE */}
+            <MarketMonitor lastRefresh={lastRefresh} />
+
             <header className="mb-10">
               <h1 className="text-4xl font-bold tracking-tighter text-white">
                 {activeView.type === 'OVERVIEW' && "Market Overview"}
@@ -259,12 +353,6 @@ export default function Home() {
                 {renderTable(data.majors, "MAJOR FOREX", "MAJORS")}
                 {renderTable(data.minors, "MINOR & CROSS FOREX", "MINORS")}
                 {renderTable(data.metals, "PRECIOUS METALS", "METALS")}
-                
-                {activeView.type !== 'TICKER' && (
-                  <div className="mt-4 text-xs text-zinc-600 font-mono text-center pb-12">
-                    Live cloud tracking active. Data refreshed automatically.
-                  </div>
-                )}
               </div>
             )}
           </div>
