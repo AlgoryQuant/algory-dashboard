@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Vercel build někdy padne, pokud mu chybí fallback pro API klíč
+const resend = new Resend(process.env.RESEND_API_KEY || 'chybejici_klic');
 
 export async function POST(request: Request) {
   try {
-    const { email, nickname } = await request.json();
+    const body = await request.json();
+    const { email, nickname } = body;
 
     const htmlContent = `
       <div style="background-color: #050505; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 60px 20px; text-align: center;">
@@ -24,15 +26,21 @@ export async function POST(request: Request) {
       </div>
     `;
 
-    const data = await resend.emails.send({
+    // Správné rozbalení dat a chyb podle nejnovější Resend dokumentace
+    const { data, error } = await resend.emails.send({
       from: 'Algory Engine <onboarding@resend.dev>', 
       to: email,
       subject: 'Access Granted: Algory Quantitative Terminal',
       html: htmlContent,
     });
 
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json({ error });
+  } catch (err: any) {
+    // Opravené typování pro TypeScript
+    return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 });
   }
 }
