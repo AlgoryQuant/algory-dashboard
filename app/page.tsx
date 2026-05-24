@@ -109,17 +109,66 @@ export default function Home() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<{ type: ViewType }>({ type: 'OVERVIEW' });
   
-  // --- NOVÝ STAV PRO ÚVODNÍ STRANU ---
   const [showLanding, setShowLanding] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
+  
+  const [nickname, setNickname] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('algory_user');
+    if (savedUser) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nickname || !email) return;
+    
+    setIsSubmitting(true);
+    try {
+      const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
+      
+      const userData = {
+        nickname,
+        email,
+        registeredAt: new Date().toISOString(),
+      };
+
+      await fetch(FIREBASE_USERS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      localStorage.setItem('algory_user', JSON.stringify(userData));
+      setIsAuthenticated(true);
+      setShowAuthGate(false);
+      
+    } catch (err) {
+      console.error("Error writing user to database:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLaunch = () => {
+    setShowLanding(false);
+    if (!isAuthenticated) {
+      setShowAuthGate(true);
+    }
+  };
 
   useEffect(() => {
     const loadData = () => {
-      // ⚠️ TVOJE FIREBASE URL ZDE
-      const FIREBASE_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json";
+      const FIREBASE_DATA_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json";
       
-      fetch(`${FIREBASE_URL}?t=${new Date().getTime()}`)
+      fetch(`${FIREBASE_DATA_URL}?t=${new Date().getTime()}`)
         .then((res) => {
-          if (!res.ok) throw new Error('Network response was not ok');
+          if (!res.ok) throw new Error('Network error');
           return res.json();
         })
         .then((jsonData: DashboardData) => {
@@ -127,21 +176,18 @@ export default function Home() {
           setLastRefresh(new Date());
           setError(null);
         })
-        .catch((err) => {
-          console.error("API Error:", err);
-          setError("Failed to sync with cloud database.");
-        })
+        .catch(() => setError("Failed to sync with cloud database."))
         .finally(() => setLoading(false));
     };
 
-    loadData();
-    const interval = setInterval(loadData, 15 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isAuthenticated || showAuthGate) {
+       loadData();
+       const interval = setInterval(loadData, 15 * 60 * 1000);
+       return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, showAuthGate]);
 
-  const toggleRow = (ticker: string) => {
-    setExpandedRow(expandedRow === ticker ? null : ticker);
-  };
+  const toggleRow = (ticker: string) => setExpandedRow(expandedRow === ticker ? null : ticker);
 
   const renderTable = (pairsData: Record<string, number> | undefined, title: string, categoryId: ViewType) => {
     if (!pairsData || Object.keys(pairsData).length === 0) return null;
@@ -204,13 +250,9 @@ export default function Home() {
                   
                   <div className="col-span-2 flex justify-end items-center gap-4">
                     {isProfitable ? (
-                      <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-500/20">
-                        Trade
-                      </span>
+                      <span className="px-4 py-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-500/20">Trade</span>
                     ) : (
-                      <span className="px-4 py-1.5 bg-black/40 text-white/30 text-[10px] font-bold uppercase tracking-widest rounded-full border border-white/10">
-                        Skip
-                      </span>
+                      <span className="px-4 py-1.5 bg-black/40 text-white/30 text-[10px] font-bold uppercase tracking-widest rounded-full border border-white/10">Skip</span>
                     )}
                   </div>
                 </div>
@@ -227,7 +269,6 @@ export default function Home() {
                           {params.aiAnalysis.evaluation}
                         </p>
                       </div>
-
                       <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
                         <div className="text-[10px] text-emerald-400/80 uppercase tracking-widest mb-4 flex items-center justify-between">
@@ -252,11 +293,9 @@ export default function Home() {
     );
   };
 
-  // --- RENDEROVÁNÍ ÚVODNÍ STRANY ---
   if (showLanding) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
-        {/* Glow efekty na pozadí úvodní strany */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#050505] to-[#050505] pointer-events-none" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
 
@@ -278,21 +317,63 @@ export default function Home() {
           </p>
 
           <button 
-            onClick={() => setShowLanding(false)}
+            onClick={handleLaunch}
             className="mt-16 px-10 py-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.15)] hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:shadow-[0_0_50px_rgba(52,211,153,0.3)] hover:-translate-y-1"
           >
             Launch Terminal
           </button>
         </div>
-        
-        <div className="absolute bottom-12 text-[10px] text-zinc-600 font-mono tracking-widest uppercase">
-          Powered by XGBoost Machine Learning
-        </div>
       </div>
     );
   }
 
-  // --- RENDEROVÁNÍ HLAVNÍHO TERMINÁLU ---
+  if (showAuthGate && !isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#050505] to-[#050505] pointer-events-none" />
+        
+        <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Request Access</h2>
+            <p className="text-xs text-zinc-400 uppercase tracking-widest">Connect to Algory Engine</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest ml-1">Trader Nickname</label>
+            <input 
+              type="text" 
+              required
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+              placeholder="e.g. AlgoMaster99"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest ml-1">Email Address</label>
+            <input 
+              type="email" 
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+              placeholder="name@domain.com"
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-xs tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 disabled:opacity-50"
+          >
+            {isSubmitting ? "Connecting..." : "Enter Terminal"}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
       
@@ -311,7 +392,6 @@ export default function Home() {
         </div>
 
         <nav className="flex-1 px-6 space-y-2">
-          {/* OPRAVA: Přidány drahé kovy (METALS) */}
           {[
             { id: 'OVERVIEW', label: 'Dashboard' },
             { id: 'MAJORS', label: 'Major Pairs' },
