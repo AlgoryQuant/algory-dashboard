@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   DndContext, 
   DragOverlay, 
-  closestCenter, 
+  pointerWithin, 
   KeyboardSensor, 
   PointerSensor, 
   useSensor, 
@@ -433,7 +433,7 @@ export default function Home() {
 
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DND Handlers (Finální, neprůstřelná logika)
+  // DND Handlers - Finální a robustní s pointerWithin
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -446,38 +446,39 @@ export default function Home() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragId(null);
     const { active, over } = event;
-    
-    if (!over) return;
-
     const activeId = active.id as string;
-    const overId = over.id as string;
+    
+    // Pokud pustíš mimo Favorites zónu (nebo na zbytek menu, které už nemá dropzone)
+    if (!over) {
+      setFavorites((prev) => prev.filter(id => id !== activeId));
+      return;
+    }
 
-    // Pokud uživatel pustí nad favorites zónou nebo jakýmkoli prvkem v ní
-    if (overId === 'favorites-zone' || favorites.includes(overId)) {
-        if (!favorites.includes(activeId)) {
-            // Pár ještě není ve favorites -> Přidáme
-            setFavorites(prev => [...prev, activeId]);
-        } else {
-            // Pár už ve favorites je -> Měníme pořadí
-            const oldIndex = favorites.indexOf(activeId);
-            const newIndex = overId === 'favorites-zone' ? favorites.length - 1 : favorites.indexOf(overId);
-            setFavorites(items => arrayMove(items, oldIndex, newIndex));
+    const overId = over.id as string;
+    const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
+
+    if (isOverFavoritesZone) {
+      if (!favorites.includes(activeId)) {
+        // Zcela nový oblíbený pár
+        setFavorites((prev) => [...prev, activeId]);
+      } else {
+        // Přehození pořadí uvnitř oblíbených
+        const oldIndex = favorites.indexOf(activeId);
+        const newIndex = overId === 'favorites-zone' ? favorites.length - 1 : favorites.indexOf(overId);
+        if (oldIndex !== newIndex && newIndex !== -1) {
+          setFavorites((items) => arrayMove(items, oldIndex, newIndex));
         }
-    } 
-    // Pokud uživatel pustí do remove-zóny, nebo mimo favorites zónu
-    else if (overId === 'remove-zone' || (favorites.includes(activeId) && !favorites.includes(overId))) {
-        setFavorites(prev => prev.filter(id => id !== activeId));
+      }
     }
   };
 
-  // Droppable zóny s detekcí přejetí (isOver) pro vizuální efekt
+  // Droppable zóna (remove-zone je odstraněna, protože "vyhození" řešíme přes over = null)
   const { setNodeRef: setFavNodeRef, isOver: isFavOver } = useDroppable({ id: 'favorites-zone' });
-  const { setNodeRef: setRemoveNodeRef } = useDroppable({ id: 'remove-zone' });
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    // TADY JE TO KOUZLO: Filtrujeme zespoda ty páry, co už jsou nahoře ve Favorites!
+    // Filtrace párů, které JSOU už v oblíbených (zabrání duplicitě ID)
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -587,7 +588,7 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
           
           <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
@@ -609,7 +610,7 @@ export default function Home() {
               {/* OBLÍBENÉ - DROP ZÓNA */}
               <div 
                 ref={setFavNodeRef} 
-                className={`mb-8 mt-2 pb-4 pt-2 rounded-2xl transition-all duration-300 min-h-[100px] ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
+                className={`mb-8 mt-2 pb-4 pt-2 rounded-2xl transition-all duration-300 min-h-[120px] ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
               >
                 <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -635,7 +636,7 @@ export default function Home() {
               </div>
 
               {/* OSTATNÍ SEKCE A ODPADNÍ ZÓNA PRO SMAZÁNÍ Z OBLÍBENÝCH */}
-              <div ref={setRemoveNodeRef} className="min-h-[200px] pb-20">
+              <div className="min-h-[200px] pb-20">
                 {renderSidebarGroup('Major Liquidity', data.majors)}
                 {renderSidebarGroup('Cross Pairs', data.minors)}
                 {renderSidebarGroup('Precious Metals', data.metals)}
