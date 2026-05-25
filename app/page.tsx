@@ -433,7 +433,7 @@ export default function Home() {
 
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DND Handlers (Opravená logika)
+  // DND Handlers (Finální, neprůstřelná logika)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -447,45 +447,26 @@ export default function Home() {
     setActiveDragId(null);
     const { active, over } = event;
     
-    // Pokud uživatel pustí prvek úplně mimo, smazat z oblíbených
-    if (!over) {
-      setFavorites((prev) => prev.filter(id => id !== active.id));
-      return;
-    }
+    if (!over) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    const isCurrentlyFavorite = favorites.includes(activeId);
-    // Zóna favorites je identifikována buď IDčkem samotné zóny, nebo jiným oblíbeným prvkem v ní
-    const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
-
-    if (isOverFavoritesZone) {
-      if (isCurrentlyFavorite) {
-        // Přehození pořadí v rámci Favorites
-        const oldIndex = favorites.indexOf(activeId);
-        const newIndex = favorites.indexOf(overId);
-        if (oldIndex !== newIndex && newIndex !== -1) {
-          setFavorites((items) => arrayMove(items, oldIndex, newIndex));
-        }
-      } else {
-        // Přidání NOVÉHO páru do Favorites
-        if (overId === 'favorites-zone') {
-          setFavorites((items) => [...items, activeId]);
+    // Pokud uživatel pustí nad favorites zónou nebo jakýmkoli prvkem v ní
+    if (overId === 'favorites-zone' || favorites.includes(overId)) {
+        if (!favorites.includes(activeId)) {
+            // Pár ještě není ve favorites -> Přidáme
+            setFavorites(prev => [...prev, activeId]);
         } else {
-          const newIndex = favorites.indexOf(overId);
-          setFavorites((items) => {
-            const newFavs = [...items];
-            newFavs.splice(newIndex, 0, activeId);
-            return newFavs;
-          });
+            // Pár už ve favorites je -> Měníme pořadí
+            const oldIndex = favorites.indexOf(activeId);
+            const newIndex = overId === 'favorites-zone' ? favorites.length - 1 : favorites.indexOf(overId);
+            setFavorites(items => arrayMove(items, oldIndex, newIndex));
         }
-      }
-    } else {
-      // Puštění do "odpadní" zóny zpět dolů
-      if (isCurrentlyFavorite) {
-        setFavorites((items) => items.filter(id => id !== activeId));
-      }
+    } 
+    // Pokud uživatel pustí do remove-zóny, nebo mimo favorites zónu
+    else if (overId === 'remove-zone' || (favorites.includes(activeId) && !favorites.includes(overId))) {
+        setFavorites(prev => prev.filter(id => id !== activeId));
     }
   };
 
@@ -495,6 +476,8 @@ export default function Home() {
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
+    
+    // TADY JE TO KOUZLO: Filtrujeme zespoda ty páry, co už jsou nahoře ve Favorites!
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -626,14 +609,14 @@ export default function Home() {
               {/* OBLÍBENÉ - DROP ZÓNA */}
               <div 
                 ref={setFavNodeRef} 
-                className={`mb-8 mt-2 pb-4 pt-2 rounded-2xl transition-all duration-300 ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
+                className={`mb-8 mt-2 pb-4 pt-2 rounded-2xl transition-all duration-300 min-h-[100px] ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
               >
                 <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   FAVORITES
                 </div>
                 
-                <div className="px-3 min-h-[70px]">
+                <div className="px-3">
                   <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
                     <div className="space-y-1.5 min-h-[60px]">
                       {favorites.length === 0 ? (
