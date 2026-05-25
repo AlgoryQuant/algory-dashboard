@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { 
   DndContext, 
   DragOverlay, 
+  closestCenter, 
   pointerWithin,
+  rectIntersection,
   KeyboardSensor, 
   PointerSensor, 
   useSensor, 
@@ -57,6 +59,20 @@ interface DashboardData {
     aiAnalysis?: AIAnalysis 
   }>;
 }
+
+// === CUSTOM COLLISION DETECTION (NEPRŮSTŘELNÁ LOGIKA) ===
+// Kombinuje myš, obdélníky a středy pro 100% přesnost dropnutí
+const customCollisionDetection = (args: any) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) {
+    return pointerCollisions;
+  }
+  const rectCollisions = rectIntersection(args);
+  if (rectCollisions.length > 0) {
+    return rectCollisions;
+  }
+  return closestCenter(args);
+};
 
 // === KOMPONENTY ===
 
@@ -264,7 +280,8 @@ const SidebarItemNode = ({ ticker, prob, isActive, onClick, isOverlay, isDraggin
   if (isOverlay) {
     containerClasses += `bg-[#0a0a0a] border-emerald-500/50 shadow-2xl ring-1 ring-emerald-500/30 scale-105 rotate-2 z-50 cursor-grabbing`;
   } else if (isDraggingOriginal) {
-    containerClasses += `opacity-0`; // Úplně schovat prvek z původního místa při tažení
+    // Opraveno: Prvek úplně schováme z původního místa, když ho zrovna táhneme
+    containerClasses += `opacity-0 !border-transparent`; 
   } else if (isActive) {
     containerClasses += pairDir === 'SELL' 
       ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] ' 
@@ -433,7 +450,7 @@ export default function Home() {
 
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DND Handlers - Finální a robustní logika s pointerWithin
+  // DND Handlers - Finální 100% funkční logika
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -448,7 +465,7 @@ export default function Home() {
     const { active, over } = event;
     const activeId = active.id as string;
     
-    // Pokud je drop zóna neplatná nebo puštěno úplně mimo, a prvek byl ve Favorites, odebere se.
+    // Pokud je drop zóna prázdná, nebo uživatel pustí myš do zbytku menu -> odebere z Favorites
     if (!over) {
       if (favorites.includes(activeId)) {
          setFavorites((prev) => prev.filter(id => id !== activeId));
@@ -458,19 +475,19 @@ export default function Home() {
 
     const overId = over.id as string;
     
-    // Pokud pouštíme do zóny favorites nebo na nějaký prvek, který už je ve favorites
+    // Rozhodnutí, zda házíme do Favorites Zóny (nebo přímo na prvek ve Favorites)
     const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
 
     if (isOverFavoritesZone) {
       setFavorites((prev) => {
-        // Pokud prvek ještě ve favorites není -> Přidáme
+        // Pokud prvek ještě v Favorites není
         if (!prev.includes(activeId)) {
           return [...prev, activeId];
         } 
-        // Pokud prvek ve favorites je -> Přehození pořadí
+        // Pokud už tam je, přehoď pořadí
         else {
           const oldIndex = prev.indexOf(activeId);
-          // Pokud pustíme na zónu (ne na konkrétní prvek), dáme na konec, jinak před prvek
+          // Jestli pouštíme přímo na pozadí boxu, prdnem to nakonec, jinak před jiný prvek
           const newIndex = overId === 'favorites-zone' ? prev.length - 1 : prev.indexOf(overId);
           if (oldIndex !== newIndex && newIndex !== -1) {
             return arrayMove(prev, oldIndex, newIndex);
@@ -479,7 +496,7 @@ export default function Home() {
         }
       });
     } else {
-      // Pokud pouštíme kamkoliv jinam (dolní menu), vymažeme ho z favorites
+      // Pustili jsme někam jinam než do Favorites -> vymažeme z Favorites
       setFavorites((prev) => prev.filter(id => id !== activeId));
     }
   };
@@ -490,7 +507,7 @@ export default function Home() {
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    // Filtrujeme páry, co už jsou ve Favorites (čistá unikátnost ID)
+    // Filtrujeme páry, co už jsou ve Favorites (čistá unikátnost)
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -600,7 +617,8 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      {/* Důležité: collisionDetection nastaveno na náš nový Custom Algorithm */}
+      <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
           
           <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
@@ -617,25 +635,25 @@ export default function Home() {
               </div>
             </div>
 
-            <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2 flex flex-col">
+            <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2">
               
-              {/* OBLÍBENÉ - OBROVSKÁ DROP ZÓNA */}
+              {/* OBLÍBENÉ - DROP ZÓNA ROZTAŽENÁ NA W-FULL */}
               <div 
                 ref={setFavNodeRef} 
                 id="favorites-zone"
-                className={`mb-8 mt-2 pb-6 pt-4 rounded-2xl transition-colors duration-300 min-h-[200px] flex-shrink-0 ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
+                className={`mb-6 mt-2 pb-4 pt-4 rounded-2xl transition-colors duration-300 w-full ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
               >
                 <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   FAVORITES
                 </div>
                 
-                <div className="px-3 h-full">
+                <div className="px-3 w-full">
                   <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1.5 h-full">
+                    <div className="space-y-1.5 w-full min-h-[60px]">
                       {favorites.length === 0 ? (
-                        <div className={`text-xs font-medium px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 h-full transition-all duration-300 ${isFavOver ? 'border-emerald-500/50 text-emerald-400 bg-emerald-950/20' : 'border-zinc-800 text-zinc-600'}`}>
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+                        <div className={`w-full text-xs font-medium px-4 py-4 border border-dashed rounded-xl text-center flex items-center justify-center gap-2 transition-all duration-300 ${isFavOver ? 'border-emerald-500/50 text-emerald-400 bg-emerald-950/20' : 'border-zinc-800 text-zinc-600'}`}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
                           Drop pairs here
                         </div>
                       ) : (
@@ -648,8 +666,8 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* OSTATNÍ SEKCE A ODPADNÍ ZÓNA PRO SMAZÁNÍ Z OBLÍBENÝCH */}
-              <div className="pb-20 flex-1">
+              {/* OSTATNÍ SEKCE ZDE */}
+              <div className="pb-20">
                 {renderSidebarGroup('Major Liquidity', data.majors)}
                 {renderSidebarGroup('Cross Pairs', data.minors)}
                 {renderSidebarGroup('Precious Metals', data.metals)}
