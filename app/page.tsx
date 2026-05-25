@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { 
   DndContext, 
   DragOverlay, 
-  pointerWithin, 
+  closestCorners, 
   KeyboardSensor, 
   PointerSensor, 
   useSensor, 
@@ -323,7 +323,7 @@ export default function Home() {
     'Precious Metals': true
   });
 
-  // DnD & Favorites State
+  // DnD & Favorites State (Opravená inicializace proti race-condition)
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -337,7 +337,6 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
     const savedUser = localStorage.getItem('algory_user');
     if (savedUser) setIsAuthenticated(true);
 
@@ -350,6 +349,7 @@ export default function Home() {
         console.error(e);
       }
     }
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
@@ -433,7 +433,7 @@ export default function Home() {
 
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DND Handlers - Finální a robustní s pointerWithin
+  // DND Handlers (Absolutně neprůstřelné)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -448,37 +448,47 @@ export default function Home() {
     const { active, over } = event;
     const activeId = active.id as string;
     
-    // Pokud pustíš mimo Favorites zónu (nebo na zbytek menu, které už nemá dropzone)
+    // Pokud pustíš prvek do prázdna -> odebereme ho z favorites
     if (!over) {
       setFavorites((prev) => prev.filter(id => id !== activeId));
       return;
     }
 
     const overId = over.id as string;
+    
+    // Zóna Favorites se skládá z containeru ('favorites-zone') a prvků v něm
     const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
 
     if (isOverFavoritesZone) {
-      if (!favorites.includes(activeId)) {
-        // Zcela nový oblíbený pár
-        setFavorites((prev) => [...prev, activeId]);
-      } else {
-        // Přehození pořadí uvnitř oblíbených
-        const oldIndex = favorites.indexOf(activeId);
-        const newIndex = overId === 'favorites-zone' ? favorites.length - 1 : favorites.indexOf(overId);
-        if (oldIndex !== newIndex && newIndex !== -1) {
-          setFavorites((items) => arrayMove(items, oldIndex, newIndex));
+      setFavorites((prev) => {
+        // Pokud prvek ještě v oblíbených není, přidáme ho
+        if (!prev.includes(activeId)) {
+          return [...prev, activeId];
+        } 
+        // Pokud prvek v oblíbených už je, přesuneme jeho pořadí
+        else {
+          const oldIndex = prev.indexOf(activeId);
+          const newIndex = overId === 'favorites-zone' ? prev.length - 1 : prev.indexOf(overId);
+          if (oldIndex !== newIndex && newIndex !== -1) {
+            return arrayMove(prev, oldIndex, newIndex);
+          }
+          return prev;
         }
-      }
+      });
+    } else {
+      // Pustili jsme to nad odpadní zónou (bottom area) -> smažeme z Favorites
+      setFavorites((prev) => prev.filter(id => id !== activeId));
     }
   };
 
-  // Droppable zóna (remove-zone je odstraněna, protože "vyhození" řešíme přes over = null)
+  // Droppable zóny
   const { setNodeRef: setFavNodeRef, isOver: isFavOver } = useDroppable({ id: 'favorites-zone' });
+  const { setNodeRef: setRemoveNodeRef, isOver: isRemoveOver } = useDroppable({ id: 'remove-zone' });
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    // Filtrace párů, které JSOU už v oblíbených (zabrání duplicitě ID)
+    // Filtrujeme páry, co už jsou ve Favorites (čistá unikátnost)
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -588,7 +598,8 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      {/* Zde je upravené collisionDetection na closestCorners pro absolutní spolehlivost */}
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
           
           <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
@@ -610,7 +621,8 @@ export default function Home() {
               {/* OBLÍBENÉ - DROP ZÓNA */}
               <div 
                 ref={setFavNodeRef} 
-                className={`mb-8 mt-2 pb-4 pt-2 rounded-2xl transition-all duration-300 min-h-[120px] ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
+                id="favorites-zone"
+                className={`mb-8 mt-2 pb-6 pt-4 rounded-2xl transition-colors duration-300 min-h-[140px] ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
               >
                 <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -619,9 +631,9 @@ export default function Home() {
                 
                 <div className="px-3">
                   <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1.5 min-h-[60px]">
+                    <div className="space-y-1.5 min-h-[80px]">
                       {favorites.length === 0 ? (
-                        <div className={`text-xs font-medium px-4 py-4 border border-dashed rounded-xl text-center flex flex-col items-center gap-2 transition-all duration-300 ${isFavOver ? 'border-emerald-500/50 text-emerald-400' : 'border-zinc-800 text-zinc-600'}`}>
+                        <div className={`text-xs font-medium px-4 py-6 border border-dashed rounded-xl text-center flex flex-col items-center gap-2 transition-all duration-300 ${isFavOver ? 'border-emerald-500/50 text-emerald-400' : 'border-zinc-800 text-zinc-600'}`}>
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
                           Drop pairs here
                         </div>
@@ -636,7 +648,11 @@ export default function Home() {
               </div>
 
               {/* OSTATNÍ SEKCE A ODPADNÍ ZÓNA PRO SMAZÁNÍ Z OBLÍBENÝCH */}
-              <div className="min-h-[200px] pb-20">
+              <div 
+                ref={setRemoveNodeRef} 
+                id="remove-zone"
+                className={`min-h-[300px] pb-20 rounded-2xl transition-colors duration-300 ${isRemoveOver && activeDragId && favorites.includes(activeDragId) ? 'bg-red-950/20' : ''}`}
+              >
                 {renderSidebarGroup('Major Liquidity', data.majors)}
                 {renderSidebarGroup('Cross Pairs', data.minors)}
                 {renderSidebarGroup('Precious Metals', data.metals)}
@@ -877,7 +893,10 @@ export default function Home() {
           </main>
 
           {/* Ochrana a animace Drag & Drop v průběhu tažení */}
-          <DragOverlay>
+          <DragOverlay dropAnimation={{
+            duration: 250,
+            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+          }}>
             {activeDragId ? (
               <SidebarItemNode 
                 ticker={activeDragId} 
