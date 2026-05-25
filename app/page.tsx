@@ -142,7 +142,6 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
   );
 };
 
-
 export default function Home() {
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -224,12 +223,11 @@ export default function Home() {
     setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
-  // POMOCNÁ FUNKCE: Dynamické barvy pro různé weby se zprávami
   const getPublisherStyle = (publisher: string) => {
     const pub = publisher.toUpperCase();
     if (pub === 'FXSTREET') return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
     if (pub === 'INVESTING') return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
-    return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'; // FOREXLIVE a výchozí
+    return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
   };
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
@@ -339,6 +337,7 @@ export default function Home() {
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
   
   const clampedProb = Math.max(0, Math.min(1, activeProb));
+  // Vypočet úhlu pro CSS animaci
   const gaugeRotation = (clampedProb * 180) - 90; 
 
   let inferredDirection = "NEUTRAL";
@@ -352,6 +351,9 @@ export default function Home() {
       isTradeActive = true;
   }
 
+  // Barva ručičky budíku podle směru
+  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
+
   const getPageBackground = () => {
     if (inferredDirection === 'BUY') return 'from-emerald-950/20 via-[#0a0a0a] to-[#050505]';
     if (inferredDirection === 'SELL') return 'from-red-950/20 via-[#0a0a0a] to-[#050505]';
@@ -361,19 +363,10 @@ export default function Home() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
       <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
@@ -455,19 +448,58 @@ export default function Home() {
                       </div>
 
                       <div className="flex flex-col items-center gap-4">
-                        <div className="flex flex-col items-center justify-center relative w-44 h-24">
+                        {/* --- NOVÝ LUXUSNÍ VIZUÁLNÍ BUDÍK --- */}
+                        <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
                           <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
-                            <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="currentColor" strokeWidth="12" className="text-red-500/10" strokeLinecap="round" />
-                            <path d="M 100 20 A 80 80 0 0 1 180 100" fill="none" stroke="currentColor" strokeWidth="12" className="text-emerald-500/10" strokeLinecap="round" />
-                            <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="currentColor" strokeWidth="12" className="text-red-500/80" strokeLinecap="round" strokeDasharray="125" strokeDashoffset="0" />
-                            <path d="M 100 20 A 80 80 0 0 1 180 100" fill="none" stroke="currentColor" strokeWidth="12" className="text-emerald-500/80" strokeLinecap="round" strokeDasharray="125" strokeDashoffset="0" />
-                            <circle cx="100" cy="100" r="8" fill="#18181b" stroke="#3f3f46" strokeWidth="3" />
-                            <g transform={`rotate(${gaugeRotation} 100 100)`} className="transition-transform duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
-                               <line x1="100" y1="100" x2="100" y2="25" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" className="drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-                               <polygon points="96,100 104,100 100,20" fill="#ffffff" />
+                            <defs>
+                              {/* Definice záře pro gradient ručičky */}
+                              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                              </filter>
+                            </defs>
+
+                            {/* Hlavní barevné oblouky (červená -> zelená) */}
+                            <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                            <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                            
+                            {/* Stupnice (11 malých barevných čárek) */}
+                            {[...Array(11)].map((_, i) => {
+                                const angle = -90 + (i * 18);
+                                const isMain = i === 0 || i === 5 || i === 10;
+                                const tickColor = i < 5 ? "#ef4444" : i > 5 ? "#10b981" : "#a1a1aa";
+                                return (
+                                    <line
+                                        key={i}
+                                        x1="100" y1={isMain ? "25" : "30"}
+                                        x2="100" y2="38"
+                                        stroke={tickColor}
+                                        strokeWidth={isMain ? "2" : "1"}
+                                        strokeOpacity="0.6"
+                                        style={{ transform: `rotate(${angle}deg)`, transformOrigin: '100px 100px' }}
+                                    />
+                                );
+                            })}
+
+                            {/* Popisky SELL a BUY */}
+                            <text x="25" y="115" fontSize="8" fill="#f87171" fontWeight="bold" textAnchor="middle" letterSpacing="1">SELL</text>
+                            <text x="175" y="115" fontSize="8" fill="#34d399" fontWeight="bold" textAnchor="middle" letterSpacing="1">BUY</text>
+
+                            {/* Animovaná Ručička (OPRAVENO: Nyní rotuje přes CSS style pro dokonale plynulý chod) */}
+                            <g 
+                              style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} 
+                              className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                            >
+                               {/* Zářící stín jehly */}
+                               <line x1="100" y1="100" x2="100" y2="35" stroke={needleColor} strokeWidth="3" strokeLinecap="round" filter="url(#glow)" strokeOpacity="0.8" />
+                               {/* Fyzická jehla */}
+                               <polygon points="97,100 103,100 100,28" fill="#ffffff" />
+                               {/* Středový čep (šroub) */}
+                               <circle cx="100" cy="100" r="6" fill="#050505" stroke={needleColor} strokeWidth="2.5" />
                             </g>
                           </svg>
-                          <div className={`absolute bottom-[-10px] text-2xl font-black tracking-tighter ${
+                          
+                          <div className={`absolute bottom-[-5px] text-2xl font-black tracking-tighter ${
                               inferredDirection === 'BUY' ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)]' :
                               inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' :
                               'text-white/50'
@@ -562,12 +594,9 @@ export default function Home() {
                               <span className="text-[9px] text-white/50 font-medium bg-black/40 px-2 py-1 rounded-md border border-white/5">
                                 {item.time}
                               </span>
-                              
-                              {/* DYNAMICKÁ BARVA PODLE ZDROJE ZPRÁV */}
                               <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border ${getPublisherStyle(item.publisher)}`}>
                                 {item.publisher}
                               </span>
-
                             </div>
                             <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors">
                               {item.title}
