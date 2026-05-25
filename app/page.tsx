@@ -5,16 +5,12 @@ import {
   DndContext, 
   DragOverlay, 
   closestCenter, 
-  pointerWithin,
-  rectIntersection,
   KeyboardSensor, 
   PointerSensor, 
   useSensor, 
   useSensors, 
   DragStartEvent, 
-  DragEndEvent,
-  useDroppable,
-  useDraggable
+  DragEndEvent
 } from '@dnd-kit/core';
 import { 
   arrayMove, 
@@ -59,20 +55,6 @@ interface DashboardData {
     aiAnalysis?: AIAnalysis 
   }>;
 }
-
-// === CUSTOM COLLISION DETECTION (NEPRŮSTŘELNÁ LOGIKA) ===
-// Kombinuje myš, obdélníky a středy pro 100% přesnost dropnutí
-const customCollisionDetection = (args: any) => {
-  const pointerCollisions = pointerWithin(args);
-  if (pointerCollisions.length > 0) {
-    return pointerCollisions;
-  }
-  const rectCollisions = rectIntersection(args);
-  if (rectCollisions.length > 0) {
-    return rectCollisions;
-  }
-  return closestCenter(args);
-};
 
 // === KOMPONENTY ===
 
@@ -250,13 +232,15 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
   );
 };
 
-// === DND KOMPONENTY PRO SIDEBAR ===
+// === SIDEBAR ITEM KOMPONENTA (Nyní s hvězdičkou) ===
 
 interface SidebarItemProps {
   ticker: string;
   prob: number;
   isActive: boolean;
+  isFavorite: boolean;
   onClick: () => void;
+  onToggleFavorite: (ticker: string) => void;
   isOverlay?: boolean;
   isDraggingOriginal?: boolean;
   dragListeners?: any;
@@ -265,7 +249,7 @@ interface SidebarItemProps {
   style?: React.CSSProperties;
 }
 
-const SidebarItemNode = ({ ticker, prob, isActive, onClick, isOverlay, isDraggingOriginal, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
+const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggleFavorite, isOverlay, isDraggingOriginal, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
   const displayTicker = ticker === "XAUUSD" ? "GOLD" : ticker;
   let pairDir = "NEUTRAL";
   if (prob >= 0.52) pairDir = "BUY";
@@ -275,53 +259,72 @@ const SidebarItemNode = ({ ticker, prob, isActive, onClick, isOverlay, isDraggin
   if (pairDir === "BUY") probColor = isActive ? "text-emerald-400" : "text-emerald-500/80";
   if (pairDir === "SELL") probColor = isActive ? "text-red-400" : "text-red-500/80";
 
-  let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border `;
+  let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
   
   if (isOverlay) {
-    containerClasses += `bg-[#0a0a0a] border-emerald-500/50 shadow-2xl ring-1 ring-emerald-500/30 scale-105 rotate-2 z-50 cursor-grabbing`;
+    containerClasses += `bg-[#0a0a0a] border-emerald-500/50 shadow-2xl ring-1 ring-emerald-500/30 scale-105 rotate-2 z-50`;
   } else if (isDraggingOriginal) {
-    // Opraveno: Prvek úplně schováme z původního místa, když ho zrovna táhneme
     containerClasses += `opacity-0 !border-transparent`; 
   } else if (isActive) {
     containerClasses += pairDir === 'SELL' 
       ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] ' 
       : 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.05)] ';
   } else {
-    containerClasses += 'border-transparent hover:bg-white/5 cursor-pointer';
+    containerClasses += 'border-transparent hover:bg-white/5';
   }
 
   return (
     <div ref={setNodeRef} style={style} className={containerClasses} onClick={!isOverlay && !isDraggingOriginal ? onClick : undefined}>
       <div className="flex items-center gap-2">
-        <div 
-          {...dragListeners} 
-          {...dragAttributes}
-          className={`cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors touch-none ${isOverlay ? 'text-emerald-500' : 'opacity-0 group-hover:opacity-100'}`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
-          </svg>
-        </div>
+        {/* Zobrazujeme úchyt (Grip) POUZE pokud je položka v oblíbených (pro řazení) */}
+        {isFavorite ? (
+          <div 
+            {...dragListeners} 
+            {...dragAttributes}
+            onClick={(e) => e.stopPropagation()} // Zabraňuje prokliku grafu při tažení
+            className={`cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors touch-none ${isOverlay ? 'text-emerald-500' : 'opacity-0 group-hover:opacity-100'}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
+            </svg>
+          </div>
+        ) : (
+          <div className="w-[14px]"></div> // Spacer aby text nelítal
+        )}
+        
         <span className={`font-semibold tracking-wide ${isActive || isOverlay ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`}>
           {displayTicker}
         </span>
       </div>
-      <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>
-        {(prob * 100).toFixed(0)}%
-      </span>
+      
+      <div className="flex items-center gap-3">
+        <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>
+          {(prob * 100).toFixed(0)}%
+        </span>
+        
+        {/* Tlačítko Hvězdičky */}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation(); // Zabraňuje překliknutí grafu
+            onToggleFavorite(ticker);
+          }}
+          className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-emerald-500 hover:text-red-400' : 'text-zinc-600 hover:text-emerald-500'}`}
+          title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+        >
+          <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 };
 
+// Komponenta pro Favorites s drag and drop (pouze na řazení)
 const SortableSidebarItem = (props: Omit<SidebarItemProps, 'dragListeners' | 'dragAttributes' | 'setNodeRef' | 'style' | 'isDraggingOriginal'>) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.ticker });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return <SidebarItemNode {...props} dragListeners={listeners} dragAttributes={attributes} setNodeRef={setNodeRef} style={style} isDraggingOriginal={isDragging} />;
-};
-
-const DraggableSidebarItem = (props: Omit<SidebarItemProps, 'dragListeners' | 'dragAttributes' | 'setNodeRef' | 'style' | 'isDraggingOriginal'>) => {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: props.ticker });
-  return <SidebarItemNode {...props} dragListeners={listeners} dragAttributes={attributes} setNodeRef={setNodeRef} isDraggingOriginal={isDragging} />;
 };
 
 // === HLAVNÍ APLIKACE ===
@@ -340,7 +343,6 @@ export default function Home() {
     'Precious Metals': true
   });
 
-  // DnD & Favorites State
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -450,7 +452,15 @@ export default function Home() {
 
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DND Handlers - Finální 100% funkční logika
+  // FUNKCE PRO HVĚZDIČKU (Přidání/Odebrání)
+  const toggleFavorite = (ticker: string) => {
+    setFavorites(prev => {
+      if (prev.includes(ticker)) return prev.filter(t => t !== ticker);
+      return [...prev, ticker];
+    });
+  };
+
+  // DND Handlers POUZE pro řazení uvnitř Favorites!
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -463,51 +473,18 @@ export default function Home() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragId(null);
     const { active, over } = event;
-    const activeId = active.id as string;
-    
-    // Pokud je drop zóna prázdná, nebo uživatel pustí myš do zbytku menu -> odebere z Favorites
-    if (!over) {
-      if (favorites.includes(activeId)) {
-         setFavorites((prev) => prev.filter(id => id !== activeId));
+    if (over && active.id !== over.id) {
+      const oldIndex = favorites.indexOf(active.id as string);
+      const newIndex = favorites.indexOf(over.id as string);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        setFavorites((items) => arrayMove(items, oldIndex, newIndex));
       }
-      return;
-    }
-
-    const overId = over.id as string;
-    
-    // Rozhodnutí, zda házíme do Favorites Zóny (nebo přímo na prvek ve Favorites)
-    const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
-
-    if (isOverFavoritesZone) {
-      setFavorites((prev) => {
-        // Pokud prvek ještě v Favorites není
-        if (!prev.includes(activeId)) {
-          return [...prev, activeId];
-        } 
-        // Pokud už tam je, přehoď pořadí
-        else {
-          const oldIndex = prev.indexOf(activeId);
-          // Jestli pouštíme přímo na pozadí boxu, prdnem to nakonec, jinak před jiný prvek
-          const newIndex = overId === 'favorites-zone' ? prev.length - 1 : prev.indexOf(overId);
-          if (oldIndex !== newIndex && newIndex !== -1) {
-            return arrayMove(prev, oldIndex, newIndex);
-          }
-          return prev;
-        }
-      });
-    } else {
-      // Pustili jsme někam jinam než do Favorites -> vymažeme z Favorites
-      setFavorites((prev) => prev.filter(id => id !== activeId));
     }
   };
-
-  // Droppable zóny
-  const { setNodeRef: setFavNodeRef, isOver: isFavOver } = useDroppable({ id: 'favorites-zone' });
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    // Filtrujeme páry, co už jsou ve Favorites (čistá unikátnost)
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -527,8 +504,17 @@ export default function Home() {
         </button>
 
         <div className={`space-y-1.5 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          {/* Tady už renderujeme jen normální SidebarItemNode, ne Draggable! To šetří paměť. */}
           {availablePairs.map(([ticker, prob]) => (
-            <DraggableSidebarItem key={ticker} ticker={ticker} prob={prob} isActive={activePair === ticker} onClick={() => setActivePair(ticker)} />
+            <SidebarItemNode 
+              key={ticker} 
+              ticker={ticker} 
+              prob={prob} 
+              isActive={activePair === ticker} 
+              isFavorite={false}
+              onClick={() => setActivePair(ticker)} 
+              onToggleFavorite={toggleFavorite}
+            />
           ))}
         </div>
       </div>
@@ -617,32 +603,27 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      {/* Důležité: collisionDetection nastaveno na náš nový Custom Algorithm */}
-      <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
-          
-          <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
-            <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4 transition-all hover:opacity-80" onClick={() => setShowLanding(true)}>
-              <h2 className="text-3xl font-semibold tracking-tighter text-white">
-                Algory<span className="text-emerald-500">.</span>
-              </h2>
-              <div className="flex items-center gap-3 mt-4">
-                <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-                </span>
-                <p className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase">Engine Online</p>
-              </div>
+      <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
+        
+        <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
+          <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4 transition-all hover:opacity-80" onClick={() => setShowLanding(true)}>
+            <h2 className="text-3xl font-semibold tracking-tighter text-white">
+              Algory<span className="text-emerald-500">.</span>
+            </h2>
+            <div className="flex items-center gap-3 mt-4">
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
+              </span>
+              <p className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase">Engine Online</p>
             </div>
+          </div>
 
-            <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2">
-              
-              {/* OBLÍBENÉ - DROP ZÓNA ROZTAŽENÁ NA W-FULL */}
-              <div 
-                ref={setFavNodeRef} 
-                id="favorites-zone"
-                className={`mb-6 mt-2 pb-4 pt-4 rounded-2xl transition-colors duration-300 w-full ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
-              >
+          <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2 flex flex-col">
+            
+            {/* OBLÍBENÉ - DND Context pouze zde pro řazení */}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              <div className={`mb-6 mt-2 pb-6 pt-4 rounded-2xl transition-colors duration-300 w-full`}>
                 <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   FAVORITES
@@ -652,278 +633,284 @@ export default function Home() {
                   <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
                     <div className="space-y-1.5 w-full min-h-[60px]">
                       {favorites.length === 0 ? (
-                        <div className={`w-full text-xs font-medium px-4 py-4 border border-dashed rounded-xl text-center flex items-center justify-center gap-2 transition-all duration-300 ${isFavOver ? 'border-emerald-500/50 text-emerald-400 bg-emerald-950/20' : 'border-zinc-800 text-zinc-600'}`}>
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-                          Drop pairs here
+                        <div className={`w-full text-xs font-medium px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 h-full transition-all duration-300 border-zinc-800 text-zinc-600`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                          Click the star to pin pairs
                         </div>
                       ) : (
                         favorites.map(ticker => (
-                          <SortableSidebarItem key={ticker} ticker={ticker} prob={getProbForTicker(ticker)} isActive={activePair === ticker} onClick={() => setActivePair(ticker)} />
+                          <SortableSidebarItem 
+                            key={ticker} 
+                            ticker={ticker} 
+                            prob={getProbForTicker(ticker)} 
+                            isActive={activePair === ticker} 
+                            isFavorite={true}
+                            onClick={() => setActivePair(ticker)} 
+                            onToggleFavorite={toggleFavorite}
+                          />
                         ))
                       )}
                     </div>
                   </SortableContext>
                 </div>
               </div>
-
-              {/* OSTATNÍ SEKCE ZDE */}
-              <div className="pb-20">
-                {renderSidebarGroup('Major Liquidity', data.majors)}
-                {renderSidebarGroup('Cross Pairs', data.minors)}
-                {renderSidebarGroup('Precious Metals', data.metals)}
-              </div>
-
-            </nav>
-          </aside>
-
-          <main className={`flex-1 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
-            <div className="max-w-[1400px] mx-auto">
               
-              <MarketMonitor lastRefresh={lastRefresh} />
+              <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
+                {activeDragId ? (
+                  <SidebarItemNode 
+                    ticker={activeDragId} 
+                    prob={getProbForTicker(activeDragId)} 
+                    isActive={activePair === activeDragId} 
+                    isFavorite={true}
+                    onClick={() => {}} 
+                    onToggleFavorite={() => {}}
+                    isOverlay 
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
-              {loading && !data.majors ? (
-                <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
-                  <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <span className="text-sm text-zinc-400 font-medium tracking-widest uppercase">Connecting to Cloud Engine...</span>
-                </div>
-              ) : error && !data.majors ? (
-                <div className="p-10 mt-10 text-center text-red-400 font-medium border border-red-900/40 bg-red-950/20 rounded-[2rem]">
-                  {error}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
+            {/* OSTATNÍ SEKCE ZDE */}
+            <div className="pb-20 flex-1">
+              {renderSidebarGroup('Major Liquidity', data.majors)}
+              {renderSidebarGroup('Cross Pairs', data.minors)}
+              {renderSidebarGroup('Precious Metals', data.metals)}
+            </div>
+
+          </nav>
+        </aside>
+
+        <main className={`flex-1 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
+          <div className="max-w-[1400px] mx-auto">
+            
+            <MarketMonitor lastRefresh={lastRefresh} />
+
+            {loading && !data.majors ? (
+              <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
+                <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
+                <span className="text-sm text-zinc-400 font-medium tracking-widest uppercase">Connecting to Cloud Engine...</span>
+              </div>
+            ) : error && !data.majors ? (
+              <div className="p-10 mt-10 text-center text-red-400 font-medium border border-red-900/40 bg-red-950/20 rounded-[2rem]">
+                {error}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
+                
+                <div className="xl:col-span-2 flex flex-col space-y-10">
                   
-                  <div className="xl:col-span-2 flex flex-col space-y-10">
+                  <TradingChart symbol={activePair} />
+                  
+                  <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? 'border-emerald-500/20' : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 ${getGlowColor()}`}>
                     
-                    <TradingChart symbol={activePair} />
-                    
-                    <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? 'border-emerald-500/20' : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 ${getGlowColor()}`}>
-                      
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
-                        <div className="w-full">
-                          <div className="flex items-center gap-4 mb-4">
-                            <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
+                      <div className="w-full">
+                        <div className="flex items-center gap-4 mb-4">
+                          <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
+                          
+                          {isTradeActive && (
+                            <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
+                              inferredDirection === 'BUY' 
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10' 
+                                : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
+                            }`}>
+                              {inferredDirection} PENDING
+                            </span>
+                          )}
+
+                          {activeParams?.KeyDriver && (
+                            <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">
+                              {activeParams.KeyDriver}
+                              <InfoTooltip term="Key Driver" info="The primary market catalyst currently affecting this asset's structure and volatility." />
+                            </span>
+                          )}
+                        </div>
+                        
+                        {activeParams && (
+                          <div className="flex flex-wrap items-center gap-3 mt-4">
+                            <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                              <span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span>
+                              <span className="text-white font-bold">{activeParams.SL}</span>
+                            </span>
+                            <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                              <span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span>
+                              <span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
+                            </span>
                             
-                            {isTradeActive && (
-                              <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
-                                inferredDirection === 'BUY' 
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10' 
-                                  : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
-                              }`}>
-                                {inferredDirection} PENDING
+                            {activeParams.RRR && (
+                              <span className="px-3 py-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 font-mono text-[11px] shadow-inner">
+                                <span className="text-blue-500/70 mr-2 uppercase tracking-wider font-bold">RRR</span>
+                                <span className="text-blue-400 font-bold">1:{activeParams.RRR}</span>
                               </span>
                             )}
 
-                            {activeParams?.KeyDriver && (
-                              <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">
-                                {activeParams.KeyDriver}
-                                <InfoTooltip term="Key Driver" info="The primary market catalyst currently affecting this asset's structure and volatility." />
-                              </span>
-                            )}
+                            <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                              <span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span>
+                              <span className="text-white font-bold">{activeParams.BE}</span>
+                            </span>
+                            <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                              <span className="text-zinc-500 mr-2 uppercase tracking-wider">Spread</span>
+                              <span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
+                            </span>
                           </div>
-                          
-                          {activeParams && (
-                            <div className="flex flex-wrap items-center gap-3 mt-4">
-                              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                <span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span>
-                                <span className="text-white font-bold">{activeParams.SL}</span>
-                              </span>
-                              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                <span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span>
-                                <span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
-                              </span>
-                              
-                              {activeParams.RRR && (
-                                <span className="px-3 py-1.5 bg-blue-500/10 rounded-lg border border-blue-500/20 font-mono text-[11px] shadow-inner">
-                                  <span className="text-blue-500/70 mr-2 uppercase tracking-wider font-bold">RRR</span>
-                                  <span className="text-blue-400 font-bold">1:{activeParams.RRR}</span>
-                                </span>
-                              )}
+                        )}
+                        
+                        {activeParams && <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />}
 
-                              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                <span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span>
-                                <span className="text-white font-bold">{activeParams.BE}</span>
-                              </span>
-                              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                <span className="text-zinc-500 mr-2 uppercase tracking-wider">Spread</span>
-                                <span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
-                              </span>
-                            </div>
-                          )}
-                          
-                          {activeParams && <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />}
-
-                        </div>
-
-                        <div className="flex flex-col items-center gap-6 flex-shrink-0">
-                          <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
-                            <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
-                              <defs>
-                                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                  <feGaussianBlur stdDeviation="3" result="blur" />
-                                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                </filter>
-                              </defs>
-                              <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                              <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                              
-                              {[...Array(11)].map((_, i) => {
-                                  const angle = -90 + (i * 18);
-                                  const isMain = i === 0 || i === 5 || i === 10;
-                                  const tickColor = i < 5 ? "#ef4444" : i > 5 ? "#10b981" : "#a1a1aa";
-                                  return (
-                                      <line key={i} x1="100" y1={isMain ? "25" : "30"} x2="100" y2="38" stroke={tickColor} strokeWidth={isMain ? "2" : "1"} strokeOpacity="0.6" style={{ transform: `rotate(${angle}deg)`, transformOrigin: '100px 100px' }} />
-                                  );
-                              })}
-                              <text x="25" y="115" fontSize="9" fill="#f87171" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">SELL</text>
-                              <text x="175" y="115" fontSize="9" fill="#34d399" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">BUY</text>
-
-                              <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
-                                 <line x1="100" y1="100" x2="100" y2="35" stroke={needleColor} strokeWidth="3.5" strokeLinecap="round" filter="url(#glow)" strokeOpacity="0.9" />
-                                 <polygon points="97,100 103,100 100,28" fill="#ffffff" />
-                                 <circle cx="100" cy="100" r="7" fill="#050505" stroke={needleColor} strokeWidth="2.5" />
-                              </g>
-                            </svg>
-                            
-                            <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${
-                                inferredDirection === 'BUY' ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)]' :
-                                inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' :
-                                'text-zinc-500'
-                            }`}>
-                              {(activeProb * 100).toFixed(1)}%
-                            </div>
-                          </div>
-
-                          {isTradeActive ? (
-                            <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${
-                                inferredDirection === 'BUY'
-                                ? 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(16,185,129,0.2)]'
-                                : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]'
-                            }`}>
-                                Execute {inferredDirection}
-                            </button>
-                          ) : (
-                            <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
-                                Low Conviction
-                            </button>
-                          )}
-                        </div>
                       </div>
 
-                      {activeParams?.aiAnalysis ? (
-                        <div className="grid md:grid-cols-2 gap-8">
-                          <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
-                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
-                              <span className="flex items-center">
-                                Previous: {activeParams.aiAnalysis.prev_session}
-                                {activeParams.aiAnalysis.prev_session.includes("Asian") && 
-                                  <InfoTooltip term="Asian Range" info="The consolidation period typically occurring during the Tokyo/Sydney trading hours, often used to determine the daily bias breakout." />
-                                }
-                              </span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
-                            </div>
-                            <p className="text-sm text-white/90 leading-loose font-medium">
-                              {activeParams.aiAnalysis.evaluation}
-                            </p>
-                          </div>
+                      <div className="flex flex-col items-center gap-6 flex-shrink-0">
+                        <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
+                          <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
+                            <defs>
+                              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                              </filter>
+                            </defs>
+                            <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                            <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                            
+                            {[...Array(11)].map((_, i) => {
+                                const angle = -90 + (i * 18);
+                                const isMain = i === 0 || i === 5 || i === 10;
+                                const tickColor = i < 5 ? "#ef4444" : i > 5 ? "#10b981" : "#a1a1aa";
+                                return (
+                                    <line key={i} x1="100" y1={isMain ? "25" : "30"} x2="100" y2="38" stroke={tickColor} strokeWidth={isMain ? "2" : "1"} strokeOpacity="0.6" style={{ transform: `rotate(${angle}deg)`, transformOrigin: '100px 100px' }} />
+                                );
+                            })}
+                            <text x="25" y="115" fontSize="9" fill="#f87171" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">SELL</text>
+                            <text x="175" y="115" fontSize="9" fill="#34d399" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">BUY</text>
+
+                            <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                               <line x1="100" y1="100" x2="100" y2="35" stroke={needleColor} strokeWidth="3.5" strokeLinecap="round" filter="url(#glow)" strokeOpacity="0.9" />
+                               <polygon points="97,100 103,100 100,28" fill="#ffffff" />
+                               <circle cx="100" cy="100" r="7" fill="#050505" stroke={needleColor} strokeWidth="2.5" />
+                            </g>
+                          </svg>
                           
-                          <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
-                               inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
-                               inferredDirection === 'BUY' ? 'bg-emerald-950/20 border-emerald-500/20' : 
-                               'bg-black/40 border-white/5'
+                          <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${
+                              inferredDirection === 'BUY' ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)]' :
+                              inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' :
+                              'text-zinc-500'
                           }`}>
-                            <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between transition-colors duration-1000 ${
-                                inferredDirection === 'SELL' ? 'text-red-400/80' : 
-                                inferredDirection === 'BUY' ? 'text-emerald-400/80' : 
-                                'text-zinc-500'
-                            }`}>
-                              <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
-                              <span className="relative flex h-2 w-2">
-                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                                    inferredDirection === 'SELL' ? 'bg-red-400' : 
-                                    inferredDirection === 'BUY' ? 'bg-emerald-400' : 'bg-zinc-600'
-                                }`}></span>
-                                <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                                    inferredDirection === 'SELL' ? 'bg-red-500' : 
-                                    inferredDirection === 'BUY' ? 'bg-emerald-500' : 'bg-zinc-500'
-                                }`}></span>
-                              </span>
-                            </div>
-                            <p className={`text-sm leading-loose font-medium relative z-10 transition-colors duration-1000 ${
-                                inferredDirection === 'SELL' ? 'text-white' : 
-                                inferredDirection === 'BUY' ? 'text-white' : 
-                                'text-white/80'
-                            }`}>
-                              {activeParams.aiAnalysis.prediction}
-                            </p>
+                            {(activeProb * 100).toFixed(1)}%
                           </div>
                         </div>
+
+                        {isTradeActive ? (
+                          <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${
+                              inferredDirection === 'BUY'
+                              ? 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(16,185,129,0.2)]'
+                              : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]'
+                          }`}>
+                              Execute {inferredDirection}
+                          </button>
+                        ) : (
+                          <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
+                              Low Conviction
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {activeParams?.aiAnalysis ? (
+                      <div className="grid md:grid-cols-2 gap-8">
+                        <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
+                          <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
+                            <span className="flex items-center">
+                              Previous: {activeParams.aiAnalysis.prev_session}
+                              {activeParams.aiAnalysis.prev_session.includes("Asian") && 
+                                <InfoTooltip term="Asian Range" info="The consolidation period typically occurring during the Tokyo/Sydney trading hours, often used to determine the daily bias breakout." />
+                              }
+                            </span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                          </div>
+                          <p className="text-sm text-white/90 leading-loose font-medium">
+                            {activeParams.aiAnalysis.evaluation}
+                          </p>
+                        </div>
+                        
+                        <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
+                             inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
+                             inferredDirection === 'BUY' ? 'bg-emerald-950/20 border-emerald-500/20' : 
+                             'bg-black/40 border-white/5'
+                        }`}>
+                          <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between transition-colors duration-1000 ${
+                              inferredDirection === 'SELL' ? 'text-red-400/80' : 
+                              inferredDirection === 'BUY' ? 'text-emerald-400/80' : 
+                              'text-zinc-500'
+                          }`}>
+                            <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
+                            <span className="relative flex h-2 w-2">
+                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                                  inferredDirection === 'SELL' ? 'bg-red-400' : 
+                                  inferredDirection === 'BUY' ? 'bg-emerald-400' : 'bg-zinc-600'
+                              }`}></span>
+                              <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                                  inferredDirection === 'SELL' ? 'bg-red-500' : 
+                                  inferredDirection === 'BUY' ? 'bg-emerald-500' : 'bg-zinc-500'
+                              }`}></span>
+                            </span>
+                          </div>
+                          <p className={`text-sm leading-loose font-medium relative z-10 transition-colors duration-1000 ${
+                              inferredDirection === 'SELL' ? 'text-white' : 
+                              inferredDirection === 'BUY' ? 'text-white' : 
+                              'text-white/80'
+                          }`}>
+                            {activeParams.aiAnalysis.prediction}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
+                        Processing AI Sentiment...
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="xl:col-span-1">
+                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden sticky top-8 shadow-2xl transition-all duration-300">
+                    <div className="px-6 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                      <div className="font-bold tracking-widest text-white uppercase text-sm flex items-center gap-2">
+                        Live Market News
+                        <InfoTooltip term="NLP Sentiment" info="Colored dots indicate the AI-analyzed sentiment of the headline. Green = Bullish, Red = Bearish." />
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col p-4">
+                      {data.news && data.news.length > 0 ? (
+                        data.news.map((item, idx) => (
+                          <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className={`w-2 h-2 rounded-full ${getSentimentDotColor(item.sentiment)}`} title={`Sentiment: ${item.sentiment}`} />
+                              <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+                                {item.time}
+                              </span>
+                              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${getPublisherStyle(item.publisher)}`}>
+                                {item.publisher}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors mt-1">
+                              {item.title}
+                            </h4>
+                          </a>
+                        ))
                       ) : (
                         <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
-                          Processing AI Sentiment...
+                          Awaiting market catalysts...
                         </div>
                       )}
                     </div>
                   </div>
-
-                  <div className="xl:col-span-1">
-                    <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden sticky top-8 shadow-2xl transition-all duration-300">
-                      <div className="px-6 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                        <div className="font-bold tracking-widest text-white uppercase text-sm flex items-center gap-2">
-                          Live Market News
-                          <InfoTooltip term="NLP Sentiment" info="Colored dots indicate the AI-analyzed sentiment of the headline. Green = Bullish, Red = Bearish." />
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col p-4">
-                        {data.news && data.news.length > 0 ? (
-                          data.news.map((item, idx) => (
-                            <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group">
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className={`w-2 h-2 rounded-full ${getSentimentDotColor(item.sentiment)}`} title={`Sentiment: ${item.sentiment}`} />
-                                <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-                                  {item.time}
-                                </span>
-                                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${getPublisherStyle(item.publisher)}`}>
-                                  {item.publisher}
-                                </span>
-                              </div>
-                              <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors mt-1">
-                                {item.title}
-                              </h4>
-                            </a>
-                          ))
-                        ) : (
-                          <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
-                            Awaiting market catalysts...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
                 </div>
-              )}
-            </div>
-          </main>
-
-          <DragOverlay dropAnimation={{
-            duration: 250,
-            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-          }}>
-            {activeDragId ? (
-              <SidebarItemNode 
-                ticker={activeDragId} 
-                prob={getProbForTicker(activeDragId)} 
-                isActive={activePair === activeDragId} 
-                onClick={() => {}} 
-                isOverlay 
-              />
-            ) : null}
-          </DragOverlay>
-
-        </div>
-      </DndContext>
+                
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
     </>
   );
 }
