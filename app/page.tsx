@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { 
   DndContext, 
   DragOverlay, 
-  closestCorners, 
+  closestCorners,
+  pointerWithin,
   KeyboardSensor, 
   PointerSensor, 
   useSensor, 
@@ -57,6 +58,16 @@ interface DashboardData {
     aiAnalysis?: AIAnalysis 
   }>;
 }
+
+// === CUSTOM COLLISION DETECTION ===
+// Nejprve zkontroluje, kde fyzicky je kurzor (pointerWithin).
+// Pokud kurzor je uvnitř favorites-zone, vrátí ji jako cíl – bez ohledu na geometrii.
+// Fallback na closestCorners pro řazení uvnitř favorites.
+const customCollisionDetection = (args: any) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+  return closestCorners(args);
+};
 
 // === KOMPONENTY ===
 
@@ -323,7 +334,6 @@ export default function Home() {
     'Precious Metals': true
   });
 
-  // DnD & Favorites State (Opravená inicializace proti race-condition)
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -433,7 +443,6 @@ export default function Home() {
 
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DND Handlers (Absolutně neprůstřelné)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -448,7 +457,6 @@ export default function Home() {
     const { active, over } = event;
     const activeId = active.id as string;
     
-    // Pokud pustíš prvek do prázdna -> odebereme ho z favorites
     if (!over) {
       setFavorites((prev) => prev.filter(id => id !== activeId));
       return;
@@ -456,17 +464,13 @@ export default function Home() {
 
     const overId = over.id as string;
     
-    // Zóna Favorites se skládá z containeru ('favorites-zone') a prvků v něm
     const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
 
     if (isOverFavoritesZone) {
       setFavorites((prev) => {
-        // Pokud prvek ještě v oblíbených není, přidáme ho
         if (!prev.includes(activeId)) {
           return [...prev, activeId];
-        } 
-        // Pokud prvek v oblíbených už je, přesuneme jeho pořadí
-        else {
+        } else {
           const oldIndex = prev.indexOf(activeId);
           const newIndex = overId === 'favorites-zone' ? prev.length - 1 : prev.indexOf(overId);
           if (oldIndex !== newIndex && newIndex !== -1) {
@@ -476,19 +480,16 @@ export default function Home() {
         }
       });
     } else {
-      // Pustili jsme to nad odpadní zónou (bottom area) -> smažeme z Favorites
       setFavorites((prev) => prev.filter(id => id !== activeId));
     }
   };
 
-  // Droppable zóny
   const { setNodeRef: setFavNodeRef, isOver: isFavOver } = useDroppable({ id: 'favorites-zone' });
   const { setNodeRef: setRemoveNodeRef, isOver: isRemoveOver } = useDroppable({ id: 'remove-zone' });
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    // Filtrujeme páry, co už jsou ve Favorites (čistá unikátnost)
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -598,8 +599,7 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}} />
 
-      {/* Zde je upravené collisionDetection na closestCorners pro absolutní spolehlivost */}
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
           
           <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
@@ -618,7 +618,6 @@ export default function Home() {
 
             <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2">
               
-              {/* OBLÍBENÉ - DROP ZÓNA */}
               <div 
                 ref={setFavNodeRef} 
                 id="favorites-zone"
@@ -647,7 +646,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* OSTATNÍ SEKCE A ODPADNÍ ZÓNA PRO SMAZÁNÍ Z OBLÍBENÝCH */}
               <div 
                 ref={setRemoveNodeRef} 
                 id="remove-zone"
@@ -892,7 +890,6 @@ export default function Home() {
             </div>
           </main>
 
-          {/* Ochrana a animace Drag & Drop v průběhu tažení */}
           <DragOverlay dropAnimation={{
             duration: 250,
             easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
