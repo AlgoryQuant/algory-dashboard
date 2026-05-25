@@ -262,7 +262,7 @@ const SidebarItemNode = ({ ticker, prob, isActive, onClick, isOverlay, isDraggin
   let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border `;
   
   if (isOverlay) {
-    containerClasses += `bg-[#0a0a0a] border-emerald-500/50 shadow-2xl ring-1 ring-emerald-500/30 scale-105 rotate-1 z-50 cursor-grabbing`;
+    containerClasses += `bg-[#0a0a0a] border-emerald-500/50 shadow-2xl ring-1 ring-emerald-500/30 scale-105 rotate-2 z-50 cursor-grabbing`;
   } else if (isDraggingOriginal) {
     containerClasses += `opacity-30 border-dashed border-zinc-700 bg-transparent scale-95`;
   } else if (isActive) {
@@ -279,7 +279,7 @@ const SidebarItemNode = ({ ticker, prob, isActive, onClick, isOverlay, isDraggin
         <div 
           {...dragListeners} 
           {...dragAttributes}
-          className={`cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors ${isOverlay ? 'text-emerald-500' : 'opacity-0 group-hover:opacity-100'}`}
+          className={`cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors touch-none ${isOverlay ? 'text-emerald-500' : 'opacity-0 group-hover:opacity-100'}`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
@@ -342,7 +342,14 @@ export default function Home() {
     if (savedUser) setIsAuthenticated(true);
 
     const savedFavs = localStorage.getItem('algory_favorites');
-    if (savedFavs) setFavorites(JSON.parse(savedFavs));
+    if (savedFavs) {
+      try {
+        const parsed = JSON.parse(savedFavs);
+        if (Array.isArray(parsed)) setFavorites(parsed);
+      } catch (e) {
+        console.error(e);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -424,10 +431,9 @@ export default function Home() {
     return null;
   };
 
-  // Helper for rendering probability
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
 
-  // DnD Handlers
+  // DND Handlers (Opravená logika)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -440,11 +446,10 @@ export default function Home() {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDragId(null);
     const { active, over } = event;
+    
+    // Pokud uživatel pustí prvek úplně mimo, smazat z oblíbených
     if (!over) {
-      // Pokud to uživatel pustí úplně mimo, můžeme to vymazat z favorites
-      if (favorites.includes(active.id as string)) {
-        setFavorites(favorites.filter(id => id !== active.id));
-      }
+      setFavorites((prev) => prev.filter(id => id !== active.id));
       return;
     }
 
@@ -452,39 +457,44 @@ export default function Home() {
     const overId = over.id as string;
 
     const isCurrentlyFavorite = favorites.includes(activeId);
+    // Zóna favorites je identifikována buď IDčkem samotné zóny, nebo jiným oblíbeným prvkem v ní
     const isOverFavoritesZone = overId === 'favorites-zone' || favorites.includes(overId);
 
     if (isOverFavoritesZone) {
       if (isCurrentlyFavorite) {
-          const oldIndex = favorites.indexOf(activeId);
-          const newIndex = favorites.indexOf(overId);
-          if (oldIndex !== newIndex && newIndex !== -1) {
-            setFavorites(arrayMove(favorites, oldIndex, newIndex));
-          }
+        // Přehození pořadí v rámci Favorites
+        const oldIndex = favorites.indexOf(activeId);
+        const newIndex = favorites.indexOf(overId);
+        if (oldIndex !== newIndex && newIndex !== -1) {
+          setFavorites((items) => arrayMove(items, oldIndex, newIndex));
+        }
       } else {
-          if (overId === 'favorites-zone') {
-            setFavorites([...favorites, activeId]);
-          } else {
-            const newIndex = favorites.indexOf(overId);
-            const newFavs = [...favorites];
+        // Přidání NOVÉHO páru do Favorites
+        if (overId === 'favorites-zone') {
+          setFavorites((items) => [...items, activeId]);
+        } else {
+          const newIndex = favorites.indexOf(overId);
+          setFavorites((items) => {
+            const newFavs = [...items];
             newFavs.splice(newIndex, 0, activeId);
-            setFavorites(newFavs);
-          }
+            return newFavs;
+          });
+        }
       }
     } else {
-      // Dropped outside favorites (e.g. back to original lists)
+      // Puštění do "odpadní" zóny zpět dolů
       if (isCurrentlyFavorite) {
-        setFavorites(favorites.filter(id => id !== activeId));
+        setFavorites((items) => items.filter(id => id !== activeId));
       }
     }
   };
 
-  const { setNodeRef: setFavNodeRef } = useDroppable({ id: 'favorites-zone' });
+  // Droppable zóny s detekcí přejetí (isOver) pro vizuální efekt
+  const { setNodeRef: setFavNodeRef, isOver: isFavOver } = useDroppable({ id: 'favorites-zone' });
   const { setNodeRef: setRemoveNodeRef } = useDroppable({ id: 'remove-zone' });
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
-    // Vykreslíme jen ty, které NEJSOU ve favorites
     const availablePairs = Object.entries(pairs)
       .filter(([ticker]) => !favorites.includes(ticker))
       .sort((a, b) => b[1] - a[1]);
@@ -613,30 +623,36 @@ export default function Home() {
 
             <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2">
               
-              {/* FAVORITES SECTION */}
-              <div ref={setFavNodeRef} className="mb-8 mt-2">
+              {/* OBLÍBENÉ - DROP ZÓNA */}
+              <div 
+                ref={setFavNodeRef} 
+                className={`mb-8 mt-2 pb-4 pt-2 rounded-2xl transition-all duration-300 ${isFavOver ? 'bg-emerald-500/10 ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'border border-transparent'}`}
+              >
                 <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                   FAVORITES
                 </div>
-                <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-1.5 px-3 min-h-[60px]">
-                    {favorites.length === 0 ? (
-                      <div className="text-xs text-zinc-600 font-medium px-4 py-4 border border-dashed border-zinc-800 rounded-xl text-center flex flex-col items-center gap-2">
-                        <svg className="w-4 h-4 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-                        Drag pairs here to pin them
-                      </div>
-                    ) : (
-                      favorites.map(ticker => (
-                        <SortableSidebarItem key={ticker} ticker={ticker} prob={getProbForTicker(ticker)} isActive={activePair === ticker} onClick={() => setActivePair(ticker)} />
-                      ))
-                    )}
-                  </div>
-                </SortableContext>
+                
+                <div className="px-3 min-h-[70px]">
+                  <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1.5 min-h-[60px]">
+                      {favorites.length === 0 ? (
+                        <div className={`text-xs font-medium px-4 py-4 border border-dashed rounded-xl text-center flex flex-col items-center gap-2 transition-all duration-300 ${isFavOver ? 'border-emerald-500/50 text-emerald-400' : 'border-zinc-800 text-zinc-600'}`}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+                          Drop pairs here
+                        </div>
+                      ) : (
+                        favorites.map(ticker => (
+                          <SortableSidebarItem key={ticker} ticker={ticker} prob={getProbForTicker(ticker)} isActive={activePair === ticker} onClick={() => setActivePair(ticker)} />
+                        ))
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
               </div>
 
-              {/* OSTATNÍ SEKCE (Droppable Remove Zone) */}
-              <div ref={setRemoveNodeRef} className="min-h-[200px]">
+              {/* OSTATNÍ SEKCE A ODPADNÍ ZÓNA PRO SMAZÁNÍ Z OBLÍBENÝCH */}
+              <div ref={setRemoveNodeRef} className="min-h-[200px] pb-20">
                 {renderSidebarGroup('Major Liquidity', data.majors)}
                 {renderSidebarGroup('Cross Pairs', data.minors)}
                 {renderSidebarGroup('Precious Metals', data.metals)}
@@ -876,7 +892,7 @@ export default function Home() {
             </div>
           </main>
 
-          {/* DND Drag Overlay pro zobrazení hezké karty během tažení */}
+          {/* Ochrana a animace Drag & Drop v průběhu tažení */}
           <DragOverlay>
             {activeDragId ? (
               <SidebarItemNode 
