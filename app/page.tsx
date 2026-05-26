@@ -13,7 +13,8 @@ import {
   useSensors, 
   DragStartEvent, 
   DragEndEvent,
-  useDroppable
+  useDroppable,
+  useDraggable
 } from '@dnd-kit/core';
 import { 
   arrayMove, 
@@ -469,7 +470,6 @@ export default function Home() {
     );
   }
 
-  // LOGIKA ZOBRAZOVÁNÍ KARET (Arb vs Normal)
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? data.crypto?.[ticker] ?? 0;
   const activeProb = getProbForTicker(activePair);
   const activeParams = data.parameters?.[activePair];
@@ -639,6 +639,7 @@ export default function Home() {
                               )}
                               {activeParams?.KeyDriver && <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold">{activeParams.KeyDriver}</span>}
                             </div>
+                            
                             {activeParams && (
                               <div className="flex flex-wrap items-center gap-3 mt-4">
                                 <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px]"><span className="text-zinc-500 mr-2 uppercase">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
@@ -662,20 +663,54 @@ export default function Home() {
                               <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : 'text-red-400'}`}>{(activeProb * 100).toFixed(1)}%</div>
                             </div>
                             {isTradeActive ? (
-                              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)]' : 'bg-emerald-500 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)]') : 'bg-red-500 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]'}`}>Execute {inferredDirection}</button>
+                              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)]') : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]'}`}>Execute {inferredDirection}</button>
                             ) : <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">Low Conviction</button>}
                           </div>
                         </div>
 
                         {activeParams?.aiAnalysis && (
                           <div className="grid md:grid-cols-2 gap-8 mb-8">
-                            <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner">
-                              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4">Previous: {activeParams.aiAnalysis.prev_session}</div>
-                              <p className="text-sm text-white/90 leading-loose">{activeParams.aiAnalysis.evaluation}</p>
+                            <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
+                              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
+                                <span className="flex items-center">
+                                  Previous: {activeParams.aiAnalysis.prev_session}
+                                </span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                              </div>
+                              <p className="text-sm text-white/90 leading-loose font-medium">
+                                {activeParams.aiAnalysis.evaluation}
+                              </p>
                             </div>
-                            <div className={`border rounded-2xl p-6 shadow-inner ${inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20')}`}>
-                              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${inferredDirection === 'SELL' ? 'text-red-400/80' : (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80')}`}>Prediction: {activeParams.aiAnalysis.current_session}</div>
-                              <p className="text-sm leading-loose text-white">{activeParams.aiAnalysis.prediction}</p>
+                            
+                            <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
+                                 inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
+                                 inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 
+                                 'bg-black/40 border-white/5'
+                            }`}>
+                              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between transition-colors duration-1000 ${
+                                  inferredDirection === 'SELL' ? 'text-red-400/80' : 
+                                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 
+                                  'text-zinc-500'
+                              }`}>
+                                <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
+                                <span className="relative flex h-2 w-2">
+                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                                      inferredDirection === 'SELL' ? 'bg-red-400' : 
+                                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'
+                                  }`}></span>
+                                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                                      inferredDirection === 'SELL' ? 'bg-red-500' : 
+                                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'
+                                  }`}></span>
+                                </span>
+                              </div>
+                              <p className={`text-sm leading-loose font-medium relative z-10 transition-colors duration-1000 ${
+                                  inferredDirection === 'SELL' ? 'text-white' : 
+                                  inferredDirection === 'BUY' ? 'text-white' : 
+                                  'text-white/80'
+                              }`}>
+                                {activeParams.aiAnalysis.prediction}
+                              </p>
                             </div>
                           </div>
                         )}
@@ -699,38 +734,50 @@ export default function Home() {
                         )}
                       </>
                     )}
+
                   </div>
                 </div>
 
                 <div className="xl:col-span-1">
-                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden sticky top-8 shadow-2xl">
+                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden sticky top-8 shadow-2xl transition-all duration-300">
                     <div className="px-6 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                      <div className="font-bold tracking-widest text-white uppercase text-sm">Live Market News</div>
+                      <div className="font-bold tracking-widest text-white uppercase text-sm flex items-center gap-2">
+                        Live Market News
+                        <InfoTooltip term="NLP Sentiment" info="Colored dots indicate the AI-analyzed sentiment of the headline. Green = Bullish, Red = Bearish." />
+                      </div>
                     </div>
+                    
                     <div className="flex flex-col p-4">
-                      {data.news?.map((item, idx) => (
-                        <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500' : 'bg-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
-                            <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-                              {item.time}
-                            </span>
-                            <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${
-                              item.publisher.toUpperCase() === 'COINDESK' ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' :
-                              item.publisher.toUpperCase() === 'FXSTREET' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
-                              'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                            }`}>
-                              {item.publisher}
-                            </span>
-                          </div>
-                          <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors mt-1">
-                            {item.title}
-                          </h4>
-                        </a>
-                      ))}
+                      {data.news && data.news.length > 0 ? (
+                        data.news.map((item, idx) => (
+                          <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500' : 'bg-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
+                              <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+                                {item.time}
+                              </span>
+                              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${
+                                item.publisher.toUpperCase() === 'COINDESK' ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' :
+                                item.publisher.toUpperCase() === 'FXSTREET' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                                'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                              }`}>
+                                {item.publisher}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors mt-1">
+                              {item.title}
+                            </h4>
+                          </a>
+                        ))
+                      ) : (
+                        <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
+                          Awaiting market catalysts...
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
+                
               </div>
             )}
           </div>
