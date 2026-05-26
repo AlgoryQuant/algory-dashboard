@@ -1,27 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { 
-  DndContext, 
-  DragOverlay, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors, 
-  DragStartEvent, 
-  DragEndEvent
-} from '@dnd-kit/core';
-import { 
-  arrayMove, 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
-  verticalListSortingStrategy, 
-  useSortable 
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 // === INTERFACES ===
+interface TradeHistory {
+  date: string;
+  type: string;
+  result: 'WIN' | 'LOSS';
+  pips: number;
+}
+
 interface AIAnalysis {
   evaluation: string;
   prediction: string;
@@ -41,6 +29,7 @@ interface DashboardData {
   majors?: Record<string, number>;
   minors?: Record<string, number>;
   metals?: Record<string, number>;
+  crypto?: Record<string, number>;
   news?: NewsItem[];
   parameters?: Record<string, { 
     SL: number; 
@@ -52,7 +41,8 @@ interface DashboardData {
     KeyDriver: string; 
     Direction?: string; 
     RRR?: number;
-    aiAnalysis?: AIAnalysis 
+    aiAnalysis?: AIAnalysis;
+    history?: TradeHistory[];
   }>;
 }
 
@@ -128,6 +118,8 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
   const getTVSymbol = (s: string) => {
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
+    // Krypto fix: Na TradingView použijeme Coinbase nebo Binance symboly
+    if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'BNBUSD'].includes(s)) return `COINBASE:${s}`;
     return `OANDA:${s}`;
   };
 
@@ -160,7 +152,7 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
   );
 };
 
-const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
+const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: string }) => {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -169,7 +161,11 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
   }, []);
 
   const hour = now.getHours();
-  const sessions = [
+  // Crypto běží 24/7, Forex má sessions
+  const isCrypto = mode === 'CRYPTO';
+  const sessions = isCrypto ? [
+    { name: "Global Crypto Market", open: "24", close: "7", isActive: true }
+  ] : [
     { name: "Sydney", open: "22:00", close: "07:00", isActive: hour >= 22 || hour < 7 },
     { name: "Tokyo", open: "00:00", close: "09:00", isActive: hour >= 0 && hour < 9 },
     { name: "London", open: "09:00", close: "17:30", isActive: hour >= 9 && hour < 17 },
@@ -191,8 +187,8 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
           </div>
           <div className="text-xs font-medium text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
             <span className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              System Sync
+              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCrypto ? 'bg-blue-400' : 'bg-emerald-400'}`}></span>
+              System Sync ({mode})
             </span>
             <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">
               {lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "Connecting..."}
@@ -204,10 +200,10 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
           {sessions.map((s) => (
             <div key={s.name} className={`px-5 py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${
               s.isActive 
-                ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]' 
+                ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30' : 'bg-emerald-500/10 border-emerald-500/30'} shadow-[0_0_15px_rgba(52,211,153,0.1)]` 
                 : 'bg-black/40 border-white/5 opacity-60'
             }`}>
-              <span className={`text-xs font-bold uppercase tracking-widest mb-1 ${s.isActive ? 'text-emerald-400' : 'text-zinc-500'}`}>
+              <span className={`text-xs font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>
                 {s.name}
               </span>
               <span className="text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
@@ -223,7 +219,7 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
         </div>
         <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
           <div 
-            className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-1000 ease-linear shadow-[0_0_15px_rgba(52,211,153,0.5)]"
+            className={`h-full rounded-full transition-all duration-1000 ease-linear ${isCrypto ? 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)]'}`}
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -232,7 +228,7 @@ const MarketMonitor = ({ lastRefresh }: { lastRefresh: Date | null }) => {
   );
 };
 
-// === SIDEBAR ITEM KOMPONENTA (Nyní s hvězdičkou) ===
+// === SIDEBAR ITEM KOMPONENTA (S HVĚZDIČKOU 1-CLICK) ===
 
 interface SidebarItemProps {
   ticker: string;
@@ -241,74 +237,34 @@ interface SidebarItemProps {
   isFavorite: boolean;
   onClick: () => void;
   onToggleFavorite: (ticker: string) => void;
-  isOverlay?: boolean;
-  isDraggingOriginal?: boolean;
-  dragListeners?: any;
-  dragAttributes?: any;
-  setNodeRef?: (node: HTMLElement | null) => void;
-  style?: React.CSSProperties;
 }
 
-const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggleFavorite, isOverlay, isDraggingOriginal, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
+const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggleFavorite }: SidebarItemProps) => {
   const displayTicker = ticker === "XAUUSD" ? "GOLD" : ticker;
-  let pairDir = "NEUTRAL";
-  if (prob >= 0.52) pairDir = "BUY";
-  else if (prob <= 0.48 && prob > 0) pairDir = "SELL";
+  let pairDir = prob >= 0.52 ? "BUY" : "SELL";
+  let probColor = pairDir === "BUY" ? (isActive ? "text-emerald-400" : "text-emerald-500/80") : (isActive ? "text-red-400" : "text-red-500/80");
 
-  let probColor = "text-zinc-500";
-  if (pairDir === "BUY") probColor = isActive ? "text-emerald-400" : "text-emerald-500/80";
-  if (pairDir === "SELL") probColor = isActive ? "text-red-400" : "text-red-500/80";
-
-  let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
-  
-  if (isOverlay) {
-    containerClasses += `bg-[#0a0a0a] border-emerald-500/50 shadow-2xl ring-1 ring-emerald-500/30 scale-105 rotate-2 z-50`;
-  } else if (isDraggingOriginal) {
-    containerClasses += `opacity-0 !border-transparent`; 
-  } else if (isActive) {
-    containerClasses += pairDir === 'SELL' 
-      ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] ' 
-      : 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.05)] ';
-  } else {
-    containerClasses += 'border-transparent hover:bg-white/5';
-  }
+  let containerClasses = `w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
+  if (isActive) containerClasses += pairDir === 'SELL' ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] ' : 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.05)] ';
+  else containerClasses += 'border-transparent hover:bg-white/5';
 
   return (
-    <div ref={setNodeRef} style={style} className={containerClasses} onClick={!isOverlay && !isDraggingOriginal ? onClick : undefined}>
-      <div className="flex items-center gap-2">
-        {/* Zobrazujeme úchyt (Grip) POUZE pokud je položka v oblíbených (pro řazení) */}
-        {isFavorite ? (
-          <div 
-            {...dragListeners} 
-            {...dragAttributes}
-            onClick={(e) => e.stopPropagation()} // Zabraňuje prokliku grafu při tažení
-            className={`cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors touch-none ${isOverlay ? 'text-emerald-500' : 'opacity-0 group-hover:opacity-100'}`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
-            </svg>
-          </div>
-        ) : (
-          <div className="w-[14px]"></div> // Spacer aby text nelítal
-        )}
-        
-        <span className={`font-semibold tracking-wide ${isActive || isOverlay ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`}>
+    <div className={containerClasses} onClick={onClick}>
+      <div className="flex items-center gap-3">
+        <span className={`font-semibold tracking-wide ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-white transition-colors'}`}>
           {displayTicker}
         </span>
       </div>
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>
           {(prob * 100).toFixed(0)}%
         </span>
         
-        {/* Tlačítko Hvězdičky */}
+        {/* Tlačítko Hvězdičky - Rychlé a Spolehlivé! */}
         <button 
-          onClick={(e) => {
-            e.stopPropagation(); // Zabraňuje překliknutí grafu
-            onToggleFavorite(ticker);
-          }}
-          className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-emerald-500 hover:text-red-400' : 'text-zinc-600 hover:text-emerald-500'}`}
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }}
+          className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-emerald-500 hover:text-red-400' : 'text-zinc-600 hover:text-emerald-400'}`}
           title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
         >
           <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -320,12 +276,6 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
   );
 };
 
-// Komponenta pro Favorites s drag and drop (pouze na řazení)
-const SortableSidebarItem = (props: Omit<SidebarItemProps, 'dragListeners' | 'dragAttributes' | 'setNodeRef' | 'style' | 'isDraggingOriginal'>) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.ticker });
-  const style = { transform: CSS.Transform.toString(transform), transition };
-  return <SidebarItemNode {...props} dragListeners={listeners} dragAttributes={attributes} setNodeRef={setNodeRef} style={style} isDraggingOriginal={isDragging} />;
-};
 
 // === HLAVNÍ APLIKACE ===
 
@@ -335,19 +285,20 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
+  // Režim zobrazení: Přepínání mezi Forexem a Kryptem
+  const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>(null);
   const [activePair, setActivePair] = useState<string>("EURUSD"); 
   
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     'Major Liquidity': true,
     'Cross Pairs': true,
-    'Precious Metals': true
+    'Precious Metals': true,
+    'Crypto Assets': true
   });
 
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   
-  const [showLanding, setShowLanding] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
   const [nickname, setNickname] = useState('');
@@ -378,10 +329,7 @@ export default function Home() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setEmailError("Please enter a valid email address.");
-      return;
-    }
+    if (!emailRegex.test(email)) { setEmailError("Please enter a valid email address."); return; }
     setEmailError(null);
     if (!nickname || !email) return;
     setIsSubmitting(true);
@@ -389,7 +337,6 @@ export default function Home() {
       const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
       const userData = { nickname, email, registeredAt: new Date().toISOString() };
       await fetch(FIREBASE_USERS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userData) });
-      await fetch('/api/welcome', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, nickname }) });
       localStorage.setItem('algory_user', JSON.stringify(userData));
       setIsAuthenticated(true);
       setShowAuthGate(false);
@@ -398,11 +345,6 @@ export default function Home() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleLaunch = () => {
-    setShowLanding(false);
-    if (!isAuthenticated) setShowAuthGate(true);
   };
 
   useEffect(() => {
@@ -433,6 +375,7 @@ export default function Home() {
   const getPublisherStyle = (publisher: string) => {
     const pub = publisher.toUpperCase();
     if (pub === 'FXSTREET') return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+    if (pub === 'COINDESK') return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
     if (pub === 'INVESTING') return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
     return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
   };
@@ -447,39 +390,15 @@ export default function Home() {
     if (title.includes('Liquidity')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg>;
     if (title.includes('Cross')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>;
     if (title.includes('Metals')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polygon points="12 2 2 7 12 22 22 7 12 2" /></svg>;
+    if (title.includes('Crypto')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>;
     return null;
   };
 
-  const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? 0;
-
-  // FUNKCE PRO HVĚZDIČKU (Přidání/Odebrání)
   const toggleFavorite = (ticker: string) => {
     setFavorites(prev => {
       if (prev.includes(ticker)) return prev.filter(t => t !== ticker);
       return [...prev, ticker];
     });
-  };
-
-  // DND Handlers POUZE pro řazení uvnitř Favorites!
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragId(event.active.id as string);
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveDragId(null);
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = favorites.indexOf(active.id as string);
-      const newIndex = favorites.indexOf(over.id as string);
-      if (oldIndex !== -1 && newIndex !== -1) {
-        setFavorites((items) => arrayMove(items, oldIndex, newIndex));
-      }
-    }
   };
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
@@ -504,7 +423,6 @@ export default function Home() {
         </button>
 
         <div className={`space-y-1.5 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          {/* Tady už renderujeme jen normální SidebarItemNode, ne Draggable! To šetří paměť. */}
           {availablePairs.map(([ticker, prob]) => (
             <SidebarItemNode 
               key={ticker} 
@@ -521,24 +439,76 @@ export default function Home() {
     );
   };
 
-  if (showLanding) {
+  // Zobrazení oblíbených párů podle toho, v jakém módu aktuálně jsme
+  const renderFavorites = () => {
+    // Vytáhneme všechny dostupné tickery z dat, abychom znali jejich Prob
+    const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...data.crypto };
+    
+    // Zjistíme, jestli pár patří do Forexu nebo do Krypta, a filtrujeme podle zvoleného režimu
+    const relevantFavs = favorites.filter(ticker => {
+      const isCryptoTicker = Object.keys(data.crypto || {}).includes(ticker);
+      if (marketMode === 'CRYPTO') return isCryptoTicker;
+      if (marketMode === 'FOREX') return !isCryptoTicker;
+      return true;
+    });
+
+    if (relevantFavs.length === 0) return (
+      <div className={`w-full text-xs font-medium px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600`}>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+        Click the star to pin pairs
+      </div>
+    );
+
+    return relevantFavs.map(ticker => (
+      <SidebarItemNode 
+        key={ticker} 
+        ticker={ticker} 
+        prob={allPairsMap[ticker] || 0} 
+        isActive={activePair === ticker} 
+        isFavorite={true}
+        onClick={() => setActivePair(ticker)} 
+        onToggleFavorite={toggleFavorite}
+      />
+    ));
+  };
+
+
+  // --- LANDING PAGE S VÝBĚREM TRHU ---
+  if (!marketMode) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-900/20 via-[#050505] to-[#050505] pointer-events-none" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900/20 via-[#050505] to-[#050505] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        
         <div className="relative z-10 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="flex items-center gap-3 mb-6">
-            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span></span>
-            <span className="text-xs font-bold text-emerald-400 tracking-[0.3em] uppercase">System Ready</span>
+            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-zinc-500"></span></span>
+            <span className="text-xs font-bold text-zinc-400 tracking-[0.3em] uppercase">System Ready</span>
           </div>
-          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">Algory<span className="text-emerald-500">.</span></h1>
-          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">Institutional Grade <br/> <span className="text-white/90 font-bold">Quantitative Trading Engine</span></p>
-          <button onClick={handleLaunch} className="mt-16 px-10 py-5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.15)] hover:bg-emerald-500/20 hover:shadow-[0_0_40px_rgba(52,211,153,0.25)] hover:-translate-y-1">Launch Terminal</button>
+          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">Algory<span className="text-zinc-500">.</span></h1>
+          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">Select Your Market Environment</p>
+          
+          <div className="flex flex-col md:flex-row gap-6 mt-16">
+            <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative px-10 py-6 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-2xl font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.1)] hover:bg-emerald-500/20 hover:shadow-[0_0_40px_rgba(52,211,153,0.25)] hover:-translate-y-1">
+              <div className="flex flex-col items-center gap-3">
+                <svg className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg>
+                <span>Forex & Metals</span>
+              </div>
+            </button>
+            <button onClick={() => { setMarketMode('CRYPTO'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative px-10 py-6 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-2xl font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(59,130,246,0.1)] hover:bg-blue-500/20 hover:shadow-[0_0_40px_rgba(59,130,246,0.25)] hover:-translate-y-1">
+              <div className="flex flex-col items-center gap-3">
+                <svg className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                <span>Crypto Assets</span>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // --- AUTH GATE ---
   if (showAuthGate && !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -562,6 +532,7 @@ export default function Home() {
     );
   }
 
+  const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? data.crypto?.[ticker] ?? 0;
   const activeProb = getProbForTicker(activePair);
   const activeParams = data.parameters?.[activePair];
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
@@ -606,75 +577,54 @@ export default function Home() {
       <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
         
         <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
-          <div className="p-8 pb-6 cursor-pointer border-b border-white/5 mb-4 transition-all hover:opacity-80" onClick={() => setShowLanding(true)}>
-            <h2 className="text-3xl font-semibold tracking-tighter text-white">
-              Algory<span className="text-emerald-500">.</span>
+          <div className="p-8 pb-6 border-b border-white/5 mb-4">
+            <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setMarketMode(null)}>
+              Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500' : 'text-emerald-500'}>.</span>
             </h2>
-            <div className="flex items-center gap-3 mt-4">
-              <span className="relative flex h-2 w-2">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-              </span>
-              <p className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase">Engine Online</p>
+            
+            {/* Přepínač trhů rovnou v panelu */}
+            <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/5">
+              <button 
+                onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} 
+                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                Forex
+              </button>
+              <button 
+                onClick={() => { setMarketMode('CRYPTO'); setActivePair("BTCUSD"); }} 
+                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                Crypto
+              </button>
             </div>
           </div>
 
           <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2 flex flex-col">
             
-            {/* OBLÍBENÉ - DND Context pouze zde pro řazení */}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <div className={`mb-6 mt-2 pb-6 pt-4 rounded-2xl transition-colors duration-300 w-full`}>
-                <div className="text-[10px] font-bold text-emerald-500/90 uppercase tracking-widest px-6 mb-3 flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  FAVORITES
-                </div>
-                
-                <div className="px-3 w-full">
-                  <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1.5 w-full min-h-[60px]">
-                      {favorites.length === 0 ? (
-                        <div className={`w-full text-xs font-medium px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 h-full transition-all duration-300 border-zinc-800 text-zinc-600`}>
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
-                          Click the star to pin pairs
-                        </div>
-                      ) : (
-                        favorites.map(ticker => (
-                          <SortableSidebarItem 
-                            key={ticker} 
-                            ticker={ticker} 
-                            prob={getProbForTicker(ticker)} 
-                            isActive={activePair === ticker} 
-                            isFavorite={true}
-                            onClick={() => setActivePair(ticker)} 
-                            onToggleFavorite={toggleFavorite}
-                          />
-                        ))
-                      )}
-                    </div>
-                  </SortableContext>
-                </div>
+            {/* OBLÍBENÉ - Nyní jednoduše přes Hvězdičku (bez DND chyb) */}
+            <div className={`mb-6 mt-2 pb-4 pt-4 rounded-2xl transition-colors duration-300 w-full`}>
+              <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90' : 'text-emerald-500/90'}`}>
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                Favorites
               </div>
-              
-              <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-                {activeDragId ? (
-                  <SidebarItemNode 
-                    ticker={activeDragId} 
-                    prob={getProbForTicker(activeDragId)} 
-                    isActive={activePair === activeDragId} 
-                    isFavorite={true}
-                    onClick={() => {}} 
-                    onToggleFavorite={() => {}}
-                    isOverlay 
-                  />
-                ) : null}
-              </DragOverlay>
-            </DndContext>
+              <div className="px-3 w-full space-y-1.5 min-h-[60px]">
+                {renderFavorites()}
+              </div>
+            </div>
 
-            {/* OSTATNÍ SEKCE ZDE */}
+            {/* OSTATNÍ SEKCE PODLE ZVOLENÉHO MÓDU */}
             <div className="pb-20 flex-1">
-              {renderSidebarGroup('Major Liquidity', data.majors)}
-              {renderSidebarGroup('Cross Pairs', data.minors)}
-              {renderSidebarGroup('Precious Metals', data.metals)}
+              {marketMode === 'FOREX' ? (
+                <>
+                  {renderSidebarGroup('Major Liquidity', data.majors)}
+                  {renderSidebarGroup('Cross Pairs', data.minors)}
+                  {renderSidebarGroup('Precious Metals', data.metals)}
+                </>
+              ) : (
+                <>
+                  {renderSidebarGroup('Crypto Assets', data.crypto)}
+                </>
+              )}
             </div>
 
           </nav>
@@ -683,12 +633,12 @@ export default function Home() {
         <main className={`flex-1 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
           <div className="max-w-[1400px] mx-auto">
             
-            <MarketMonitor lastRefresh={lastRefresh} />
+            <MarketMonitor lastRefresh={lastRefresh} mode={marketMode} />
 
             {loading && !data.majors ? (
               <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
-                <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin"></div>
-                <span className="text-sm text-zinc-400 font-medium tracking-widest uppercase">Connecting to Cloud Engine...</span>
+                <div className={`w-10 h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
+                <span className="text-sm text-zinc-400 font-medium tracking-widest uppercase">Connecting to Engine...</span>
               </div>
             ) : error && !data.majors ? (
               <div className="p-10 mt-10 text-center text-red-400 font-medium border border-red-900/40 bg-red-950/20 rounded-[2rem]">
@@ -814,14 +764,14 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {activeParams?.aiAnalysis ? (
-                      <div className="grid md:grid-cols-2 gap-8">
+                    {activeParams?.aiAnalysis && (
+                      <div className="grid md:grid-cols-2 gap-8 mb-8">
                         <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
                           <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
                             <span className="flex items-center">
                               Previous: {activeParams.aiAnalysis.prev_session}
-                              {activeParams.aiAnalysis.prev_session.includes("Asian") && 
-                                <InfoTooltip term="Asian Range" info="The consolidation period typically occurring during the Tokyo/Sydney trading hours, often used to determine the daily bias breakout." />
+                              {activeParams.aiAnalysis.prev_session.includes("Range") && 
+                                <InfoTooltip term="Range" info="Consolidation period often used to determine the daily bias breakout." />
                               }
                             </span>
                             <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
@@ -862,11 +812,27 @@ export default function Home() {
                           </p>
                         </div>
                       </div>
-                    ) : (
-                      <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
-                        Processing AI Sentiment...
+                    )}
+
+                    {/* NOVÁ SEKCE: AI SIGNAL HISTORY */}
+                    {activeParams?.history && (
+                      <div className="border-t border-white/5 pt-8 mt-2">
+                        <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                          <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          AI Backtest & Signal History (Last 5)
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {activeParams.history.map((trade, idx) => (
+                            <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
+                              <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span>
+                              <span className="text-[10px] font-bold text-white/80">{trade.type}</span>
+                              <span className={`text-xs font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} pips</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
+
                   </div>
                 </div>
 
@@ -910,6 +876,7 @@ export default function Home() {
             )}
           </div>
         </main>
+
       </div>
     </>
   );
