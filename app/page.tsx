@@ -121,7 +121,7 @@ const ExecuteButton = ({ baseClass, defaultText, colorTheme }: { baseClass: stri
 const InfoTooltip = ({ info }: { info: string }) => (
   <span className="relative group inline-flex items-center cursor-help ml-2">
     <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
       {info}
       <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
     </div>
@@ -138,13 +138,13 @@ const LiquidationsBar = () => {
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
           <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
-          24H Market Liquidations
+          24H MARKET LIQUIDATIONS
         </h3>
-        <span className="text-[9px] bg-white/5 px-2 py-1 rounded text-zinc-400 border border-white/5 tracking-widest uppercase">Global Crypto Metrics</span>
+        <span className="text-[9px] bg-white/5 px-2 py-1 rounded text-zinc-400 border border-white/5 tracking-widest uppercase font-bold">GLOBAL METRICS</span>
       </div>
       <div className="flex justify-between text-xs font-mono font-bold mb-2">
-        <span className="text-red-400">Longs Rekt: ${(LIQUIDATIONS_MOCK.longsRekt / 1000000).toFixed(1)}M</span>
-        <span className="text-emerald-400">Shorts Rekt: ${(LIQUIDATIONS_MOCK.shortsRekt / 1000000).toFixed(1)}M</span>
+        <span className="text-red-400">LONGS REKT: ${(LIQUIDATIONS_MOCK.longsRekt / 1000000).toFixed(1)}M</span>
+        <span className="text-emerald-400">SHORTS REKT: ${(LIQUIDATIONS_MOCK.shortsRekt / 1000000).toFixed(1)}M</span>
       </div>
       <div className="w-full h-3 rounded-full overflow-hidden flex border border-white/5 shadow-inner">
         <div className="bg-gradient-to-r from-red-600 to-red-400 h-full transition-all duration-1000" style={{ width: `${longPct}%` }}></div>
@@ -170,26 +170,26 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
     }
   }, [balance, riskPercent, slPips]);
 
-  const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : 'focus:ring-red-500/50';
+  const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : direction === 'SELL' ? 'focus:ring-red-500/50' : 'focus:ring-white/20';
 
   return (
     <div className="mt-6 p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
       <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
-        Position Sizing
+        POSITION SIZING
         <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
       </div>
       <div className="flex gap-6 items-end">
         <div className="flex flex-col gap-2 w-1/3">
-          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">Balance ($)</label>
+          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">BALANCE ($)</label>
           <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
         </div>
         <div className="flex flex-col gap-2 w-1/3">
-          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">Risk (%)</label>
+          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">RISK (%)</label>
           <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
         </div>
         <div className={`w-1/3 flex flex-col items-center justify-center py-2 px-4 rounded-lg border shadow-inner ${direction === 'BUY' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
-          <span className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : 'text-red-500/70'}`}>Volume</span>
-          <span className="text-xl font-bold text-white font-mono">{lotSize} <span className="text-xs text-zinc-500 font-normal font-sans">Lots</span></span>
+          <span className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : 'text-red-500/70'}`}>VOLUME</span>
+          <span className="text-xl font-bold text-white font-mono">{lotSize} <span className="text-xs text-zinc-500 font-normal font-sans tracking-normal">Lots</span></span>
         </div>
       </div>
     </div>
@@ -215,11 +215,11 @@ const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) =>
           <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
             <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
           </div>
-          <h3 className="font-bold tracking-widest text-white uppercase text-sm">
-            {isArb ? `Statistical Arbitrage Spread: ${symbol}` : `Live Market Structure: ${symbol}`}
+          <h3 className="font-bold tracking-widest text-white uppercase text-[10px]">
+            {isArb ? `STATISTICAL ARBITRAGE SPREAD: ${symbol}` : `LIVE MARKET STRUCTURE: ${symbol}`}
           </h3>
         </div>
-        <span className="px-3 py-1.5 bg-black/60 text-white/80 text-[10px] font-bold uppercase tracking-widest rounded-md border border-white/5">M15 Timeframe</span>
+        <span className="px-3 py-1.5 bg-black/60 text-white/80 text-[9px] font-bold uppercase tracking-widest rounded-md border border-white/5">M15 TIMEFRAME</span>
       </div>
       <div className="w-full h-full pt-[73px]">
         <iframe src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${encodeURIComponent(getTVSymbol(symbol))}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`} style={{ width: '100%', height: '100%', border: 'none' }} title={`Chart ${symbol}`} />
@@ -235,6 +235,9 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const fees = (arbData.askPrice * volume * (arbData.estimatedFeePercent / 100)) + (arbData.bidPrice * volume * (arbData.estimatedFeePercent / 100));
   const netProfit = grossProfit - fees;
   const isProfitable = netProfit > 0;
+  
+  const gaugeRotation = isProfitable ? 45 : -45; 
+  const needleColor = isProfitable ? '#34d399' : '#ef4444';
 
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
@@ -244,8 +247,8 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">{arbData.asset} Arbitrage</h2>
-            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Spatial Exchange Opportunity</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.asset} ARBITRAGE</h2>
+            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">SPATIAL EXCHANGE OPPORTUNITY</p>
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
@@ -257,14 +260,14 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-red-500/50"></div>
-            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Buy Exchange (Ask)</div>
-            <div className="text-xl font-bold text-white mb-4">{arbData.buyExchange}</div>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">BUY EXCHANGE (ASK)</div>
+            <div className="text-xl font-bold text-white mb-4 uppercase">{arbData.buyExchange}</div>
             <div className="text-4xl font-mono font-bold text-red-400">${arbData.askPrice.toLocaleString()}</div>
           </div>
           <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50"></div>
-            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Sell Exchange (Bid)</div>
-            <div className="text-xl font-bold text-white mb-4">{arbData.sellExchange}</div>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">SELL EXCHANGE (BID)</div>
+            <div className="text-xl font-bold text-white mb-4 uppercase">{arbData.sellExchange}</div>
             <div className="text-4xl font-mono font-bold text-emerald-400">${arbData.bidPrice.toLocaleString()}</div>
           </div>
         </div>
@@ -272,16 +275,16 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
         <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8">
           <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-2">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-            Net Profit Calculator
+            NET PROFIT CALCULATOR
           </div>
           <div className="flex flex-col md:flex-row gap-8 items-end">
             <div className="flex flex-col gap-2 w-full md:w-1/3">
-              <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Trading Volume ({arbData.asset.split('/')[0]})</label>
+              <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">TRADING VOLUME ({arbData.asset.split('/')[0]})</label>
               <input type="number" min="0.01" step="0.01" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="bg-black/50 border border-white/10 rounded-xl px-5 py-3 text-lg text-white font-mono focus:outline-none focus:border-blue-500/50 transition-all" />
             </div>
             <div className="flex flex-col gap-2 w-full md:w-1/3">
-              <div className="flex justify-between text-xs text-zinc-400 font-mono"><span>GROSS PROFIT:</span><span className={grossProfit > 0 ? 'text-emerald-400' : 'text-red-400'}>${grossProfit.toFixed(2)}</span></div>
-              <div className="flex justify-between text-xs text-zinc-400 font-mono"><span>EST. FEES ({arbData.estimatedFeePercent}%):</span><span className="text-red-400">-${fees.toFixed(2)}</span></div>
+              <div className="flex justify-between text-[10px] tracking-widest font-bold text-zinc-500 uppercase"><span>GROSS PROFIT:</span><span className={`font-mono ${grossProfit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>${grossProfit.toFixed(2)}</span></div>
+              <div className="flex justify-between text-[10px] tracking-widest font-bold text-zinc-500 uppercase"><span>EST. FEES ({arbData.estimatedFeePercent}%):</span><span className="font-mono text-red-400">-${fees.toFixed(2)}</span></div>
               <div className="w-full h-[1px] bg-white/10 my-2"></div>
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest"><span className="text-zinc-500">NET PROFIT:</span></div>
             </div>
@@ -304,6 +307,7 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
   const step2 = step1 * arbData.rate2;
   const step3 = step2 * arbData.rate3;
   const netProfit = step3 - volume;
+  const isProfitable = netProfit > 0;
 
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all duration-300">
@@ -313,8 +317,8 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">{arbData.pairName}</h2>
-            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">Triangular Inefficiency Loop</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.pairName}</h2>
+            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">TRIANGULAR INEFFICIENCY LOOP</p>
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
@@ -327,9 +331,9 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
           <div className="absolute top-1/2 left-0 w-full h-[2px] bg-white/5 hidden lg:block -z-10"></div>
           
           <div className="bg-black border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center w-full lg:w-1/3">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Step 1: Buy {arbData.path[1]}</div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">STEP 1: BUY {arbData.path[1]}</div>
             <div className="text-2xl font-bold text-white mb-2">{arbData.path[0]} ➔ {arbData.path[1]}</div>
-            <div className="text-sm font-mono text-purple-400">Rate: {arbData.rate1.toLocaleString()}</div>
+            <div className="text-[10px] font-mono font-bold tracking-widest uppercase text-purple-400">RATE: {arbData.rate1.toLocaleString()}</div>
           </div>
           
           <div className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 z-10 border border-purple-500/30">
@@ -337,9 +341,9 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
           </div>
 
           <div className="bg-black border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center w-full lg:w-1/3">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Step 2: Cross to {arbData.path[2]}</div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">STEP 2: CROSS TO {arbData.path[2]}</div>
             <div className="text-2xl font-bold text-white mb-2">{arbData.path[1]} ➔ {arbData.path[2]}</div>
-            <div className="text-sm font-mono text-purple-400">Rate: {arbData.rate2.toLocaleString()}</div>
+            <div className="text-[10px] font-mono font-bold tracking-widest uppercase text-purple-400">RATE: {arbData.rate2.toLocaleString()}</div>
           </div>
 
           <div className="hidden lg:flex items-center justify-center w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 z-10 border border-purple-500/30">
@@ -347,25 +351,24 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
           </div>
 
           <div className="bg-black border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center w-full lg:w-1/3">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Step 3: Sell back to {arbData.path[3]}</div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">STEP 3: SELL BACK TO {arbData.path[3]}</div>
             <div className="text-2xl font-bold text-white mb-2">{arbData.path[2]} ➔ {arbData.path[3]}</div>
-            <div className="text-sm font-mono text-purple-400">Rate: {arbData.rate3.toLocaleString()}</div>
+            <div className="text-[10px] font-mono font-bold tracking-widest uppercase text-purple-400">RATE: {arbData.rate3.toLocaleString()}</div>
           </div>
         </div>
 
         <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 flex flex-col md:flex-row gap-8 items-center justify-between">
           <div className="w-full md:w-1/3">
-            <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Initial Capital ({arbData.path[0]})</label>
+            <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">INITIAL CAPITAL ({arbData.path[0]})</label>
             <input type="number" min="1" step="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-3 text-lg text-white font-mono focus:outline-none focus:border-purple-500/50 mt-2 transition-all" />
           </div>
           <div className="flex-1 text-center md:text-right">
-            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Calculated Net Profit</div>
-            <div className={`text-6xl font-black font-mono tracking-tighter ${netProfit > 0 ? 'text-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]' : 'text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]'}`}>
-              {netProfit > 0 ? '+' : ''}{netProfit.toFixed(2)} <span className="text-2xl tracking-normal text-white/50">{arbData.path[0]}</span>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">CALCULATED NET PROFIT</div>
+            <div className={`text-6xl font-black font-mono tracking-tighter ${isProfitable ? 'text-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]' : 'text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]'}`}>
+              {isProfitable ? '+' : ''}{netProfit.toFixed(2)} <span className="text-2xl tracking-normal text-white/50">{arbData.path[0]}</span>
             </div>
           </div>
-          
-          <ExecuteButton baseClass="w-full md:w-auto px-10 py-5 font-bold text-xs uppercase tracking-widest rounded-xl" defaultText="EXECUTE LOOP" colorTheme="purple" />
+          <ExecuteButton baseClass="w-full md:w-auto px-10 py-5 font-bold text-[10px] tracking-widest uppercase rounded-xl" defaultText="EXECUTE LOOP" colorTheme="purple" />
         </div>
       </div>
     </div>
@@ -381,8 +384,8 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">{data.asset}</h2>
-            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">Cross-Exchange Funding Arb</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{data.asset}</h2>
+            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">CROSS-EXCHANGE FUNDING ARB</p>
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
@@ -391,7 +394,7 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
       </div>
 
       <div className="p-8">
-        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6">Current 8H Funding Rates</div>
+        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6">CURRENT 8H FUNDING RATES</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {[
             { name: 'Binance', rate: data.binanceRate },
@@ -399,8 +402,8 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
             { name: 'OKX', rate: data.okxRate }
           ].map(ex => (
              <div key={ex.name} className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner flex flex-col items-center">
-               <div className="text-sm font-bold text-white mb-4 uppercase tracking-widest">{ex.name}</div>
-               <div className={`text-4xl font-mono font-black ${ex.rate > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+               <div className="text-[10px] font-bold text-white mb-4 uppercase tracking-widest">{ex.name}</div>
+               <div className={`text-4xl font-mono font-black ${ex.rate > 0 ? 'text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.3)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]'}`}>
                  {ex.rate > 0 ? '+' : ''}{(ex.rate * 100).toFixed(4)}%
                </div>
                <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-3">
@@ -414,7 +417,7 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
           <div>
             <div className="text-sm font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
-              Delta-Neutral Setup
+              DELTA-NEUTRAL SETUP
             </div>
             <p className="text-xs text-orange-400/80 leading-relaxed max-w-md">
               To collect the funding fee difference without price exposure, open opposing positions simultaneously.
@@ -423,12 +426,12 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
           <div className="flex gap-4 items-center">
             <div className="px-6 py-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex flex-col items-center">
               <span className="text-[10px] text-emerald-500 uppercase font-bold tracking-widest mb-1">LONG POSITION</span>
-              <span className="text-xl font-bold text-white">{data.optimalLong}</span>
+              <span className="text-xl font-bold text-white uppercase">{data.optimalLong}</span>
             </div>
             <div className="text-zinc-600 font-bold">+</div>
             <div className="px-6 py-4 bg-red-500/10 border border-red-500/30 rounded-xl flex flex-col items-center">
               <span className="text-[10px] text-red-500 uppercase font-bold tracking-widest mb-1">SHORT POSITION</span>
-              <span className="text-xl font-bold text-white">{data.optimalShort}</span>
+              <span className="text-xl font-bold text-white uppercase">{data.optimalShort}</span>
             </div>
           </div>
         </div>
@@ -473,7 +476,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   }
 
   return (
-    <div className="mb-10 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0">
+    <div className="mb-6 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white">
@@ -483,10 +486,10 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
             <span className="flex items-center gap-2">
               <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${pulseColor}`}></span>
-              System Sync ({mode})
+              SYSTEM SYNC ({mode})
             </span>
             <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">
-              {lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "Connecting..."}
+              {lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "CONNECTING..."}
             </span>
           </div>
         </div>
@@ -509,8 +512,8 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
 
       <div className="mt-8 relative z-10">
         <div className="flex justify-between text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-widest">
-          <span>AI Engine M15 Cycle</span>
-          <span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s remaining</span>
+          <span>AI ENGINE M15 CYCLE</span>
+          <span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
         </div>
         <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
           <div 
@@ -585,7 +588,7 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
           <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
           <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+{data.spreadPercent.toFixed(2)}%</span>
         </div>
-        <div className="flex items-center text-[10px] font-medium text-zinc-500">
+        <div className="flex items-center text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
           <span>{data.buyExchange}</span><svg className="w-3 h-3 mx-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg><span>{data.sellExchange}</span>
         </div>
       </div>
@@ -607,7 +610,7 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
           <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
           <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">{(data.netYield * 100).toFixed(2)}% APY</span>
         </div>
-        <div className="flex items-center text-[9px] font-medium text-zinc-500 mt-1 uppercase">
+        <div className="flex items-center text-[9px] font-medium text-zinc-500 mt-1 uppercase tracking-widest">
           L: {data.optimalLong} / S: {data.optimalShort}
         </div>
       </div>
@@ -749,7 +752,7 @@ export default function Home() {
     if (relevantFavs.length === 0) return (
       <div className="w-full text-[10px] uppercase tracking-widest font-bold px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
-        Click the star to pin pairs
+        CLICK STAR TO PIN
       </div>
     );
 
@@ -758,23 +761,23 @@ export default function Home() {
 
   if (!marketMode) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900/20 via-[#050505] to-[#050505] pointer-events-none" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] pointer-events-none animate-pulse" />
         <div className="relative z-10 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="flex items-center gap-3 mb-6">
             <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-zinc-500"></span></span>
-            <span className="text-[10px] font-bold text-zinc-400 tracking-[0.3em] uppercase">System Ready</span>
+            <span className="text-[10px] font-bold text-zinc-400 tracking-[0.3em] uppercase">SYSTEM READY</span>
           </div>
           <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">Algory<span className="text-zinc-500">.</span></h1>
-          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">Select Your Market Environment</p>
+          <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">SELECT YOUR MARKET ENVIRONMENT</p>
           <div className="flex flex-col md:flex-row gap-6 mt-16">
             <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative px-10 py-6 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-2xl font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(52,211,153,0.1)] hover:bg-emerald-500/20 hover:shadow-[0_0_40px_rgba(52,211,153,0.25)] hover:-translate-y-1">
-              <div className="flex flex-col items-center gap-3"><svg className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg><span>Forex & Metals</span></div>
+              <div className="flex flex-col items-center gap-3"><svg className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg><span>FOREX & METALS</span></div>
             </button>
             <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative px-10 py-6 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-2xl font-bold text-sm tracking-widest uppercase transition-all duration-300 shadow-[0_0_30px_rgba(59,130,246,0.1)] hover:bg-blue-500/20 hover:shadow-[0_0_40px_rgba(59,130,246,0.25)] hover:-translate-y-1">
-              <div className="flex flex-col items-center gap-3"><svg className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg><span>Crypto Assets</span></div>
+              <div className="flex flex-col items-center gap-3"><svg className="w-8 h-8 opacity-80 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg><span>CRYPTO ASSETS</span></div>
             </button>
           </div>
         </div>
@@ -784,12 +787,12 @@ export default function Home() {
 
   if (showAuthGate && !isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
         <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
-          <div className="text-center mb-4"><h2 className="text-2xl font-bold tracking-tight text-white mb-2">Request Access</h2><p className="text-[10px] text-zinc-400 uppercase tracking-widest">Connect to Algory Engine</p></div>
-          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">Trader Nickname</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
-          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">Email Address</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
-          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "Connecting..." : "Enter Terminal"}</button>
+          <div className="text-center mb-4"><h2 className="text-2xl font-bold tracking-tight text-white mb-2">REQUEST ACCESS</h2><p className="text-[10px] text-zinc-400 uppercase tracking-widest">CONNECT TO ALGORY ENGINE</p></div>
+          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">TRADER NICKNAME</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
+          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">EMAIL ADDRESS</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
+          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "CONNECTING..." : "ENTER TERMINAL"}</button>
         </form>
       </div>
     );
@@ -809,6 +812,8 @@ export default function Home() {
 
   if (clampedProb >= 0.52) { inferredDirection = "BUY"; isTradeActive = true; } 
   else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
+
+  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
 
   const getPageBackground = () => {
     if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-[#0a0a0a] to-[#050505]';
@@ -835,26 +840,27 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(63, 63, 70, 1); }
       `}} />
 
-      <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 w-full min-w-[1024px]">
+      {/* MAIN LAYOUT WRAPPER */}
+      <div className="flex h-screen w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 min-w-[1024px]">
         
-        {/* LEFT SIDEBAR */}
-        <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
-          <div className="p-8 pb-4 border-b border-white/5 mb-4">
+        {/* LEFT SIDEBAR (FIXED WIDTH, FLEX-SHRINK-0) */}
+        <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex overflow-hidden">
+          <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
             <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setMarketMode(null)}>
               Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500' : 'text-emerald-500'}>.</span>
             </h2>
             
             <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/5">
-              <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Forex</button>
-              <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Crypto</button>
+              <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>FOREX</button>
+              <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>CRYPTO</button>
             </div>
 
             {marketMode === 'CRYPTO' && (
               <div className="flex flex-wrap gap-1 bg-[#0a0a0a] rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-                <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Standard</button>
-                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Spatial Arb</button>
-                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Triangular</button>
-                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Funding</button>
+                <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>STANDARD</button>
+                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>SPATIAL</button>
+                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>TRIANGLE</button>
+                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>FUNDING</button>
               </div>
             )}
           </div>
@@ -867,11 +873,13 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                      <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">Spatial Arbitrage <InfoTooltip info="Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken)." /></span>
+                      <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">SPATIAL ARBITRAGE <InfoTooltip info="Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken)." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
-                    {Object.values(MOCK_SPATIAL_ARB).map((arb) => <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />)}
+                    {Object.values(MOCK_SPATIAL_ARB).map((arb) => (
+                       <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -881,11 +889,13 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">Triangular Inefficiency <InfoTooltip info="Executes a sequence of three trades (e.g., USDT to BTC, BTC to ETH, ETH back to USDT) to profit from currency cross-rate inefficiencies." /></span>
+                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS <InfoTooltip info="Executes a sequence of three trades (e.g., USDT to BTC, BTC to ETH, ETH back to USDT) to profit from currency cross-rate inefficiencies." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
-                    {Object.values(MOCK_TRIANGULAR_ARB).map((arb) => <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />)}
+                    {Object.values(MOCK_TRIANGULAR_ARB).map((arb) => (
+                       <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -895,11 +905,13 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">Cross-Exchange Rates <InfoTooltip info="A delta-neutral strategy where you open opposing positions on two exchanges to capture the interest payments (funding fees) paid between long and short traders." /></span>
+                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES <InfoTooltip info="A delta-neutral strategy where you open opposing positions on two exchanges to capture the interest payments (funding fees) paid between long and short traders." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
-                    {Object.values(MOCK_FUNDING_RATES).map((arb) => <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />)}
+                    {Object.values(MOCK_FUNDING_RATES).map((arb) => (
+                       <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -908,7 +920,7 @@ export default function Home() {
                 <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                   <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full`}>
                     <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90' : 'text-emerald-500/90'}`}>
-                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Favorites
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> FAVORITES
                     </div>
                     <div className="px-3 w-full space-y-1.5 min-h-[60px]">
                       <SortableContext items={favorites} strategy={verticalListSortingStrategy}>{renderFavorites()}</SortableContext>
@@ -932,8 +944,8 @@ export default function Home() {
           </nav>
         </aside>
 
-        {/* MAIN PANEL */}
-        <main className={`flex-1 min-w-0 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
+        {/* MAIN PANEL (FLEX-1, MIN-W-0) */}
+        <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
           <div className="max-w-[1400px] mx-auto w-full">
             
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
@@ -941,10 +953,10 @@ export default function Home() {
             {loading && !data.majors ? (
               <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
                 <div className={`w-10 h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
-                <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">System Scanning...</span>
+                <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">SYSTEM SCANNING...</span>
               </div>
             ) : error && !data.majors ? (
-              <div className="p-10 mt-10 text-center text-red-400 font-medium border border-red-900/40 bg-red-950/20 rounded-[2rem]">{error}</div>
+              <div className="p-10 mt-10 text-center text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[2rem]">{error}</div>
             ) : (
               <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full">
                 
@@ -1003,7 +1015,7 @@ export default function Home() {
                                   <span className="text-white font-bold">{activeParams.BE}</span>
                                 </span>
                                 <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">Spread</span>
+                                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span>
                                   <span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
                                 </span>
                               </div>
@@ -1047,26 +1059,21 @@ export default function Home() {
                           <div className="grid md:grid-cols-2 gap-8 mb-8">
                             <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
                               <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
-                                <span className="flex items-center">
-                                  Previous: {activeParams.aiAnalysis.prev_session}
-                                </span>
+                                <span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session}</span>
                                 <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
                               </div>
-                              <p className="text-sm text-white/90 leading-loose font-medium">
-                                {activeParams.aiAnalysis.evaluation}
-                              </p>
+                              <p className="text-sm text-white/90 leading-loose font-medium">{activeParams.aiAnalysis.evaluation}</p>
                             </div>
-                            
                             <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
                                 inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
                                 inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 
                                 'bg-black/40 border-white/5'
                             }`}>
-                              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between transition-colors duration-1000 ${
+                              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between ${
                                   inferredDirection === 'SELL' ? 'text-red-400/80' : 
                                   inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'
                               }`}>
-                                <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
+                                <span>PREDICTION: {activeParams.aiAnalysis.current_session}</span>
                                 <span className="relative flex h-2 w-2">
                                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                                       inferredDirection === 'SELL' ? 'bg-red-400' : 
@@ -1078,9 +1085,7 @@ export default function Home() {
                                   }`}></span>
                                 </span>
                               </div>
-                              <p className={`text-sm leading-loose font-medium relative z-10 transition-colors duration-1000 ${
-                                  inferredDirection === 'SELL' ? 'text-white' : inferredDirection === 'BUY' ? 'text-white' : 'text-white/80'
-                              }`}>
+                              <p className={`text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>
                                 {activeParams.aiAnalysis.prediction}
                               </p>
                             </div>
@@ -1091,14 +1096,14 @@ export default function Home() {
                           <div className="border-t border-white/5 pt-8 mt-2">
                             <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2">
                               <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              AI Backtest & Signal History (Last 5)
+                              AI BACKTEST & SIGNAL HISTORY (LAST 5)
                             </div>
                             <div className="flex flex-wrap gap-3">
                               {activeParams.history.map((trade, idx) => (
                                 <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
                                   <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span>
                                   <span className="text-[10px] font-bold text-white/80">{trade.type}</span>
-                                  <span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} pips</span>
+                                  <span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
                                 </div>
                               ))}
                             </div>
@@ -1115,9 +1120,9 @@ export default function Home() {
 
                 </div>
 
-                {/* RIGHT SIDEBAR PANEL */}
-                <div className="w-full xl:w-1/3">
-                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 sticky top-8">
+                {/* RIGHT SIDEBAR (FIXED WIDTH, FLEX-SHRINK-0) */}
+                <div className="w-full xl:w-80 flex-shrink-0 flex flex-col h-full">
+                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 sticky top-8 flex flex-col max-h-[85vh]">
                     <div className="px-6 py-6 border-b border-white/5 bg-white/[0.01]">
                       
                       <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/5">
@@ -1125,20 +1130,20 @@ export default function Home() {
                           onClick={() => setRightPanelMode('news')} 
                           className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${rightPanelMode === 'news' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
                         >
-                          Market News
+                          MARKET NEWS
                         </button>
                         {marketMode === 'CRYPTO' && (
                           <button 
                             onClick={() => setRightPanelMode('whales')} 
                             className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
                           >
-                            Whale Alerts 🚨
+                            WHALES 🚨
                           </button>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex flex-col p-4">
+                    <div className="flex flex-col p-4 overflow-y-auto custom-scrollbar flex-1">
                       {rightPanelMode === 'news' ? (
                         displayedNews && displayedNews.length > 0 ? (
                           displayedNews.map((item, idx) => (
@@ -1162,9 +1167,9 @@ export default function Home() {
                             </a>
                           ))
                         ) : (
-                          <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest flex flex-col items-center gap-4">
+                          <div className="p-10 text-center text-[10px] text-zinc-500 font-bold uppercase tracking-widest flex flex-col items-center gap-4">
                             <svg className="animate-spin h-6 w-6 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            System Scanning...
+                            SYSTEM SCANNING...
                           </div>
                         )
                       ) : (
