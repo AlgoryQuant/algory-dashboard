@@ -2,24 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  DndContext, 
-  DragOverlay, 
-  closestCorners,
-  pointerWithin,
-  rectIntersection,
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors, 
-  DragStartEvent, 
-  DragEndEvent
+  DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
+  KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
 } from '@dnd-kit/core';
 import { 
-  arrayMove, 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
-  verticalListSortingStrategy, 
-  useSortable 
+  arrayMove, SortableContext, sortableKeyboardCoordinates, 
+  verticalListSortingStrategy, useSortable 
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -92,13 +80,50 @@ const customCollisionDetection = (args: any) => {
   return closestCorners(args);
 };
 
-// === SUB-COMPONENTS ===
-const InfoTooltip = ({ term, info }: { term: string, info: string }) => (
+// === INTERACTIVE COMPONENTS ===
+
+const ExecuteButton = ({ baseClass, defaultText, colorTheme }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' }) => {
+  const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
+
+  const handleClick = () => {
+    if (state !== 'idle') return;
+    setState('loading');
+    setTimeout(() => {
+      setState('success');
+      setTimeout(() => setState('idle'), 1000);
+    }, 1500);
+  };
+
+  let bgClass = '';
+  if (colorTheme === 'emerald') bgClass = 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)]';
+  if (colorTheme === 'red') bgClass = 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]';
+  if (colorTheme === 'blue') bgClass = 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)]';
+  if (colorTheme === 'purple') bgClass = 'bg-purple-500 hover:bg-purple-400 text-white border-purple-400 shadow-[0_5px_20px_rgba(168,85,247,0.2)]';
+
+  return (
+    <button onClick={handleClick} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative`}>
+      {state === 'idle' && <span>{defaultText}</span>}
+      {state === 'loading' && (
+        <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      )}
+      {state === 'success' && (
+        <svg className="h-5 w-5 text-current animate-in zoom-in" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </button>
+  );
+};
+
+const InfoTooltip = ({ info }: { info: string }) => (
   <span className="relative group inline-flex items-center cursor-help ml-2">
-    <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-white/10 hover:text-white hover:border-white/30 transition-colors">i</span>
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50">
-      <div className="font-bold mb-1.5 text-white">{term}</div>
-      <div className="text-zinc-400 leading-relaxed">{info}</div>
+    <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal">
+      {info}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
     </div>
   </span>
 );
@@ -109,13 +134,13 @@ const LiquidationsBar = () => {
   const shortPct = (LIQUIDATIONS_MOCK.shortsRekt / total) * 100;
 
   return (
-    <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-2xl p-6 mt-6 shadow-2xl">
+    <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 mt-6 shadow-2xl">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+        <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
           <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
           24H Market Liquidations
         </h3>
-        <span className="text-[10px] bg-white/5 px-2 py-1 rounded text-zinc-400 border border-white/5">Global Crypto Metrics</span>
+        <span className="text-[9px] bg-white/5 px-2 py-1 rounded text-zinc-400 border border-white/5 tracking-widest uppercase">Global Crypto Metrics</span>
       </div>
       <div className="flex justify-between text-xs font-mono font-bold mb-2">
         <span className="text-red-400">Longs Rekt: ${(LIQUIDATIONS_MOCK.longsRekt / 1000000).toFixed(1)}M</span>
@@ -149,19 +174,22 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
 
   return (
     <div className="mt-6 p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
-      <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4 flex items-center">Position Sizing</div>
+      <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
+        Position Sizing
+        <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
+      </div>
       <div className="flex gap-6 items-end">
         <div className="flex flex-col gap-2 w-1/3">
-          <label className="text-[10px] text-zinc-500 uppercase font-semibold">Balance ($)</label>
-          <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
+          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">Balance ($)</label>
+          <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
         </div>
         <div className="flex flex-col gap-2 w-1/3">
-          <label className="text-[10px] text-zinc-500 uppercase font-semibold">Risk (%)</label>
-          <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
+          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">Risk (%)</label>
+          <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
         </div>
         <div className={`w-1/3 flex flex-col items-center justify-center py-2 px-4 rounded-lg border shadow-inner ${direction === 'BUY' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
-          <span className={`text-[10px] uppercase font-bold mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : 'text-red-500/70'}`}>Volume</span>
-          <span className="text-xl font-bold text-white">{lotSize} <span className="text-xs text-zinc-500 font-normal">Lots</span></span>
+          <span className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : 'text-red-500/70'}`}>Volume</span>
+          <span className="text-xl font-bold text-white font-mono">{lotSize} <span className="text-xs text-zinc-500 font-normal font-sans">Lots</span></span>
         </div>
       </div>
     </div>
@@ -181,7 +209,7 @@ const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) =>
   };
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl h-[450px] relative transition-all duration-300">
+    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl h-[450px] relative transition-all duration-300 flex-shrink-0">
       <div className="absolute top-0 left-0 w-full px-6 py-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between z-10 pointer-events-none">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
@@ -206,9 +234,10 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const grossProfit = (arbData.bidPrice - arbData.askPrice) * volume;
   const fees = (arbData.askPrice * volume * (arbData.estimatedFeePercent / 100)) + (arbData.bidPrice * volume * (arbData.estimatedFeePercent / 100));
   const netProfit = grossProfit - fees;
+  const isProfitable = netProfit > 0;
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.1)] transition-all duration-300">
+    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -216,11 +245,11 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight">{arbData.asset} Arbitrage</h2>
-            <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mt-1">Spatial Exchange Opportunity</p>
+            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Spatial Exchange Opportunity</p>
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg">+{arbData.spreadPercent}% Spread</span>
+          <span className="text-emerald-400 font-bold text-lg tracking-wider">+{arbData.spreadPercent}% SPREAD</span>
         </div>
       </div>
 
@@ -228,37 +257,37 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-red-500/50"></div>
-            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Buy Exchange (Ask)</div>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Buy Exchange (Ask)</div>
             <div className="text-xl font-bold text-white mb-4">{arbData.buyExchange}</div>
-            <div className="text-3xl font-mono font-bold text-red-400">${arbData.askPrice.toLocaleString()}</div>
+            <div className="text-4xl font-mono font-bold text-red-400">${arbData.askPrice.toLocaleString()}</div>
           </div>
           <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50"></div>
-            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Sell Exchange (Bid)</div>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Sell Exchange (Bid)</div>
             <div className="text-xl font-bold text-white mb-4">{arbData.sellExchange}</div>
-            <div className="text-3xl font-mono font-bold text-emerald-400">${arbData.bidPrice.toLocaleString()}</div>
+            <div className="text-4xl font-mono font-bold text-emerald-400">${arbData.bidPrice.toLocaleString()}</div>
           </div>
         </div>
 
         <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8">
-          <div className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+          <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-2">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
             Net Profit Calculator
           </div>
           <div className="flex flex-col md:flex-row gap-8 items-end">
             <div className="flex flex-col gap-2 w-full md:w-1/3">
-              <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">Trading Volume ({arbData.asset.split('/')[0]})</label>
+              <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Trading Volume ({arbData.asset.split('/')[0]})</label>
               <input type="number" min="0.01" step="0.01" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="bg-black/50 border border-white/10 rounded-xl px-5 py-3 text-lg text-white font-mono focus:outline-none focus:border-blue-500/50 transition-all" />
             </div>
-            <div className="flex flex-col gap-1 w-full md:w-1/3">
-              <div className="flex justify-between text-xs text-zinc-400 font-mono"><span>Gross Profit:</span><span className={grossProfit > 0 ? 'text-emerald-400' : 'text-red-400'}>${grossProfit.toFixed(2)}</span></div>
-              <div className="flex justify-between text-xs text-zinc-400 font-mono"><span>Est. Fees ({arbData.estimatedFeePercent}%):</span><span className="text-red-400">-${fees.toFixed(2)}</span></div>
+            <div className="flex flex-col gap-2 w-full md:w-1/3">
+              <div className="flex justify-between text-xs text-zinc-400 font-mono"><span>GROSS PROFIT:</span><span className={grossProfit > 0 ? 'text-emerald-400' : 'text-red-400'}>${grossProfit.toFixed(2)}</span></div>
+              <div className="flex justify-between text-xs text-zinc-400 font-mono"><span>EST. FEES ({arbData.estimatedFeePercent}%):</span><span className="text-red-400">-${fees.toFixed(2)}</span></div>
               <div className="w-full h-[1px] bg-white/10 my-2"></div>
-              <div className="flex justify-between text-sm font-bold uppercase tracking-widest mt-1"><span className="text-zinc-500">Net Profit:</span></div>
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest"><span className="text-zinc-500">NET PROFIT:</span></div>
             </div>
             <div className="w-full md:w-1/3 flex justify-end">
-               <div className={`text-4xl font-black font-mono tracking-tighter ${netProfit > 0 ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]' : 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]'}`}>
-                 {netProfit > 0 ? '+' : ''}${netProfit.toFixed(2)}
+               <div className={`text-6xl font-black font-mono tracking-tighter ${isProfitable ? 'text-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]' : 'text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]'}`}>
+                 {isProfitable ? '+' : ''}${netProfit.toFixed(2)}
                </div>
             </div>
           </div>
@@ -277,7 +306,7 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
   const netProfit = step3 - volume;
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.1)] transition-all duration-300">
+    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all duration-300">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
@@ -285,11 +314,11 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight">{arbData.pairName}</h2>
-            <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mt-1">Triangular Inefficiency Loop</p>
+            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">Triangular Inefficiency Loop</p>
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg">+{arbData.expectedProfitPercent}% Expected</span>
+          <span className="text-emerald-400 font-bold text-lg tracking-wider">+{arbData.expectedProfitPercent}% EXPECTED</span>
         </div>
       </div>
 
@@ -297,7 +326,6 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-12 relative">
           <div className="absolute top-1/2 left-0 w-full h-[2px] bg-white/5 hidden lg:block -z-10"></div>
           
-          {/* Box 1 */}
           <div className="bg-black border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center w-full lg:w-1/3">
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Step 1: Buy {arbData.path[1]}</div>
             <div className="text-2xl font-bold text-white mb-2">{arbData.path[0]} ➔ {arbData.path[1]}</div>
@@ -308,7 +336,6 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </div>
 
-          {/* Box 2 */}
           <div className="bg-black border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center w-full lg:w-1/3">
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Step 2: Cross to {arbData.path[2]}</div>
             <div className="text-2xl font-bold text-white mb-2">{arbData.path[1]} ➔ {arbData.path[2]}</div>
@@ -319,7 +346,6 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </div>
 
-          {/* Box 3 */}
           <div className="bg-black border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center w-full lg:w-1/3">
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-bold">Step 3: Sell back to {arbData.path[3]}</div>
             <div className="text-2xl font-bold text-white mb-2">{arbData.path[2]} ➔ {arbData.path[3]}</div>
@@ -329,16 +355,17 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
 
         <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 flex flex-col md:flex-row gap-8 items-center justify-between">
           <div className="w-full md:w-1/3">
-            <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">Initial Capital ({arbData.path[0]})</label>
+            <label className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Initial Capital ({arbData.path[0]})</label>
             <input type="number" min="1" step="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-3 text-lg text-white font-mono focus:outline-none focus:border-purple-500/50 mt-2 transition-all" />
           </div>
           <div className="flex-1 text-center md:text-right">
-            <div className="text-sm text-zinc-500 font-bold uppercase tracking-widest mb-1">Calculated Net Profit</div>
-            <div className={`text-4xl font-black font-mono tracking-tighter ${netProfit > 0 ? 'text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]' : 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]'}`}>
-              {netProfit > 0 ? '+' : ''}{netProfit.toFixed(2)} {arbData.path[0]}
+            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Calculated Net Profit</div>
+            <div className={`text-6xl font-black font-mono tracking-tighter ${netProfit > 0 ? 'text-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]' : 'text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]'}`}>
+              {netProfit > 0 ? '+' : ''}{netProfit.toFixed(2)} <span className="text-2xl tracking-normal text-white/50">{arbData.path[0]}</span>
             </div>
           </div>
-          <button className="w-full md:w-auto px-10 py-5 bg-purple-500 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-purple-400 transition-all shadow-[0_5px_20px_rgba(168,85,247,0.2)] hover:-translate-y-1">Execute Loop</button>
+          
+          <ExecuteButton baseClass="w-full md:w-auto px-10 py-5 font-bold text-xs uppercase tracking-widest rounded-xl" defaultText="EXECUTE LOOP" colorTheme="purple" />
         </div>
       </div>
     </div>
@@ -347,7 +374,7 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
 
 const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(249,115,22,0.1)] transition-all duration-300">
+    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(249,115,22,0.15)] transition-all duration-300">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
@@ -355,16 +382,16 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tight">{data.asset}</h2>
-            <p className="text-xs font-bold text-orange-400 uppercase tracking-widest mt-1">Cross-Exchange Funding Arb</p>
+            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">Cross-Exchange Funding Arb</p>
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg">{(data.netYield * 100).toFixed(3)}% Daily Yield</span>
+          <span className="text-emerald-400 font-bold text-lg tracking-wider">{(data.netYield * 100).toFixed(3)}% DAILY YIELD</span>
         </div>
       </div>
 
       <div className="p-8">
-        <div className="text-xs text-zinc-500 uppercase tracking-widest font-bold mb-6">Current 8H Funding Rates</div>
+        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6">Current 8H Funding Rates</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {[
             { name: 'Binance', rate: data.binanceRate },
@@ -372,12 +399,12 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
             { name: 'OKX', rate: data.okxRate }
           ].map(ex => (
              <div key={ex.name} className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner flex flex-col items-center">
-               <div className="text-sm font-bold text-white mb-4">{ex.name}</div>
-               <div className={`text-3xl font-mono font-black ${ex.rate > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+               <div className="text-sm font-bold text-white mb-4 uppercase tracking-widest">{ex.name}</div>
+               <div className={`text-4xl font-mono font-black ${ex.rate > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                  {ex.rate > 0 ? '+' : ''}{(ex.rate * 100).toFixed(4)}%
                </div>
-               <div className="text-[10px] text-zinc-500 uppercase font-bold mt-2">
-                 {ex.rate > 0 ? 'Pays Shorts' : 'Pays Longs'}
+               <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-3">
+                 {ex.rate > 0 ? 'PAYS SHORTS' : 'PAYS LONGS'}
                </div>
              </div>
           ))}
@@ -385,7 +412,7 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
 
         <div className="bg-orange-950/20 border border-orange-500/20 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
-            <div className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <div className="text-sm font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
               Delta-Neutral Setup
             </div>
@@ -419,7 +446,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   }, []);
 
   const hour = now.getHours();
-  const isCrypto = mode.includes('CRYPTO') || mode.includes('Arb') || mode.includes('Rates');
+  const isCrypto = mode.includes('CRYPTO');
   const sessions = isCrypto ? [
     { name: "Global Crypto Market", open: "24", close: "7", isActive: true }
   ] : [
@@ -433,17 +460,29 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   const seconds = now.getSeconds();
   const progressPercent = (((minutes % 15) * 60 + seconds) / 900) * 100;
 
+  let pulseColor = 'bg-emerald-400';
+  let gradientStart = 'from-emerald-600';
+  let gradientEnd = 'to-emerald-400';
+
+  if (mode.includes('CRYPTO') && !mode.includes('TRIANGULAR') && !mode.includes('FUNDING')) {
+      pulseColor = 'bg-blue-400'; gradientStart = 'from-blue-600'; gradientEnd = 'to-blue-400'; 
+  } else if (mode.includes('TRIANGULAR')) {
+      pulseColor = 'bg-purple-400'; gradientStart = 'from-purple-600'; gradientEnd = 'to-purple-400'; 
+  } else if (mode.includes('FUNDING')) {
+      pulseColor = 'bg-orange-400'; gradientStart = 'from-orange-600'; gradientEnd = 'to-orange-400'; 
+  }
+
   return (
-    <div className="mb-6 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300">
+    <div className="mb-10 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white">
             {now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
             <span className="text-2xl text-white/50 ml-1">:{now.getSeconds().toString().padStart(2, '0')}</span>
           </div>
-          <div className="text-xs font-medium text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
+          <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
             <span className="flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isCrypto ? 'bg-blue-400' : 'bg-emerald-400'}`}></span>
+              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${pulseColor}`}></span>
               System Sync ({mode})
             </span>
             <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">
@@ -459,7 +498,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
                 ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` 
                 : 'bg-black/40 border-white/5 opacity-60'
             }`}>
-              <span className={`text-xs font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>
                 {s.name}
               </span>
               <span className="text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
@@ -475,7 +514,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
         </div>
         <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
           <div 
-            className={`h-full rounded-full transition-all duration-1000 ease-linear ${isCrypto ? 'bg-gradient-to-r from-blue-600 to-blue-400' : 'bg-gradient-to-r from-emerald-600 to-emerald-400'}`}
+            className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`}
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -672,20 +711,23 @@ export default function Home() {
     return null;
   };
 
-  const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined) => {
+  const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined, tooltipInfo?: string) => {
     if (!pairs || Object.keys(pairs).length === 0) return null;
     const availablePairs = Object.entries(pairs).filter(([ticker]) => !favorites.includes(ticker)).sort((a, b) => b[1] - a[1]);
     const isOpen = openGroups[title]; 
 
     return (
       <div className="mb-6">
-        <button onClick={() => setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }))} className="w-full flex items-center justify-between px-6 py-2 mb-3 cursor-pointer group outline-none">
-          <div className="flex items-center gap-2">
+        <div className="w-full flex items-center justify-between px-6 py-2 mb-3 group">
+          <button onClick={() => setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }))} className="flex items-center gap-2 cursor-pointer outline-none">
             {getSidebarIcon(title)}
-            <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 uppercase tracking-widest transition-colors">{title}</span>
-          </div>
-          <svg className={`w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-        </button>
+            <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 uppercase tracking-widest transition-colors flex items-center">
+              {title}
+              {tooltipInfo && <InfoTooltip info={tooltipInfo} />}
+            </span>
+          </button>
+          <svg className={`w-3.5 h-3.5 text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </div>
         <div className={`space-y-1.5 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
           {availablePairs.map(([ticker, prob]) => (
             <SidebarItemNode key={ticker} ticker={ticker} prob={prob} isActive={activePair === ticker} isFavorite={false} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />
@@ -705,7 +747,7 @@ export default function Home() {
     });
 
     if (relevantFavs.length === 0) return (
-      <div className="w-full text-xs font-medium px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600">
+      <div className="w-full text-[10px] uppercase tracking-widest font-bold px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         Click the star to pin pairs
       </div>
@@ -723,7 +765,7 @@ export default function Home() {
         <div className="relative z-10 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="flex items-center gap-3 mb-6">
             <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-zinc-500"></span></span>
-            <span className="text-xs font-bold text-zinc-400 tracking-[0.3em] uppercase">System Ready</span>
+            <span className="text-[10px] font-bold text-zinc-400 tracking-[0.3em] uppercase">System Ready</span>
           </div>
           <h1 className="text-7xl md:text-9xl font-bold tracking-tighter text-white drop-shadow-2xl">Algory<span className="text-zinc-500">.</span></h1>
           <p className="mt-8 text-zinc-400 text-sm md:text-lg tracking-[0.2em] uppercase max-w-xl leading-relaxed">Select Your Market Environment</p>
@@ -744,41 +786,29 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
         <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Request Access</h2>
-            <p className="text-xs text-zinc-400 uppercase tracking-widest">Connect to Algory Engine</p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">Trader Nickname</label>
-            <input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">Email Address</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />
-            {emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}
-          </div>
-          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-xs tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "Connecting..." : "Enter Terminal"}</button>
+          <div className="text-center mb-4"><h2 className="text-2xl font-bold tracking-tight text-white mb-2">Request Access</h2><p className="text-[10px] text-zinc-400 uppercase tracking-widest">Connect to Algory Engine</p></div>
+          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">Trader Nickname</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
+          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">Email Address</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
+          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "Connecting..." : "Enter Terminal"}</button>
         </form>
       </div>
     );
   }
 
   // --- LOGIC FOR CARD RENDERING ---
-  const isArbitrageMode = marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb';
-  
   const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? data.crypto?.[ticker] ?? 0;
   const activeProb = getProbForTicker(activePair);
   const activeParams = data.parameters?.[activePair];
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
 
-  let inferredDirection = "NEUTRAL";
-  let isTradeActive = false;
-  
   const clampedProb = Math.max(0, Math.min(1, activeProb));
   const gaugeRotation = (clampedProb * 180) - 90; 
+
+  let inferredDirection = "NEUTRAL";
+  let isTradeActive = false;
+
   if (clampedProb >= 0.52) { inferredDirection = "BUY"; isTradeActive = true; } 
   else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
-  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
 
   const getPageBackground = () => {
     if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-[#0a0a0a] to-[#050505]';
@@ -798,59 +828,33 @@ export default function Home() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `.custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }`}} />
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(39, 39, 42, 0.8); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(63, 63, 70, 1); }
+      `}} />
 
-      <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700">
+      <div className="flex h-screen bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 w-full min-w-[1024px]">
         
+        {/* LEFT SIDEBAR */}
         <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex">
           <div className="p-8 pb-4 border-b border-white/5 mb-4">
             <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setMarketMode(null)}>
               Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500' : 'text-emerald-500'}>.</span>
             </h2>
             
-            {/* MAIN MARKET SWITCH */}
             <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/5">
-              <button 
-                onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} 
-                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-              >
-                Forex
-              </button>
-              <button 
-                onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} 
-                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-              >
-                Crypto
-              </button>
+              <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Forex</button>
+              <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Crypto</button>
             </div>
 
-            {/* NEW SUB-NAVIGATION ONLY FOR CRYPTO */}
             {marketMode === 'CRYPTO' && (
               <div className="flex flex-wrap gap-1 bg-[#0a0a0a] rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-                <button 
-                  onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} 
-                  className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  Standard
-                </button>
-                <button 
-                  onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} 
-                  className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  Spatial Arb
-                </button>
-                <button 
-                  onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} 
-                  className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  Triangular
-                </button>
-                <button 
-                  onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} 
-                  className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  Funding
-                </button>
+                <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Standard</button>
+                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Spatial Arb</button>
+                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Triangular</button>
+                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>Funding</button>
               </div>
             )}
           </div>
@@ -863,19 +867,11 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                      <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest">Spatial Arbitrage</span>
+                      <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">Spatial Arbitrage <InfoTooltip info="Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken)." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
-                    {Object.values(MOCK_SPATIAL_ARB).map((arb) => (
-                       <ArbSidebarItemNode 
-                          key={arb.id} 
-                          data={arb} 
-                          isActive={activePair === arb.id} 
-                          onClick={() => setActivePair(arb.id)} 
-                          type="spatial"
-                       />
-                    ))}
+                    {Object.values(MOCK_SPATIAL_ARB).map((arb) => <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />)}
                   </div>
                 </div>
               </div>
@@ -885,19 +881,11 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest">Triangular Inefficiency</span>
+                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">Triangular Inefficiency <InfoTooltip info="Executes a sequence of three trades (e.g., USDT to BTC, BTC to ETH, ETH back to USDT) to profit from currency cross-rate inefficiencies." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
-                    {Object.values(MOCK_TRIANGULAR_ARB).map((arb) => (
-                       <ArbSidebarItemNode 
-                          key={arb.id} 
-                          data={arb} 
-                          isActive={activePair === arb.id} 
-                          onClick={() => setActivePair(arb.id)} 
-                          type="triangular"
-                       />
-                    ))}
+                    {Object.values(MOCK_TRIANGULAR_ARB).map((arb) => <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />)}
                   </div>
                 </div>
               </div>
@@ -907,35 +895,23 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest">Cross-Exchange Rates</span>
+                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">Cross-Exchange Rates <InfoTooltip info="A delta-neutral strategy where you open opposing positions on two exchanges to capture the interest payments (funding fees) paid between long and short traders." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
-                    {Object.values(MOCK_FUNDING_RATES).map((arb) => (
-                       <ArbSidebarItemNode 
-                          key={arb.id} 
-                          data={arb} 
-                          isActive={activePair === arb.id} 
-                          onClick={() => setActivePair(arb.id)} 
-                          type="funding"
-                       />
-                    ))}
+                    {Object.values(MOCK_FUNDING_RATES).map((arb) => <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />)}
                   </div>
                 </div>
               </div>
             ) : (
-              /* DISPLAY CLASSIC WATCHLIST (DND + FAVORITES) */
               <>
                 <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                   <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full`}>
                     <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90' : 'text-emerald-500/90'}`}>
-                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      Favorites
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Favorites
                     </div>
                     <div className="px-3 w-full space-y-1.5 min-h-[60px]">
-                      <SortableContext items={favorites} strategy={verticalListSortingStrategy}>
-                        {renderFavorites()}
-                      </SortableContext>
+                      <SortableContext items={favorites} strategy={verticalListSortingStrategy}>{renderFavorites()}</SortableContext>
                     </div>
                   </div>
                   <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
@@ -945,15 +921,9 @@ export default function Home() {
 
                 <div className="pb-20 flex-1">
                   {marketMode === 'FOREX' ? (
-                    <>
-                      {renderSidebarGroup('Major Liquidity', data.majors)}
-                      {renderSidebarGroup('Cross Pairs', data.minors)}
-                      {renderSidebarGroup('Precious Metals', data.metals)}
-                    </>
+                    <>{renderSidebarGroup('Major Liquidity', data.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data.minors)}{renderSidebarGroup('Precious Metals', data.metals)}</>
                   ) : (
-                    <>
-                      {renderSidebarGroup('Crypto Assets', data.crypto)}
-                    </>
+                    <>{renderSidebarGroup('Crypto Assets', data.crypto)}</>
                   )}
                 </div>
               </>
@@ -962,24 +932,23 @@ export default function Home() {
           </nav>
         </aside>
 
-        <main className={`flex-1 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
-          <div className="max-w-[1400px] mx-auto">
+        {/* MAIN PANEL */}
+        <main className={`flex-1 min-w-0 overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
+          <div className="max-w-[1400px] mx-auto w-full">
             
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
 
             {loading && !data.majors ? (
               <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
                 <div className={`w-10 h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
-                <span className="text-sm text-zinc-400 font-medium tracking-widest uppercase">Connecting to Engine...</span>
+                <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">System Scanning...</span>
               </div>
             ) : error && !data.majors ? (
-              <div className="p-10 mt-10 text-center text-red-400 font-medium border border-red-900/40 bg-red-950/20 rounded-[2rem]">
-                {error}
-              </div>
+              <div className="p-10 mt-10 text-center text-red-400 font-medium border border-red-900/40 bg-red-950/20 rounded-[2rem]">{error}</div>
             ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
+              <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full">
                 
-                <div className="xl:col-span-2 flex flex-col space-y-10">
+                <div className="w-full xl:w-2/3 flex flex-col space-y-10">
                   
                   {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' && MOCK_SPATIAL_ARB[activePair] ? (
                     <SpatialArbitragePanel arbData={MOCK_SPATIAL_ARB[activePair]} />
@@ -993,12 +962,10 @@ export default function Home() {
                       <TradingChart symbol={activePair} />
                       
                       <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 ${getGlowColor()}`}>
-                        
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
                           <div className="w-full">
                             <div className="flex items-center gap-4 mb-4">
                               <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
-                              
                               {isTradeActive && (
                                 <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
                                   inferredDirection === 'BUY' 
@@ -1008,7 +975,6 @@ export default function Home() {
                                   {inferredDirection} PENDING
                                 </span>
                               )}
-
                               {activeParams?.KeyDriver && (
                                 <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">
                                   {activeParams.KeyDriver}
@@ -1026,14 +992,12 @@ export default function Home() {
                                   <span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span>
                                   <span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
                                 </span>
-                                
                                 {activeParams.RRR && (
                                   <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner">
                                     <span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span>
                                     <span className="text-white font-bold">1:{activeParams.RRR}</span>
                                   </span>
                                 )}
-
                                 <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
                                   <span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span>
                                   <span className="text-white font-bold">{activeParams.BE}</span>
@@ -1044,61 +1008,36 @@ export default function Home() {
                                 </span>
                               </div>
                             )}
-                            
                             {activeParams && <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />}
-
                           </div>
 
                           <div className="flex flex-col items-center gap-6 flex-shrink-0">
                             <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
                               <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
-                                <defs>
-                                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                  </filter>
-                                </defs>
+                                <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
                                 <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
                                 <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                                
-                                {[...Array(11)].map((_, i) => {
-                                    const angle = -90 + (i * 18);
-                                    const isMain = i === 0 || i === 5 || i === 10;
-                                    const tickColor = i < 5 ? "#ef4444" : i > 5 ? "#10b981" : "#a1a1aa";
-                                    return (
-                                        <line key={i} x1="100" y1={isMain ? "25" : "30"} x2="100" y2="38" stroke={tickColor} strokeWidth={isMain ? "2" : "1"} strokeOpacity="0.6" style={{ transform: `rotate(${angle}deg)`, transformOrigin: '100px 100px' }} />
-                                    );
-                                })}
-                                <text x="25" y="115" fontSize="9" fill="#f87171" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">SELL</text>
-                                <text x="175" y="115" fontSize="9" fill="#34d399" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">BUY</text>
-
                                 <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
                                   <line x1="100" y1="100" x2="100" y2="35" stroke={needleColor} strokeWidth="3.5" strokeLinecap="round" filter="url(#glow)" strokeOpacity="0.9" />
-                                  <polygon points="97,100 103,100 100,28" fill="#ffffff" />
                                   <circle cx="100" cy="100" r="7" fill="#050505" stroke={needleColor} strokeWidth="2.5" />
                                 </g>
                               </svg>
-                              
                               <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${
                                   inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') :
-                                  inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' :
-                                  'text-zinc-500'
+                                  inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'
                               }`}>
                                 {(activeProb * 100).toFixed(1)}%
                               </div>
                             </div>
-
                             {isTradeActive ? (
-                              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${
-                                  inferredDirection === 'BUY'
-                                  ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)]')
-                                  : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]'
-                              }`}>
-                                  Execute {inferredDirection}
-                              </button>
+                              <ExecuteButton 
+                                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1"
+                                defaultText={`EXECUTE ${inferredDirection}`}
+                                colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'}
+                              />
                             ) : (
                               <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
-                                  Low Conviction
+                                  LOW CONVICTION
                               </button>
                             )}
                           </div>
@@ -1125,8 +1064,7 @@ export default function Home() {
                             }`}>
                               <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between transition-colors duration-1000 ${
                                   inferredDirection === 'SELL' ? 'text-red-400/80' : 
-                                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 
-                                  'text-zinc-500'
+                                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'
                               }`}>
                                 <span>Prediction: {activeParams.aiAnalysis.current_session}</span>
                                 <span className="relative flex h-2 w-2">
@@ -1141,9 +1079,7 @@ export default function Home() {
                                 </span>
                               </div>
                               <p className={`text-sm leading-loose font-medium relative z-10 transition-colors duration-1000 ${
-                                  inferredDirection === 'SELL' ? 'text-white' : 
-                                  inferredDirection === 'BUY' ? 'text-white' : 
-                                  'text-white/80'
+                                  inferredDirection === 'SELL' ? 'text-white' : inferredDirection === 'BUY' ? 'text-white' : 'text-white/80'
                               }`}>
                                 {activeParams.aiAnalysis.prediction}
                               </p>
@@ -1151,10 +1087,9 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* AI SIGNAL HISTORY */}
                         {activeParams?.history && (
                           <div className="border-t border-white/5 pt-8 mt-2">
-                            <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2">
                               <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                               AI Backtest & Signal History (Last 5)
                             </div>
@@ -1163,7 +1098,7 @@ export default function Home() {
                                 <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
                                   <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span>
                                   <span className="text-[10px] font-bold text-white/80">{trade.type}</span>
-                                  <span className={`text-xs font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} pips</span>
+                                  <span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} pips</span>
                                 </div>
                               ))}
                             </div>
@@ -1180,11 +1115,11 @@ export default function Home() {
 
                 </div>
 
-                <div className="xl:col-span-1">
-                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden sticky top-8 shadow-2xl transition-all duration-300">
-                    <div className="px-6 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                {/* RIGHT SIDEBAR PANEL */}
+                <div className="w-full xl:w-1/3">
+                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 sticky top-8">
+                    <div className="px-6 py-6 border-b border-white/5 bg-white/[0.01]">
                       
-                      {/* SMART MONEY TOGGLE TABS */}
                       <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/5">
                         <button 
                           onClick={() => setRightPanelMode('news')} 
@@ -1192,12 +1127,14 @@ export default function Home() {
                         >
                           Market News
                         </button>
-                        <button 
-                          onClick={() => setRightPanelMode('whales')} 
-                          className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-                        >
-                          Whale Alerts 🚨
-                        </button>
+                        {marketMode === 'CRYPTO' && (
+                          <button 
+                            onClick={() => setRightPanelMode('whales')} 
+                            className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                          >
+                            Whale Alerts 🚨
+                          </button>
+                        )}
                       </div>
                     </div>
                     
@@ -1225,8 +1162,9 @@ export default function Home() {
                             </a>
                           ))
                         ) : (
-                          <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest">
-                            Awaiting market catalysts...
+                          <div className="p-10 text-center text-xs text-zinc-500 font-bold uppercase tracking-widest flex flex-col items-center gap-4">
+                            <svg className="animate-spin h-6 w-6 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            System Scanning...
                           </div>
                         )
                       ) : (
@@ -1246,7 +1184,7 @@ export default function Home() {
                                   {alert.type}
                                 </span>
                               </div>
-                              <span className="text-xs font-mono font-bold text-white/90">{alert.amountUsd}</span>
+                              <span className="text-[10px] font-mono font-bold text-white/90">{alert.amountUsd}</span>
                             </div>
                             <h4 className="text-sm font-medium text-white/70 leading-relaxed mt-1">
                               {alert.text}
