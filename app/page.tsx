@@ -64,6 +64,7 @@ interface DashboardData {
   minors?: Record<string, number>;
   metals?: Record<string, number>;
   crypto?: Record<string, number>;
+  crypto_arb?: Record<string, SpatialArbData>;
   news?: NewsItem[];
   parameters?: Record<string, { 
     SL: number; 
@@ -80,14 +81,29 @@ interface DashboardData {
   }>;
 }
 
-// === MOCK DATA PRO ARBITRÁŽ ===
-// Slouží pro okamžité oživení nového UI před napojením backendu
+// === MOCK DATA FOR ARBITRAGE ===
+// Used to instantly bring the new UI to life before connecting the backend
 const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
   "ARB-BTC-1": { id: "ARB-BTC-1", asset: "BTC/USDT", buyExchange: "Binance", sellExchange: "Kraken", askPrice: 64200.50, bidPrice: 64970.90, spreadPercent: 1.2, estimatedFeePercent: 0.2 },
   "ARB-ETH-1": { id: "ARB-ETH-1", asset: "ETH/USDT", buyExchange: "KuCoin", sellExchange: "Binance", askPrice: 3450.10, bidPrice: 3481.15, spreadPercent: 0.9, estimatedFeePercent: 0.2 },
   "ARB-SOL-1": { id: "ARB-SOL-1", asset: "SOL/USDT", buyExchange: "Bybit", sellExchange: "Coinbase", askPrice: 142.20, bidPrice: 145.75, spreadPercent: 2.5, estimatedFeePercent: 0.25 },
   "ARB-XRP-1": { id: "ARB-XRP-1", asset: "XRP/USDT", buyExchange: "Binance", sellExchange: "Bitstamp", askPrice: 0.5820, bidPrice: 0.5980, spreadPercent: 2.7, estimatedFeePercent: 0.3 }
 };
+
+// === CONTEXTUAL MOCK NEWS DATA ===
+const FOREX_NEWS_MOCK: NewsItem[] = [
+  { title: "Fed Chair Powell hints at maintaining higher rates for longer.", publisher: "Bloomberg", link: "#", time: "14:30", sentiment: "negative" },
+  { title: "EUR/USD rallies as ECB downplays immediate rate cut risks.", publisher: "FXStreet", link: "#", time: "11:15", sentiment: "positive" },
+  { title: "Gold prices stabilize amid fluctuating US bond yields.", publisher: "ForexLive", link: "#", time: "09:45", sentiment: "neutral" },
+  { title: "BoE holds interest rates steady, sterling remains firm.", publisher: "Bloomberg", link: "#", time: "08:00", sentiment: "positive" }
+];
+
+const CRYPTO_NEWS_MOCK: NewsItem[] = [
+  { title: "Bitcoin breaks key resistance as institutional inflows surge.", publisher: "CoinDesk", link: "#", time: "15:20", sentiment: "positive" },
+  { title: "Ethereum gas fees hit new lows following latest network upgrade.", publisher: "Decrypt", link: "#", time: "13:05", sentiment: "positive" },
+  { title: "SEC delays decision on spot Altcoin ETFs citing market volatility.", publisher: "CoinTelegraph", link: "#", time: "10:30", sentiment: "negative" },
+  { title: "Major exchange announces integration with the Lightning Network.", publisher: "CoinDesk", link: "#", time: "09:15", sentiment: "positive" }
+];
 
 // === CUSTOM COLLISION DETECTION ===
 const customCollisionDetection = (args: any) => {
@@ -98,7 +114,7 @@ const customCollisionDetection = (args: any) => {
   return closestCorners(args);
 };
 
-// === KOMPONENTY ===
+// === COMPONENTS ===
 
 const InfoTooltip = ({ term, info }: { term: string, info: string }) => (
   <span className="relative group inline-flex items-center cursor-help ml-2">
@@ -166,8 +182,12 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
   );
 };
 
-const TradingChart = ({ symbol }: { symbol: string }) => {
+const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) => {
   const getTVSymbol = (s: string) => {
+    if (isArb) {
+      const parts = s.split('/');
+      return `COINBASE:${parts[0]}/COINBASE:${parts[1]}`;
+    }
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
     if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'BNBUSD'].includes(s)) return `COINBASE:${s}`;
@@ -186,7 +206,7 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
             </svg>
           </div>
           <h3 className="font-bold tracking-widest text-white uppercase text-sm">
-            Live Market Structure: {symbol}
+            {isArb ? `Statistical Arbitrage Spread: ${symbol}` : `Live Market Structure: ${symbol}`}
           </h3>
         </div>
         <span className="px-3 py-1.5 bg-black/60 text-white/80 text-[10px] font-bold uppercase tracking-widest rounded-md border border-white/5">
@@ -208,12 +228,12 @@ const TradingChart = ({ symbol }: { symbol: string }) => {
 const ArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const [volume, setVolume] = useState<number>(1);
   
-  // Výpočty pro kalkulačku
+  // Calculations for calculator
   const grossValueBuy = arbData.askPrice * volume;
   const grossValueSell = arbData.bidPrice * volume;
   const grossProfit = grossValueSell - grossValueBuy;
   
-  // Odhad poplatků (fee na buy + fee na sell)
+  // Estimated fees (buy fee + sell fee)
   const feeDecimal = arbData.estimatedFeePercent / 100;
   const fees = (grossValueBuy * feeDecimal) + (grossValueSell * feeDecimal);
   
@@ -239,7 +259,7 @@ const ArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
       </div>
 
       <div className="p-8">
-        {/* Vizualizace nákupu a prodeje */}
+        {/* Buy and Sell Visualization */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           
           <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner relative overflow-hidden">
@@ -258,7 +278,7 @@ const ArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
 
         </div>
 
-        {/* Kalkulačka zisku */}
+        {/* Profit Calculator */}
         <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8">
           <div className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
             <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
@@ -380,7 +400,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   );
 };
 
-// === SIDEBAR ITEM KOMPONENTA PRO STANDARDNÍ TRHY ===
+// === SIDEBAR ITEM COMPONENT FOR STANDARD MARKETS ===
 interface SidebarItemProps {
   ticker: string;
   prob?: number;
@@ -465,7 +485,7 @@ const SortableSidebarItem = (props: any) => {
 };
 
 
-// === SIDEBAR ITEM KOMPONENTA PRO ARBITRÁŽ ===
+// === SIDEBAR ITEM COMPONENT FOR ARBITRAGE ===
 const ArbSidebarItemNode = ({ arbId, data, isActive, onClick }: { arbId: string, data: SpatialArbData, isActive: boolean, onClick: () => void }) => {
   let containerClasses = `w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex flex-col justify-between group border cursor-pointer `;
   if (isActive) containerClasses += 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]';
@@ -491,7 +511,7 @@ const ArbSidebarItemNode = ({ arbId, data, isActive, onClick }: { arbId: string,
 };
 
 
-// === HLAVNÍ APLIKACE ===
+// === MAIN APPLICATION ===
 
 export default function Home() {
   const [data, setData] = useState<DashboardData>({});
@@ -499,7 +519,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  // Režimy zobrazení
+  // Display Modes
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>(null);
   const [cryptoMode, setCryptoMode] = useState<'standard' | 'arbitrage'>('standard');
   const [activePair, setActivePair] = useState<string>("EURUSD"); 
@@ -683,9 +703,12 @@ export default function Home() {
     );
   };
 
+  // Render favorite pairs based on the current active mode
   const renderFavorites = () => {
+    // Extract all available tickers from data to get their probabilities
     const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...data.crypto };
     
+    // Determine if pair belongs to Forex or Crypto, and filter based on selected mode
     const relevantFavs = favorites.filter(ticker => {
       const isCryptoTicker = Object.keys(data.crypto || {}).includes(ticker);
       if (marketMode === 'CRYPTO') return isCryptoTicker;
@@ -714,7 +737,7 @@ export default function Home() {
   };
 
 
-  // --- LANDING PAGE S VÝBĚREM TRHU ---
+  // --- LANDING PAGE WITH MARKET SELECTION ---
   if (!marketMode) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -773,7 +796,7 @@ export default function Home() {
     );
   }
 
-  // --- LOGIKA STAVŮ A PÁRŮ ---
+  // --- STATE AND PAIR LOGIC ---
   const isArbitrageMode = marketMode === 'CRYPTO' && cryptoMode === 'arbitrage';
   const activeArbData = MOCK_SPATIAL_ARB[activePair];
 
@@ -811,6 +834,8 @@ export default function Home() {
     return 'shadow-2xl';
   };
 
+  const displayedNews = marketMode === 'FOREX' ? FOREX_NEWS_MOCK : CRYPTO_NEWS_MOCK;
+
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -828,7 +853,7 @@ export default function Home() {
               Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500' : 'text-emerald-500'}>.</span>
             </h2>
             
-            {/* HLAVNÍ PŘEPÍNAČ TRHŮ */}
+            {/* MAIN MARKET SWITCH */}
             <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/5">
               <button 
                 onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} 
@@ -844,7 +869,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* NOVÁ SUB-NAVIGACE POUZE PRO CRYPTO */}
+            {/* NEW SUB-NAVIGATION ONLY FOR CRYPTO */}
             {marketMode === 'CRYPTO' && (
               <div className="flex bg-[#0a0a0a] rounded-full p-1 mt-3 border border-white/5 shadow-inner">
                 <button 
@@ -865,7 +890,7 @@ export default function Home() {
 
           <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2 flex flex-col">
             
-            {/* ZOBRAZENÍ ARBITRÁŽNÍHO WATCHLISTU */}
+            {/* DISPLAY ARBITRAGE WATCHLIST */}
             {isArbitrageMode ? (
               <div className="pb-20">
                 <div className="mb-6">
@@ -889,7 +914,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              /* ZOBRAZENÍ KLASICKÉHO WATCHLISTU (DND + FAVORITES) */
+              /* DISPLAY CLASSIC WATCHLIST (DND + FAVORITES) */
               <>
                 <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                   <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full`}>
@@ -947,10 +972,10 @@ export default function Home() {
                 <div className="xl:col-span-2 flex flex-col space-y-10">
                   
                   {isArbitrageMode && activeArbData ? (
-                    // === ARBITRÁŽNÍ HLAVNÍ PANEL (Bez grafu) ===
+                    // === ARBITRAGE MAIN PANEL (No Chart) ===
                     <ArbitragePanel arbData={activeArbData} />
                   ) : (
-                    // === STANDARDNÍ HLAVNÍ PANEL (Graf + AI Analýza) ===
+                    // === STANDARD MAIN PANEL (Chart + AI Analysis) ===
                     <>
                       <TradingChart symbol={activePair} />
                       
@@ -1148,8 +1173,8 @@ export default function Home() {
                     </div>
                     
                     <div className="flex flex-col p-4">
-                      {data.news && data.news.length > 0 ? (
-                        data.news.map((item, idx) => (
+                      {displayedNews && displayedNews.length > 0 ? (
+                        displayedNews.map((item, idx) => (
                           <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group">
                             <div className="flex items-center gap-3 mb-2">
                               <div className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500' : 'bg-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
