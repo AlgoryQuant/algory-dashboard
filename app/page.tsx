@@ -50,7 +50,7 @@ const generateSpreadHistory = (baseSpread: number, status: ArbStatus): ChartPoin
   return data;
 };
 
-// === FULL MOCK CRYPTO PAIRS (15 ASSETS) ===
+// === FULL MOCK CRYPTO PAIRS (50 ASSETS) ===
 const MOCK_CRYPTO_PAIRS: Record<string, number> = {
   "BTCUSD": 0.85, 
   "ETHUSD": 0.72, 
@@ -66,7 +66,42 @@ const MOCK_CRYPTO_PAIRS: Record<string, number> = {
   "UNIUSD": 0.58, 
   "LTCUSD": 0.49, 
   "PEPEUSD": 0.92, 
-  "SHIBUSD": 0.41
+  "SHIBUSD": 0.41,
+  "TRXUSD": 0.61,
+  "TONUSD": 0.75,
+  "BCHUSD": 0.53,
+  "XLMUSD": 0.38,
+  "NEARUSD": 0.68,
+  "APTUSD": 0.70,
+  "ARBUSD": 0.45,
+  "OPUSD": 0.55,
+  "LDOUSD": 0.50,
+  "ATOMUSD": 0.48,
+  "INJUSD": 0.74,
+  "RNDRUSD": 0.80,
+  "IMXUSD": 0.65,
+  "STXUSD": 0.60,
+  "KASUSD": 0.78,
+  "WIFUSD": 0.85,
+  "FETUSD": 0.82,
+  "FILUSD": 0.45,
+  "ICPUSD": 0.52,
+  "VETUSD": 0.40,
+  "MKRUSD": 0.66,
+  "AAVEUSD": 0.59,
+  "SNXUSD": 0.42,
+  "CRVUSD": 0.35,
+  "THETAUSD": 0.44,
+  "SANDUSD": 0.39,
+  "MANAUSD": 0.37,
+  "ALGOUSD": 0.35,
+  "FTMUSD": 0.58,
+  "QNTUSD": 0.51,
+  "EGLDUSD": 0.47,
+  "FLOWUSD": 0.33,
+  "AXSUSD": 0.36,
+  "CHZUSD": 0.41,
+  "ENJUSD": 0.34
 };
 
 const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
@@ -846,6 +881,21 @@ export default function Home() {
 
   const toggleFavorite = (ticker: string) => { setFavorites(prev => prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]); };
 
+  const handleSeedFirebase = async () => {
+    try {
+      // Provedeme PATCH pouze na uzel /crypto.json, aby se zachovala případná ostatní data (forex atd.)
+      await fetch('https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results/crypto.json', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(MOCK_CRYPTO_PAIRS)
+      });
+      alert('Hotovo! Všechny chybějící krypto páry byly úspěšně přidány do tvé Firebase databáze.');
+    } catch (error) {
+      console.error("Firebase upload error:", error);
+      alert('Něco se pokazilo při odesílání párů do Firebase.');
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -1054,10 +1104,10 @@ export default function Home() {
             )}
           </div>
 
-          <nav className="flex-1 overflow-y-auto pb-10 custom-scrollbar pr-2 pl-2 flex flex-col">
+          <nav className="flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col">
             
             {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-              <div className="pb-20">
+              <div className="pb-10">
                 <div className="mb-6">
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -1073,7 +1123,7 @@ export default function Home() {
                 </div>
               </div>
             ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-              <div className="pb-20">
+              <div className="pb-10">
                 <div className="mb-6">
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -1089,7 +1139,7 @@ export default function Home() {
                 </div>
               </div>
             ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-              <div className="pb-20">
+              <div className="pb-10">
                 <div className="mb-6">
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -1120,7 +1170,7 @@ export default function Home() {
                   </DragOverlay>
                 </DndContext>
 
-                <div className="pb-20 flex-1">
+                <div className="flex-1">
                   {marketMode === 'FOREX' ? (
                     <>{renderSidebarGroup('Major Liquidity', data.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data.minors)}{renderSidebarGroup('Precious Metals', data.metals)}</>
                   ) : (
@@ -1129,6 +1179,17 @@ export default function Home() {
                 </div>
               </>
             )}
+
+            {/* DEV SYNC BUTTON pro naplnění Firebase - můžeš ho pak smazat */}
+            <div className="px-6 mt-8 mb-6">
+              <button
+                onClick={handleSeedFirebase}
+                className="w-full py-3 bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all shadow-inner flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                SYNC ALL PAIRS TO FIREBASE
+              </button>
+            </div>
 
           </nav>
         </aside>
