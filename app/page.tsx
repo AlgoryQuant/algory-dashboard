@@ -50,12 +50,23 @@ const generateSpreadHistory = (baseSpread: number, status: ArbStatus): ChartPoin
   return data;
 };
 
-// === EXTENDED MOCK DATA ===
+// === FULL MOCK CRYPTO PAIRS (15 ASSETS) ===
 const MOCK_CRYPTO_PAIRS: Record<string, number> = {
-  "BTCUSD": 0.85, "ETHUSD": 0.72, "SOLUSD": 0.65, "XRPUSD": 0.45,
-  "ADAUSD": 0.55, "AVAXUSD": 0.62, "MATICUSD": 0.48, "DOTUSD": 0.51,
-  "DOGEUSD": 0.88, "PEPEUSD": 0.92, "SHIBUSD": 0.41, "BNBUSD": 0.60, 
-  "LINKUSD": 0.40, "UNIUSD": 0.58, "LTCUSD": 0.49, "ATOMUSD": 0.35
+  "BTCUSD": 0.85, 
+  "ETHUSD": 0.72, 
+  "SOLUSD": 0.65, 
+  "ADAUSD": 0.55, 
+  "BNBUSD": 0.60, 
+  "XRPUSD": 0.45, 
+  "MATICUSD": 0.48, 
+  "DOTUSD": 0.51, 
+  "AVAXUSD": 0.62, 
+  "DOGEUSD": 0.88, 
+  "LINKUSD": 0.40, 
+  "UNIUSD": 0.58, 
+  "LTCUSD": 0.49, 
+  "PEPEUSD": 0.92, 
+  "SHIBUSD": 0.41
 };
 
 const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
@@ -108,13 +119,59 @@ const customCollisionDetection = (args: any) => {
   return closestCorners(args);
 };
 
-// === SUB-COMPONENTS ===
+// === INTERACTIVE COMPONENTS ===
+
+const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' | 'orange', disabled?: boolean }) => {
+  const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
+
+  const handleClick = () => {
+    if (state !== 'idle' || disabled) return;
+    setState('loading');
+    setTimeout(() => {
+      setState('success');
+      setTimeout(() => setState('idle'), 1000);
+    }, 1500);
+  };
+
+  let bgClass = '';
+  if (disabled) {
+    bgClass = 'bg-zinc-900/50 text-zinc-600 border border-white/5 cursor-not-allowed';
+  } else {
+    if (colorTheme === 'emerald') bgClass = 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'red') bgClass = 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'blue') bgClass = 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'purple') bgClass = 'bg-purple-500 hover:bg-purple-400 text-white border-purple-400 shadow-[0_5px_20px_rgba(168,85,247,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'orange') bgClass = 'bg-orange-500 hover:bg-orange-400 text-white border-orange-400 shadow-[0_5px_20px_rgba(249,115,22,0.2)] hover:-translate-y-1';
+  }
+
+  return (
+    <button onClick={handleClick} disabled={disabled} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative overflow-hidden`}>
+      <div className={`transition-all duration-300 ${state !== 'idle' ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+        {defaultText}
+      </div>
+      
+      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${state === 'loading' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+
+      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${state === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+        <svg className="h-6 w-6 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    </button>
+  );
+};
+
 const InfoTooltip = ({ info }: { info: string }) => (
-  <span className="relative group inline-flex items-center cursor-help">
-    <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-[#18181b] border border-white/10 text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left break-words">
+  <span className="relative group inline-flex items-center cursor-help ml-2">
+    <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
       {info}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#18181b]" />
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
     </div>
   </span>
 );
@@ -167,51 +224,6 @@ const SpreadHistoryChart = ({ data, color }: { data: ChartPoint[], color: string
       </div>
   </div>
 );
-
-const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' | 'orange', disabled?: boolean }) => {
-  const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
-
-  const handleClick = () => {
-    if (state !== 'idle' || disabled) return;
-    setState('loading');
-    setTimeout(() => {
-      setState('success');
-      setTimeout(() => setState('idle'), 1000);
-    }, 1500);
-  };
-
-  let bgClass = '';
-  if (disabled) {
-    bgClass = 'bg-zinc-900/50 text-zinc-600 border border-white/5 cursor-not-allowed';
-  } else {
-    if (colorTheme === 'emerald') bgClass = 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)] hover:-translate-y-1';
-    if (colorTheme === 'red') bgClass = 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)] hover:-translate-y-1';
-    if (colorTheme === 'blue') bgClass = 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)] hover:-translate-y-1';
-    if (colorTheme === 'purple') bgClass = 'bg-purple-500 hover:bg-purple-400 text-white border-purple-400 shadow-[0_5px_20px_rgba(168,85,247,0.2)] hover:-translate-y-1';
-    if (colorTheme === 'orange') bgClass = 'bg-orange-500 hover:bg-orange-400 text-white border-orange-400 shadow-[0_5px_20px_rgba(249,115,22,0.2)] hover:-translate-y-1';
-  }
-
-  return (
-    <button onClick={handleClick} disabled={disabled} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative overflow-hidden`}>
-      <div className={`transition-all duration-300 ${state !== 'idle' ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-        {defaultText}
-      </div>
-      
-      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${state === 'loading' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-        <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      </div>
-
-      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${state === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-        <svg className="h-6 w-6 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-    </button>
-  );
-};
 
 const LiquidationsBar = () => {
   const total = LIQUIDATIONS_MOCK.longsRekt + LIQUIDATIONS_MOCK.shortsRekt;
@@ -307,7 +319,7 @@ const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) =>
         <span className="px-3 py-1.5 bg-black/60 text-white/80 text-[9px] font-bold uppercase tracking-widest rounded-md border border-white/5">M15 TIMEFRAME</span>
       </div>
       <div className="w-full h-full pt-[73px]">
-        <iframe src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${encodeURIComponent(getTVSymbol(symbol))}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`} style={{ width: '100%', height: '100%', border: 'none' }} title={`Chart ${symbol}`} />
+        <iframe src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${encodeURIComponent(getTVSymbol(symbol))}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`} style={{ width: '100%', height: '100%', border: 'none' }} title={`Chart`} />
       </div>
     </div>
   );
@@ -322,6 +334,8 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const isProfitable = netProfit > 0;
   
   const chartColor = arbData.status === 'ACTIVE' ? '#34d399' : arbData.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
+  const gaugeRotation = isProfitable ? 45 : -45; 
+  const needleColor = isProfitable ? '#34d399' : '#ef4444';
 
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
@@ -682,7 +696,7 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
       </div>
       <div className="flex items-center gap-3">
         <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${((prob ?? 0) * 100).toFixed(0)}%`}</span>
-        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400' : 'text-zinc-600 hover:text-white'}`} title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}>
+        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400' : 'text-zinc-600 hover:text-white'}`}>
           <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         </button>
       </div>
@@ -861,9 +875,16 @@ export default function Home() {
             {getSidebarIcon(title)}
             <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 uppercase tracking-widest transition-colors flex items-center">
               {title}
-              {tooltipInfo && <InfoTooltip info={tooltipInfo} />}
             </span>
           </button>
+          {tooltipInfo && (
+            <div className="relative group/tt ml-auto mr-2">
+              <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+              <div className="absolute top-1/2 -translate-y-1/2 right-full mr-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 group-hover/tt:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left break-words">
+                {tooltipInfo}
+              </div>
+            </div>
+          )}
           <svg className={`w-3.5 h-3.5 text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </div>
         <div className={`space-y-1.5 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -1001,15 +1022,24 @@ export default function Home() {
                 <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>STANDARD</button>
                 <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   SPATIAL
-                  <InfoTooltip info="Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken)." />
+                  <div className="absolute z-50 hidden group-hover:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+                    Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken).
+                  </div>
+                  <svg className="w-3 h-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
                 <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   TRIANGLE
-                  <InfoTooltip info="Executes a sequence of three trades to profit from currency cross-rate inefficiencies (e.g., USDT ➔ BTC ➔ ETH ➔ USDT)." />
+                  <div className="absolute z-50 hidden group-hover:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+                    Executes a sequence of three trades to profit from currency cross-rate inefficiencies (e.g., USDT ➔ BTC ➔ ETH ➔ USDT).
+                  </div>
+                  <svg className="w-3 h-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
                 <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   FUNDING
-                  <InfoTooltip info="Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences." />
+                  <div className="absolute z-50 hidden group-hover:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+                    Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences.
+                  </div>
+                  <svg className="w-3 h-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
               </div>
             )}
@@ -1261,7 +1291,7 @@ export default function Home() {
                         )}
                       </div>
                       
-                      {/* LIQUIDATIONS BAR (Only in Standard Crypto Mode) */}
+                      {/* LIQUIDATIONS BAR */}
                       {marketMode === 'CRYPTO' && cryptoMode === 'standard' && (
                         <LiquidationsBar />
                       )}
