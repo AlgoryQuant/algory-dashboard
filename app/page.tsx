@@ -110,11 +110,11 @@ const customCollisionDetection = (args: any) => {
 
 // === SUB-COMPONENTS ===
 const InfoTooltip = ({ info }: { info: string }) => (
-  <span className="relative group inline-flex items-center cursor-help ml-2">
-    <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
+  <span className="relative group inline-flex items-center cursor-help">
+    <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-[#18181b] border border-white/10 text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left break-words">
       {info}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#18181b]" />
     </div>
   </span>
 );
@@ -142,13 +142,13 @@ const SpreadHistoryChart = ({ data, color }: { data: ChartPoint[], color: string
   <div className="w-full mt-8 bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner">
       <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke={color}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-          Spread & Profitability History (24H)
+          SPREAD & PROFITABILITY HISTORY (24H)
       </div>
       <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                   <defs>
-                      <linearGradient id={`colorGradient`} x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id={`colorGradient-${color}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor={color} stopOpacity={0.3}/>
                           <stop offset="95%" stopColor={color} stopOpacity={0}/>
                       </linearGradient>
@@ -161,7 +161,7 @@ const SpreadHistoryChart = ({ data, color }: { data: ChartPoint[], color: string
                       itemStyle={{ color: '#fff', fontWeight: 'bold' }}
                       labelStyle={{ color: '#a1a1aa', marginBottom: '4px' }}
                   />
-                  <Area type="monotone" dataKey="spread" stroke={color} strokeWidth={2} fillOpacity={1} fill={`url(#colorGradient)`} />
+                  <Area type="monotone" dataKey="spread" stroke={color} strokeWidth={2} fillOpacity={1} fill={`url(#colorGradient-${color})`} />
               </AreaChart>
           </ResponsiveContainer>
       </div>
@@ -289,7 +289,8 @@ const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) =>
     }
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
-    return `COINBASE:${s}`;
+    if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'BNBUSD'].includes(s)) return `COINBASE:${s}`;
+    return `OANDA:${s}`;
   };
 
   return (
@@ -998,9 +999,18 @@ export default function Home() {
             {marketMode === 'CRYPTO' && (
               <div className="flex flex-wrap gap-1 bg-[#0a0a0a] rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
                 <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>STANDARD</button>
-                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>SPATIAL</button>
-                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>TRIANGLE</button>
-                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>FUNDING</button>
+                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  SPATIAL
+                  <InfoTooltip info="Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken)." />
+                </button>
+                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  TRIANGLE
+                  <InfoTooltip info="Executes a sequence of three trades to profit from currency cross-rate inefficiencies (e.g., USDT ➔ BTC ➔ ETH ➔ USDT)." />
+                </button>
+                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                  FUNDING
+                  <InfoTooltip info="Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences." />
+                </button>
               </div>
             )}
           </div>
@@ -1013,7 +1023,7 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                      <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">SPATIAL ARBITRAGE <InfoTooltip info="Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken)." /></span>
+                      <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">SPATIAL ARBITRAGE</span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
@@ -1029,7 +1039,7 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS <InfoTooltip info="Executes a sequence of three trades on a single exchange to profit from currency cross-rate inefficiencies (e.g., USDT -> BTC -> ETH -> USDT)." /></span>
+                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS</span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
@@ -1044,8 +1054,8 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
-                      <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES <InfoTooltip info="A delta-neutral strategy where you open opposing positions on two derivatives exchanges to capture the interest payments (funding fees) paid between long and short traders." /></span>
+                      <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES</span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
@@ -1183,7 +1193,7 @@ export default function Home() {
                             </div>
                             {isTradeActive ? (
                               <ExecuteButton 
-                                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1"
+                                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all"
                                 defaultText={`EXECUTE ${inferredDirection}`}
                                 colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'}
                               />
@@ -1251,7 +1261,7 @@ export default function Home() {
                         )}
                       </div>
                       
-                      {/* LIQUIDATIONS BAR */}
+                      {/* LIQUIDATIONS BAR (Only in Standard Crypto Mode) */}
                       {marketMode === 'CRYPTO' && cryptoMode === 'standard' && (
                         <LiquidationsBar />
                       )}
@@ -1264,7 +1274,6 @@ export default function Home() {
                 <div className="w-full xl:w-80 flex-shrink-0 flex flex-col h-full">
                   <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 sticky top-8 flex flex-col max-h-[85vh]">
                     <div className="px-6 py-6 border-b border-white/5 bg-white/[0.01]">
-                      
                       <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/5">
                         <button 
                           onClick={() => setRightPanelMode('news')} 
