@@ -10,6 +10,9 @@ import {
   verticalListSortingStrategy, useSortable 
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { 
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip 
+} from 'recharts';
 
 // === INTERFACES ===
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
@@ -17,9 +20,12 @@ interface AIAnalysis { evaluation: string; prediction: string; current_session: 
 interface NewsItem { title: string; publisher: string; link: string; time: string; sentiment: 'positive' | 'negative' | 'neutral'; }
 interface WhaleAlert { id: string; text: string; type: 'bullish' | 'bearish' | 'neutral'; time: string; amountUsd: string; }
 
-interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; }
-interface TriangularArbData { id: string; pairName: string; path: string[]; rate1: number; rate2: number; rate3: number; expectedProfitPercent: number; }
-interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; }
+type ArbStatus = 'ACTIVE' | 'DEGRADING' | 'CLOSED';
+interface ChartPoint { time: string; spread: number; }
+
+interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; status: ArbStatus; chartData: ChartPoint[]; }
+interface TriangularArbData { id: string; pairName: string; path: string[]; rate1: number; rate2: number; rate3: number; expectedProfitPercent: number; status: ArbStatus; chartData: ChartPoint[]; }
+interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
 
 interface DashboardData {
   majors?: Record<string, number>;
@@ -31,22 +37,44 @@ interface DashboardData {
   parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; Direction?: string; RRR?: number; aiAnalysis?: AIAnalysis; history?: TradeHistory[]; }>;
 }
 
-// === MOCK DATA ===
+// === HELPER TO GENERATE MOCK CHART DATA ===
+const generateSpreadHistory = (baseSpread: number, status: ArbStatus): ChartPoint[] => {
+  const data: ChartPoint[] = [];
+  let current = status === 'CLOSED' ? baseSpread + 1.5 : baseSpread - 0.5;
+  for (let i = 24; i >= 0; i--) {
+      data.push({ time: i === 0 ? 'Now' : `-${i}h`, spread: Number(Math.max(0, current).toFixed(2)) });
+      if (status === 'ACTIVE') current += Math.random() * 0.15 - 0.05;
+      else if (status === 'DEGRADING') current -= Math.random() * 0.2;
+      else current -= Math.random() * 0.4;
+  }
+  return data;
+};
+
+// === EXTENDED MOCK DATA ===
+const MOCK_CRYPTO_PAIRS: Record<string, number> = {
+  "BTCUSD": 0.85, "ETHUSD": 0.72, "SOLUSD": 0.65, "XRPUSD": 0.45,
+  "ADAUSD": 0.55, "AVAXUSD": 0.62, "MATICUSD": 0.48, "DOTUSD": 0.51,
+  "DOGEUSD": 0.88, "PEPEUSD": 0.92, "SHIBUSD": 0.41, "BNBUSD": 0.60, 
+  "LINKUSD": 0.40, "UNIUSD": 0.58, "LTCUSD": 0.49, "ATOMUSD": 0.35
+};
+
 const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
-  "ARB-BTC-1": { id: "ARB-BTC-1", asset: "BTC/USDT", buyExchange: "Binance", sellExchange: "Kraken", askPrice: 64200.50, bidPrice: 64970.90, spreadPercent: 1.2, estimatedFeePercent: 0.2 },
-  "ARB-ETH-1": { id: "ARB-ETH-1", asset: "ETH/USDT", buyExchange: "KuCoin", sellExchange: "Binance", askPrice: 3450.10, bidPrice: 3481.15, spreadPercent: 0.9, estimatedFeePercent: 0.2 },
-  "ARB-SOL-1": { id: "ARB-SOL-1", asset: "SOL/USDT", buyExchange: "Bybit", sellExchange: "Coinbase", askPrice: 142.20, bidPrice: 145.75, spreadPercent: 2.5, estimatedFeePercent: 0.25 },
+  "ARB-BTC-1": { id: "ARB-BTC-1", asset: "BTC/USDT", buyExchange: "Binance", sellExchange: "Kraken", askPrice: 64200.50, bidPrice: 64970.90, spreadPercent: 1.2, estimatedFeePercent: 0.2, status: 'ACTIVE', chartData: generateSpreadHistory(1.2, 'ACTIVE') },
+  "ARB-ETH-1": { id: "ARB-ETH-1", asset: "ETH/USDT", buyExchange: "KuCoin", sellExchange: "Binance", askPrice: 3450.10, bidPrice: 3481.15, spreadPercent: 0.9, estimatedFeePercent: 0.2, status: 'DEGRADING', chartData: generateSpreadHistory(0.9, 'DEGRADING') },
+  "ARB-SOL-1": { id: "ARB-SOL-1", asset: "SOL/USDT", buyExchange: "Bybit", sellExchange: "Coinbase", askPrice: 142.20, bidPrice: 145.75, spreadPercent: 2.5, estimatedFeePercent: 0.25, status: 'ACTIVE', chartData: generateSpreadHistory(2.5, 'ACTIVE') },
+  "ARB-PEPE-1": { id: "ARB-PEPE-1", asset: "PEPE/USDT", buyExchange: "HTX", sellExchange: "Binance", askPrice: 0.0000105, bidPrice: 0.0000101, spreadPercent: -3.8, estimatedFeePercent: 0.3, status: 'CLOSED', chartData: generateSpreadHistory(0, 'CLOSED') },
 };
 
 const MOCK_TRIANGULAR_ARB: Record<string, TriangularArbData> = {
-  "TRI-1": { id: "TRI-1", pairName: "USDT ➔ BTC ➔ ETH ➔ USDT", path: ["USDT", "BTC", "ETH", "USDT"], rate1: 64000, rate2: 18.5, rate3: 3500, expectedProfitPercent: 1.15 },
-  "TRI-2": { id: "TRI-2", pairName: "USDT ➔ SOL ➔ BNB ➔ USDT", path: ["USDT", "SOL", "BNB", "USDT"], rate1: 145, rate2: 0.24, rate3: 610, expectedProfitPercent: 0.85 },
+  "TRI-1": { id: "TRI-1", pairName: "USDT ➔ BTC ➔ ETH ➔ USDT", path: ["USDT", "BTC", "ETH", "USDT"], rate1: 64000, rate2: 18.5, rate3: 3500, expectedProfitPercent: 1.15, status: 'ACTIVE', chartData: generateSpreadHistory(1.15, 'ACTIVE') },
+  "TRI-2": { id: "TRI-2", pairName: "USDT ➔ SOL ➔ BNB ➔ USDT", path: ["USDT", "SOL", "BNB", "USDT"], rate1: 145, rate2: 0.24, rate3: 610, expectedProfitPercent: 0.85, status: 'DEGRADING', chartData: generateSpreadHistory(0.85, 'DEGRADING') },
+  "TRI-3": { id: "TRI-3", pairName: "USDT ➔ ADA ➔ XRP ➔ USDT", path: ["USDT", "ADA", "XRP", "USDT"], rate1: 0.45, rate2: 1.2, rate3: 0.55, expectedProfitPercent: 0.1, status: 'CLOSED', chartData: generateSpreadHistory(0.1, 'CLOSED') },
 };
 
 const MOCK_FUNDING_RATES: Record<string, FundingRateData> = {
-  "FUND-SOL": { id: "FUND-SOL", asset: "SOL Perpetuals", binanceRate: 0.015, bybitRate: 0.002, okxRate: -0.012, optimalLong: "OKX", optimalShort: "Binance", netYield: 0.027 },
-  "FUND-XRP": { id: "FUND-XRP", asset: "XRP Perpetuals", binanceRate: -0.005, bybitRate: 0.018, okxRate: 0.015, optimalLong: "Binance", optimalShort: "Bybit", netYield: 0.023 },
-  "FUND-BTC": { id: "FUND-BTC", asset: "BTC Perpetuals", binanceRate: 0.010, bybitRate: 0.011, okxRate: 0.001, optimalLong: "OKX", optimalShort: "Bybit", netYield: 0.010 },
+  "FUND-SOL": { id: "FUND-SOL", asset: "SOL Perpetuals", binanceRate: 0.015, bybitRate: 0.002, okxRate: -0.012, optimalLong: "OKX", optimalShort: "Binance", netYield: 0.027, status: 'ACTIVE', chartData: generateSpreadHistory(0.027, 'ACTIVE') },
+  "FUND-XRP": { id: "FUND-XRP", asset: "XRP Perpetuals", binanceRate: -0.005, bybitRate: 0.018, okxRate: 0.015, optimalLong: "Binance", optimalShort: "Bybit", netYield: 0.023, status: 'DEGRADING', chartData: generateSpreadHistory(0.023, 'DEGRADING') },
+  "FUND-BTC": { id: "FUND-BTC", asset: "BTC Perpetuals", binanceRate: 0.010, bybitRate: 0.011, okxRate: 0.001, optimalLong: "OKX", optimalShort: "Bybit", netYield: 0.010, status: 'CLOSED', chartData: generateSpreadHistory(0.010, 'CLOSED') },
 };
 
 const FOREX_NEWS_MOCK: NewsItem[] = [
@@ -80,44 +108,7 @@ const customCollisionDetection = (args: any) => {
   return closestCorners(args);
 };
 
-// === INTERACTIVE COMPONENTS ===
-
-const ExecuteButton = ({ baseClass, defaultText, colorTheme }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' }) => {
-  const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
-
-  const handleClick = () => {
-    if (state !== 'idle') return;
-    setState('loading');
-    setTimeout(() => {
-      setState('success');
-      setTimeout(() => setState('idle'), 1000);
-    }, 1500);
-  };
-
-  let bgClass = '';
-  if (colorTheme === 'emerald') bgClass = 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)]';
-  if (colorTheme === 'red') bgClass = 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)]';
-  if (colorTheme === 'blue') bgClass = 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)]';
-  if (colorTheme === 'purple') bgClass = 'bg-purple-500 hover:bg-purple-400 text-white border-purple-400 shadow-[0_5px_20px_rgba(168,85,247,0.2)]';
-
-  return (
-    <button onClick={handleClick} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative`}>
-      {state === 'idle' && <span>{defaultText}</span>}
-      {state === 'loading' && (
-        <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-      )}
-      {state === 'success' && (
-        <svg className="h-5 w-5 text-current animate-in zoom-in" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      )}
-    </button>
-  );
-};
-
+// === SUB-COMPONENTS ===
 const InfoTooltip = ({ info }: { info: string }) => (
   <span className="relative group inline-flex items-center cursor-help ml-2">
     <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
@@ -127,6 +118,100 @@ const InfoTooltip = ({ info }: { info: string }) => (
     </div>
   </span>
 );
+
+const StatusBadge = ({ status }: { status: ArbStatus }) => {
+  const colors = {
+      ACTIVE: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      DEGRADING: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+      CLOSED: 'text-red-400 bg-red-500/10 border-red-500/20'
+  };
+  const dotColors = {
+      ACTIVE: 'bg-emerald-400',
+      DEGRADING: 'bg-yellow-400',
+      CLOSED: 'bg-red-400'
+  };
+  return (
+      <div className={`px-2 py-1 rounded-md border text-[9px] font-bold tracking-widest flex items-center gap-1.5 ml-4 ${colors[status]}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${dotColors[status]} ${status === 'ACTIVE' ? 'animate-pulse' : ''}`}></span>
+          {status}
+      </div>
+  )
+};
+
+const SpreadHistoryChart = ({ data, color }: { data: ChartPoint[], color: string }) => (
+  <div className="w-full mt-8 bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner">
+      <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke={color}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+          Spread & Profitability History (24H)
+      </div>
+      <div className="h-48 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                      <linearGradient id={`colorGradient`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={color} stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor={color} stopOpacity={0}/>
+                      </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.2)" fontSize={10} tickMargin={10} axisLine={false} tickLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickFormatter={(val) => `${val}%`} width={50} axisLine={false} tickLine={false} />
+                  <RechartsTooltip 
+                      contentStyle={{ backgroundColor: '#0a0a0a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '0.5rem', fontSize: '12px' }}
+                      itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                      labelStyle={{ color: '#a1a1aa', marginBottom: '4px' }}
+                  />
+                  <Area type="monotone" dataKey="spread" stroke={color} strokeWidth={2} fillOpacity={1} fill={`url(#colorGradient)`} />
+              </AreaChart>
+          </ResponsiveContainer>
+      </div>
+  </div>
+);
+
+const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' | 'orange', disabled?: boolean }) => {
+  const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
+
+  const handleClick = () => {
+    if (state !== 'idle' || disabled) return;
+    setState('loading');
+    setTimeout(() => {
+      setState('success');
+      setTimeout(() => setState('idle'), 1000);
+    }, 1500);
+  };
+
+  let bgClass = '';
+  if (disabled) {
+    bgClass = 'bg-zinc-900/50 text-zinc-600 border border-white/5 cursor-not-allowed';
+  } else {
+    if (colorTheme === 'emerald') bgClass = 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_5px_20px_rgba(52,211,153,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'red') bgClass = 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_5px_20px_rgba(239,68,68,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'blue') bgClass = 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_5px_20px_rgba(59,130,246,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'purple') bgClass = 'bg-purple-500 hover:bg-purple-400 text-white border-purple-400 shadow-[0_5px_20px_rgba(168,85,247,0.2)] hover:-translate-y-1';
+    if (colorTheme === 'orange') bgClass = 'bg-orange-500 hover:bg-orange-400 text-white border-orange-400 shadow-[0_5px_20px_rgba(249,115,22,0.2)] hover:-translate-y-1';
+  }
+
+  return (
+    <button onClick={handleClick} disabled={disabled} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative overflow-hidden`}>
+      <div className={`transition-all duration-300 ${state !== 'idle' ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+        {defaultText}
+      </div>
+      
+      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${state === 'loading' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+
+      <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${state === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+        <svg className="h-6 w-6 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    </button>
+  );
+};
 
 const LiquidationsBar = () => {
   const total = LIQUIDATIONS_MOCK.longsRekt + LIQUIDATIONS_MOCK.shortsRekt;
@@ -204,8 +289,7 @@ const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) =>
     }
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
-    if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'BNBUSD'].includes(s)) return `COINBASE:${s}`;
-    return `OANDA:${s}`;
+    return `COINBASE:${s}`;
   };
 
   return (
@@ -236,23 +320,25 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const netProfit = grossProfit - fees;
   const isProfitable = netProfit > 0;
   
-  const gaugeRotation = isProfitable ? 45 : -45; 
-  const needleColor = isProfitable ? '#34d399' : '#ef4444';
+  const chartColor = arbData.status === 'ACTIVE' ? '#34d399' : arbData.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
 
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
-      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.asset} ARBITRAGE</h2>
-            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">SPATIAL EXCHANGE OPPORTUNITY</p>
+          <div className="flex items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.asset} ARBITRAGE</h2>
+              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">SPATIAL EXCHANGE OPPORTUNITY</p>
+            </div>
+            <StatusBadge status={arbData.status} />
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg tracking-wider">+{arbData.spreadPercent}% SPREAD</span>
+          <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.spreadPercent > 0 ? '+' : ''}{arbData.spreadPercent}% SPREAD</span>
         </div>
       </div>
 
@@ -294,7 +380,18 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
                </div>
             </div>
           </div>
+          
+          <div className="mt-8 flex justify-end">
+            <ExecuteButton 
+              baseClass="w-full md:w-auto px-10 py-5 font-bold text-[10px] tracking-widest uppercase rounded-xl" 
+              defaultText="EXECUTE ARBITRAGE" 
+              colorTheme="blue" 
+              disabled={arbData.status === 'CLOSED'}
+            />
+          </div>
         </div>
+
+        <SpreadHistoryChart data={arbData.chartData} color={chartColor} />
       </div>
     </div>
   );
@@ -309,20 +406,25 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
   const netProfit = step3 - volume;
   const isProfitable = netProfit > 0;
 
+  const chartColor = arbData.status === 'ACTIVE' ? '#a855f7' : arbData.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
+
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all duration-300">
-      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.pairName}</h2>
-            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">TRIANGULAR INEFFICIENCY LOOP</p>
+          <div className="flex items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.pairName}</h2>
+              <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">TRIANGULAR INEFFICIENCY LOOP</p>
+            </div>
+            <StatusBadge status={arbData.status} />
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg tracking-wider">+{arbData.expectedProfitPercent}% EXPECTED</span>
+          <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.expectedProfitPercent > 0 ? '+' : ''}{arbData.expectedProfitPercent}% EXPECTED</span>
         </div>
       </div>
 
@@ -368,24 +470,37 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
               {isProfitable ? '+' : ''}{netProfit.toFixed(2)} <span className="text-2xl tracking-normal text-white/50">{arbData.path[0]}</span>
             </div>
           </div>
-          <ExecuteButton baseClass="w-full md:w-auto px-10 py-5 font-bold text-[10px] tracking-widest uppercase rounded-xl" defaultText="EXECUTE LOOP" colorTheme="purple" />
+          
+          <ExecuteButton 
+            baseClass="w-full md:w-auto px-10 py-5 font-bold text-[10px] tracking-widest uppercase rounded-xl" 
+            defaultText="EXECUTE LOOP" 
+            colorTheme="purple" 
+            disabled={arbData.status === 'CLOSED'}
+          />
         </div>
+
+        <SpreadHistoryChart data={arbData.chartData} color={chartColor} />
       </div>
     </div>
   );
 };
 
 const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
+  const chartColor = data.status === 'ACTIVE' ? '#f97316' : data.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
+
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(249,115,22,0.15)] transition-all duration-300">
-      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{data.asset}</h2>
-            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">CROSS-EXCHANGE FUNDING ARB</p>
+          <div className="flex items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{data.asset}</h2>
+              <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">CROSS-EXCHANGE FUNDING ARB</p>
+            </div>
+            <StatusBadge status={data.status} />
           </div>
         </div>
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
@@ -434,7 +549,15 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
               <span className="text-xl font-bold text-white uppercase">{data.optimalShort}</span>
             </div>
           </div>
+          <ExecuteButton 
+            baseClass="w-full md:w-auto px-10 py-5 font-bold text-[10px] tracking-widest uppercase rounded-xl" 
+            defaultText="OPEN POSITIONS" 
+            colorTheme="orange" 
+            disabled={data.status === 'CLOSED'}
+          />
         </div>
+
+        <SpreadHistoryChart data={data.chartData} color={chartColor} />
       </div>
     </div>
   );
@@ -585,8 +708,11 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
     return (
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-1">
-          <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
-          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">+{data.spreadPercent.toFixed(2)}%</span>
+          <div className="flex items-center gap-2">
+            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+          </div>
+          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{data.spreadPercent > 0 ? '+' : ''}{data.spreadPercent.toFixed(2)}%</span>
         </div>
         <div className="flex items-center text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
           <span>{data.buyExchange}</span><svg className="w-3 h-3 mx-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg><span>{data.sellExchange}</span>
@@ -597,8 +723,11 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
     return (
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-2">
-          <span className={`font-bold tracking-wide text-[11px] ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.id}</span>
-          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">+{data.expectedProfitPercent.toFixed(2)}%</span>
+          <div className="flex items-center gap-2">
+            <span className={`font-bold tracking-wide text-[11px] ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.id}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-purple-400 animate-pulse' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+          </div>
+          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">{data.expectedProfitPercent > 0 ? '+' : ''}{data.expectedProfitPercent.toFixed(2)}%</span>
         </div>
         <div className="text-[9px] font-mono text-zinc-500 break-words">{data.pairName}</div>
       </div>
@@ -607,7 +736,10 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
     return (
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-1">
-          <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
+          <div className="flex items-center gap-2">
+            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-orange-400 animate-pulse' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+          </div>
           <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">{(data.netYield * 100).toFixed(2)}% APY</span>
         </div>
         <div className="flex items-center text-[9px] font-medium text-zinc-500 mt-1 uppercase tracking-widest">
@@ -715,8 +847,10 @@ export default function Home() {
   };
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined, tooltipInfo?: string) => {
-    if (!pairs || Object.keys(pairs).length === 0) return null;
-    const availablePairs = Object.entries(pairs).filter(([ticker]) => !favorites.includes(ticker)).sort((a, b) => b[1] - a[1]);
+    const finalPairs = title === 'Crypto Assets' && (!pairs || Object.keys(pairs).length === 0) ? MOCK_CRYPTO_PAIRS : pairs;
+    if (!finalPairs || Object.keys(finalPairs).length === 0) return null;
+    
+    const availablePairs = Object.entries(finalPairs).filter(([ticker]) => !favorites.includes(ticker)).sort((a, b) => b[1] - a[1]);
     const isOpen = openGroups[title]; 
 
     return (
@@ -741,9 +875,11 @@ export default function Home() {
   };
 
   const renderFavorites = () => {
-    const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...data.crypto };
+    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
+    const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...fallbackCrypto };
+    
     const relevantFavs = favorites.filter(ticker => {
-      const isCryptoTicker = Object.keys(data.crypto || {}).includes(ticker);
+      const isCryptoTicker = Object.keys(fallbackCrypto || {}).includes(ticker);
       if (marketMode === 'CRYPTO') return isCryptoTicker;
       if (marketMode === 'FOREX') return !isCryptoTicker;
       return true;
@@ -799,7 +935,11 @@ export default function Home() {
   }
 
   // --- LOGIC FOR CARD RENDERING ---
-  const getProbForTicker = (ticker: string) => data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? data.crypto?.[ticker] ?? 0;
+  const getProbForTicker = (ticker: string) => {
+    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
+    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? fallbackCrypto?.[ticker] ?? 0;
+  };
+  
   const activeProb = getProbForTicker(activePair);
   const activeParams = data.parameters?.[activePair];
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
@@ -889,7 +1029,7 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS <InfoTooltip info="Executes a sequence of three trades (e.g., USDT to BTC, BTC to ETH, ETH back to USDT) to profit from currency cross-rate inefficiencies." /></span>
+                      <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS <InfoTooltip info="Executes a sequence of three trades on a single exchange to profit from currency cross-rate inefficiencies (e.g., USDT -> BTC -> ETH -> USDT)." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
@@ -905,7 +1045,7 @@ export default function Home() {
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
                       <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES <InfoTooltip info="A delta-neutral strategy where you open opposing positions on two exchanges to capture the interest payments (funding fees) paid between long and short traders." /></span>
+                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES <InfoTooltip info="A delta-neutral strategy where you open opposing positions on two derivatives exchanges to capture the interest payments (funding fees) paid between long and short traders." /></span>
                     </div>
                   </div>
                   <div className="space-y-2 px-3">
@@ -935,7 +1075,7 @@ export default function Home() {
                   {marketMode === 'FOREX' ? (
                     <>{renderSidebarGroup('Major Liquidity', data.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data.minors)}{renderSidebarGroup('Precious Metals', data.metals)}</>
                   ) : (
-                    <>{renderSidebarGroup('Crypto Assets', data.crypto)}</>
+                    <>{renderSidebarGroup('Crypto Assets', data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS)}</>
                   )}
                 </div>
               </>
@@ -1111,7 +1251,7 @@ export default function Home() {
                         )}
                       </div>
                       
-                      {/* LIQUIDATIONS BAR (Only in Standard Crypto Mode) */}
+                      {/* LIQUIDATIONS BAR */}
                       {marketMode === 'CRYPTO' && cryptoMode === 'standard' && (
                         <LiquidationsBar />
                       )}
