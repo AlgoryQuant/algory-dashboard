@@ -167,13 +167,22 @@ const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }:
 };
 
 const InfoTooltip = ({ info }: { info: string }) => (
-  <span className="relative group inline-flex items-center cursor-help ml-2">
+  <span className="relative group/tt inline-flex items-center cursor-help ml-2">
     <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover/tt:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
       {info}
       <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
     </div>
   </span>
+);
+
+const NavTooltip = ({ info }: { info: string }) => (
+  <div className="relative group/navtt ml-1 flex items-center justify-center">
+    <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+    <div className="absolute z-50 hidden group-hover/navtt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-1/2 -translate-x-1/2 text-left font-normal normal-case tracking-normal">
+      {info}
+    </div>
+  </div>
 );
 
 const StatusBadge = ({ status }: { status: ArbStatus }) => {
@@ -319,7 +328,7 @@ const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) =>
         <span className="px-3 py-1.5 bg-black/60 text-white/80 text-[9px] font-bold uppercase tracking-widest rounded-md border border-white/5">M15 TIMEFRAME</span>
       </div>
       <div className="w-full h-full pt-[73px]">
-        <iframe src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${encodeURIComponent(getTVSymbol(symbol))}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`} style={{ width: '100%', height: '100%', border: 'none' }} title={`Chart`} />
+        <iframe src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${encodeURIComponent(getTVSymbol(symbol))}&interval=15&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=050505&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en`} style={{ width: '100%', height: '100%', border: 'none' }} title={`Chart ${symbol}`} />
       </div>
     </div>
   );
@@ -878,9 +887,9 @@ export default function Home() {
             </span>
           </button>
           {tooltipInfo && (
-            <div className="relative group/tt ml-auto mr-2">
+            <div className="relative group/navtt ml-auto mr-2">
               <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-              <div className="absolute top-1/2 -translate-y-1/2 right-full mr-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 group-hover/tt:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left break-words">
+              <div className="absolute z-50 hidden group-hover/navtt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-1/2 -translate-y-1/2 right-full mr-2 text-left font-normal normal-case tracking-normal break-words">
                 {tooltipInfo}
               </div>
             </div>
@@ -1020,26 +1029,26 @@ export default function Home() {
             {marketMode === 'CRYPTO' && (
               <div className="flex flex-wrap gap-1 bg-[#0a0a0a] rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
                 <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>STANDARD</button>
-                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   SPATIAL
-                  <div className="absolute z-50 hidden group-hover:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+                  <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+                  <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
                     Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken).
                   </div>
-                  <svg className="w-3 h-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
-                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   TRIANGLE
-                  <div className="absolute z-50 hidden group-hover:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+                  <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+                  <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
                     Executes a sequence of three trades to profit from currency cross-rate inefficiencies (e.g., USDT ➔ BTC ➔ ETH ➔ USDT).
                   </div>
-                  <svg className="w-3 h-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
-                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`group relative flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
                   FUNDING
-                  <div className="absolute z-50 hidden group-hover:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+                  <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+                  <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
                     Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences.
                   </div>
-                  <svg className="w-3 h-3 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
               </div>
             )}
@@ -1084,7 +1093,7 @@ export default function Home() {
                 <div className="mb-6">
                   <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                     <div className="flex items-center gap-2">
-                      <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES</span>
                     </div>
                   </div>
@@ -1223,7 +1232,7 @@ export default function Home() {
                             </div>
                             {isTradeActive ? (
                               <ExecuteButton 
-                                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all"
+                                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1"
                                 defaultText={`EXECUTE ${inferredDirection}`}
                                 colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'}
                               />
