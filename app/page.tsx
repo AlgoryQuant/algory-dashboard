@@ -1445,7 +1445,7 @@ export default function Home() {
                           ))}
                         </div>
                       </SortableContext>
-                      <DragOverlay dropAnimation={defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } })}>
+                      <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }) }}>
                         {activeWidgetDragId && widgetMap[activeWidgetDragId] ? (
                           <div className="opacity-80 scale-105 shadow-2xl pointer-events-none">
                             {widgetMap[activeWidgetDragId]}
