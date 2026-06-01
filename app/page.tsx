@@ -265,7 +265,7 @@ const LiquidationsBar = () => {
   const shortPct = (LIQUIDATIONS_MOCK.shortsRekt / total) * 100;
 
   return (
-    <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 shadow-2xl">
+    <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 shadow-2xl relative z-10">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
           <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
@@ -331,10 +331,10 @@ const TradingChart = ({ symbol, isArb, mode }: { symbol: string, isArb?: boolean
   const getTVSymbol = (s: string) => {
     if (isArb) {
       const parts = s.split('/');
-      return `BINANCE:${parts[0]}USDT`;
+      return `${parts[0]}USDT`;
     }
-    if (mode === 'CRYPTO') {
-      return `BINANCE:${s}`;
+    if (mode === 'CRYPTO' || ['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'BNBUSD'].includes(s)) {
+      return s;
     }
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
@@ -342,7 +342,7 @@ const TradingChart = ({ symbol, isArb, mode }: { symbol: string, isArb?: boolean
   };
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl h-[450px] relative transition-all duration-300 flex-shrink-0">
+    <div className="w-full bg-[#050505]/90 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl h-[450px] relative transition-all duration-300 flex-shrink-0 z-10">
       <div className="absolute top-0 left-0 w-full px-6 py-4 bg-white/[0.02] border-b border-white/5 flex items-center justify-between z-10 pointer-events-none">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
@@ -372,7 +372,7 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const chartColor = arbData.status === 'ACTIVE' ? '#34d399' : arbData.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
+    <div className="w-full bg-[#050505]/80 backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300 relative z-10">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1 w-full">
           <div className="flex items-center justify-between">
@@ -463,7 +463,7 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
   const chartColor = arbData.status === 'ACTIVE' ? '#a855f7' : arbData.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all duration-300">
+    <div className="w-full bg-[#050505]/80 backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all duration-300 relative z-10">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1 w-full">
           <div className="flex items-center justify-between">
@@ -548,7 +548,7 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
   const chartColor = data.status === 'ACTIVE' ? '#f97316' : data.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
 
   return (
-    <div className="w-full bg-[#050505] backdrop-blur-2xl border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(249,115,22,0.15)] transition-all duration-300">
+    <div className="w-full bg-[#050505]/80 backdrop-blur-2xl border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(249,115,22,0.15)] transition-all duration-300 relative z-10">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1 w-full">
           <div className="flex items-center justify-between">
@@ -663,7 +663,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   }
 
   return (
-    <div className="mb-6 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0">
+    <div className="mb-6 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0 z-10">
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white">
@@ -1042,7 +1042,7 @@ export default function Home() {
     const isOpen = openGroups[title]; 
 
     return (
-      <div className="mb-6">
+      <div className="mb-6 z-10 relative">
         <div className="w-full flex items-center justify-between px-6 py-2 mb-3 group">
           <button onClick={() => setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }))} className="flex items-center gap-2 cursor-pointer outline-none">
             {getSidebarIcon(title)}
@@ -1112,10 +1112,10 @@ export default function Home() {
   const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
 
   const getPageBackground = () => {
-    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-zinc-950/50 to-[#050505]';
-    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/20 via-[#0a0a0a] to-[#050505]' : 'from-emerald-950/20 via-[#0a0a0a] to-[#050505]';
-    if (inferredDirection === 'SELL') return 'from-red-950/20 via-[#0a0a0a] to-[#050505]';
-    return 'from-[#050505] via-[#0a0a0a] to-[#050505]';
+    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/10 via-zinc-950/20 to-[#050505]/40';
+    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/10 via-[#0a0a0a]/40 to-[#050505]/40' : 'from-emerald-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
+    if (inferredDirection === 'SELL') return 'from-red-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
+    return 'from-[#050505]/40 via-[#0a0a0a]/40 to-[#050505]/40';
   };
   
   const getGlowColor = () => {
@@ -1131,7 +1131,7 @@ export default function Home() {
   const renderAiAnalysisWidget = () => {
     if (!activeParams) return null;
     return (
-      <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 ${getGlowColor()}`}>
+      <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 relative z-10 ${getGlowColor()}`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
           <div className="w-full">
             <div className="flex items-center gap-4 mb-4">
@@ -1334,11 +1334,18 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(63, 63, 70, 1); }
       `}} />
 
-      {/* MAIN LAYOUT WRAPPER */}
-      <div className="flex h-screen w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 min-w-[1024px]">
+      {/* MAIN LAYOUT WRAPPER WITH GLOW CONTAINER */}
+      <div className="flex h-screen w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 min-w-[1024px] relative">
         
-        {/* LEFT SIDEBAR */}
-        <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex overflow-hidden">
+        {/* AMBIENT CYBER GLOW BACKGROUND (z-0) */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '12s' }} />
+          <div className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-500 rounded-full blur-[120px] opacity-[0.06] animate-pulse" style={{ animationDuration: '10s' }} />
+        </div>
+
+        {/* LEFT SIDEBAR (z-20) */}
+        <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505]/60 backdrop-blur-xl flex flex-col h-full z-20 hidden md:flex overflow-hidden">
           <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
             <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setMarketMode(null)}>
               Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500' : 'text-emerald-500'}>.</span>
@@ -1370,7 +1377,7 @@ export default function Home() {
                       <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">SPATIAL ARBITRAGE</span>
                     </div>
                   </div>
-                  <div className="space-y-2 px-3">
+                  <div className="space-y-2 px-3 z-10 relative">
                     {Object.values(MOCK_SPATIAL_ARB).map((arb) => (
                        <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
                     ))}
@@ -1386,7 +1393,7 @@ export default function Home() {
                       <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS</span>
                     </div>
                   </div>
-                  <div className="space-y-2 px-3">
+                  <div className="space-y-2 px-3 z-10 relative">
                     {Object.values(MOCK_TRIANGULAR_ARB).map((arb) => (
                        <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
                     ))}
@@ -1402,7 +1409,7 @@ export default function Home() {
                       <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES</span>
                     </div>
                   </div>
-                  <div className="space-y-2 px-3">
+                  <div className="space-y-2 px-3 z-10 relative">
                     {Object.values(MOCK_FUNDING_RATES).map((arb) => (
                        <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
                     ))}
@@ -1412,7 +1419,7 @@ export default function Home() {
             ) : (
               <>
                 <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                  <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full`}>
+                  <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full z-10 relative`}>
                     <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90' : 'text-emerald-500/90'}`}>
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> FAVORITES
                     </div>
@@ -1425,7 +1432,7 @@ export default function Home() {
                   </DragOverlay>
                 </DndContext>
 
-                <div className="flex-1">
+                <div className="flex-1 z-10 relative">
                   {marketMode === 'FOREX' ? (
                     <>{renderSidebarGroup('Major Liquidity', data.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data.minors)}{renderSidebarGroup('Precious Metals', data.metals)}</>
                   ) : (
@@ -1435,7 +1442,7 @@ export default function Home() {
               </>
             )}
 
-            <div className="px-6 mt-8 mb-6">
+            <div className="px-6 mt-8 mb-6 z-10 relative">
               <button
                 onClick={handleSeedFirebase}
                 className="w-full py-3 bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all shadow-inner flex items-center justify-center gap-2"
@@ -1449,8 +1456,8 @@ export default function Home() {
         </aside>
 
         {/* MAIN PANEL */}
-        <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()}`}>
-          <div className="max-w-[1400px] mx-auto w-full">
+        <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
+          <div className="max-w-[1400px] mx-auto w-full relative z-10">
             
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
 
