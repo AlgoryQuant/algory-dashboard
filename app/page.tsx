@@ -116,6 +116,33 @@ const customCollisionDetection = (args: any) => {
 };
 
 // === INTERACTIVE COMPONENTS ===
+
+const AnimatedNumber = ({ value }: { value: number }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+
+  useEffect(() => {
+    let start = displayValue;
+    const end = value;
+    if (start === end) return;
+    
+    const duration = 400;
+    let startTime: number | null = null;
+    
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setDisplayValue(start + (end - start) * progress);
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+    
+    window.requestAnimationFrame(step);
+  }, [value]);
+
+  return <>{displayValue.toFixed(2)}</>;
+};
+
 const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' | 'orange', disabled?: boolean }) => {
   const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
 
@@ -300,15 +327,17 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
   );
 };
 
-const TradingChart = ({ symbol, isArb }: { symbol: string, isArb?: boolean }) => {
+const TradingChart = ({ symbol, isArb, mode }: { symbol: string, isArb?: boolean, mode: string | null }) => {
   const getTVSymbol = (s: string) => {
     if (isArb) {
       const parts = s.split('/');
-      return `COINBASE:${parts[0]}/COINBASE:${parts[1]}`;
+      return `BINANCE:${parts[0]}USDT`;
+    }
+    if (mode === 'CRYPTO') {
+      return `BINANCE:${s}`;
     }
     if (s === 'GOLD' || s === 'XAUUSD') return 'OANDA:XAUUSD';
     if (s === 'SILVER' || s === 'XAGUSD') return 'OANDA:XAGUSD';
-    if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'ADAUSD', 'DOGEUSD', 'BNBUSD'].includes(s)) return `COINBASE:${s}`;
     return `OANDA:${s}`;
   };
 
@@ -345,25 +374,26 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-          </div>
-          <div className="flex items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.asset} ARBITRAGE</h2>
-              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">SPATIAL EXCHANGE OPPORTUNITY</p>
+        <div className="flex flex-col gap-1 w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+              </div>
+              <div className="flex items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.asset} ARBITRAGE</h2>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">SPATIAL EXCHANGE OPPORTUNITY</p>
+                </div>
+                <StatusBadge status={arbData.status} />
+              </div>
             </div>
-            <StatusBadge status={arbData.status} />
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.spreadPercent > 0 ? '+' : ''}{arbData.spreadPercent}% SPREAD</span>
+            </div>
           </div>
+          <p className="text-sm text-zinc-400 italic mt-3 ml-14">Exploits price differences of the same asset across different exchanges.</p>
         </div>
-        <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.spreadPercent > 0 ? '+' : ''}{arbData.spreadPercent}% SPREAD</span>
-        </div>
-      </div>
-      
-      <div className="px-8 pt-6 pb-2 text-sm text-zinc-400 font-medium border-b border-white/5 bg-[#0a0a0a]">
-        Exploits price differences of the same asset across different exchanges.
       </div>
 
       <div className="p-8">
@@ -393,14 +423,14 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
               <input type="number" min="0.01" step="0.01" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="bg-black/50 border border-white/10 rounded-xl px-5 py-3 text-lg text-white font-mono focus:outline-none focus:border-blue-500/50 transition-all" />
             </div>
             <div className="flex flex-col gap-2 w-full md:w-1/3">
-              <div className="flex justify-between text-[10px] tracking-widest font-bold text-zinc-500 uppercase"><span>GROSS PROFIT:</span><span className={`font-mono ${grossProfit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>${grossProfit.toFixed(2)}</span></div>
-              <div className="flex justify-between text-[10px] tracking-widest font-bold text-zinc-500 uppercase"><span>EST. FEES ({arbData.estimatedFeePercent}%):</span><span className="font-mono text-red-400">-${fees.toFixed(2)}</span></div>
+              <div className="flex justify-between text-[10px] tracking-widest font-bold text-zinc-500 uppercase"><span>GROSS PROFIT:</span><span className={`font-mono ${grossProfit > 0 ? 'text-emerald-400' : 'text-red-400'}`}>$<AnimatedNumber value={grossProfit} /></span></div>
+              <div className="flex justify-between text-[10px] tracking-widest font-bold text-zinc-500 uppercase"><span>EST. FEES ({arbData.estimatedFeePercent}%):</span><span className="font-mono text-red-400">-$<AnimatedNumber value={fees} /></span></div>
               <div className="w-full h-[1px] bg-white/10 my-2"></div>
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest"><span className="text-zinc-500">NET PROFIT:</span></div>
             </div>
             <div className="w-full md:w-1/3 flex justify-end">
                <div className={`text-6xl font-black font-mono tracking-tighter ${isProfitable ? 'text-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]' : 'text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]'}`}>
-                 {isProfitable ? '+' : ''}${netProfit.toFixed(2)}
+                 {isProfitable ? '+' : ''}$<AnimatedNumber value={netProfit} />
                </div>
             </div>
           </div>
@@ -435,25 +465,26 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-purple-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)] transition-all duration-300">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          </div>
-          <div className="flex items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.pairName}</h2>
-              <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">TRIANGULAR INEFFICIENCY LOOP</p>
+        <div className="flex flex-col gap-1 w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              </div>
+              <div className="flex items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{arbData.pairName}</h2>
+                  <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest mt-1">TRIANGULAR INEFFICIENCY LOOP</p>
+                </div>
+                <StatusBadge status={arbData.status} />
+              </div>
             </div>
-            <StatusBadge status={arbData.status} />
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.expectedProfitPercent > 0 ? '+' : ''}{arbData.expectedProfitPercent}% EXPECTED</span>
+            </div>
           </div>
+          <p className="text-sm text-zinc-400 italic mt-3 ml-14">Executes a sequence of three trades to profit from currency cross-rate inefficiencies.</p>
         </div>
-        <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.expectedProfitPercent > 0 ? '+' : ''}{arbData.expectedProfitPercent}% EXPECTED</span>
-        </div>
-      </div>
-
-      <div className="px-8 pt-6 pb-2 text-sm text-zinc-400 font-medium border-b border-white/5 bg-[#0a0a0a]">
-        Executes a sequence of three trades to profit from currency cross-rate inefficiencies.
       </div>
 
       <div className="p-8">
@@ -495,7 +526,7 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
           <div className="flex-1 text-center md:text-right">
             <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">CALCULATED NET PROFIT</div>
             <div className={`text-6xl font-black font-mono tracking-tighter ${isProfitable ? 'text-emerald-400 drop-shadow-[0_0_25px_rgba(52,211,153,0.6)]' : 'text-red-400 drop-shadow-[0_0_25px_rgba(239,68,68,0.6)]'}`}>
-              {isProfitable ? '+' : ''}{netProfit.toFixed(2)} <span className="text-2xl tracking-normal text-white/50">{arbData.path[0]}</span>
+              {isProfitable ? '+' : ''}<AnimatedNumber value={netProfit} /> <span className="text-2xl tracking-normal text-white/50">{arbData.path[0]}</span>
             </div>
           </div>
           
@@ -519,25 +550,26 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(249,115,22,0.15)] transition-all duration-300">
       <div className="px-8 py-6 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <div className="flex items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{data.asset}</h2>
-              <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">CROSS-EXCHANGE FUNDING ARB</p>
+        <div className="flex flex-col gap-1 w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div className="flex items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight uppercase">{data.asset}</h2>
+                  <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mt-1">CROSS-EXCHANGE FUNDING ARB</p>
+                </div>
+                <StatusBadge status={data.status} />
+              </div>
             </div>
-            <StatusBadge status={data.status} />
+            <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+              <span className="text-emerald-400 font-bold text-lg tracking-wider">{(data.netYield * 100).toFixed(3)}% DAILY YIELD</span>
+            </div>
           </div>
+          <p className="text-sm text-zinc-400 italic mt-3 ml-14">Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences.</p>
         </div>
-        <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-          <span className="text-emerald-400 font-bold text-lg tracking-wider">{(data.netYield * 100).toFixed(3)}% DAILY YIELD</span>
-        </div>
-      </div>
-
-      <div className="px-8 pt-6 pb-2 text-sm text-zinc-400 font-medium border-b border-white/5 bg-[#0a0a0a]">
-        Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences.
       </div>
 
       <div className="p-8">
@@ -1080,7 +1112,7 @@ export default function Home() {
   const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
 
   const getPageBackground = () => {
-    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-[#0a0a0a] to-[#050505]';
+    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-zinc-950/50 to-[#050505]';
     if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/20 via-[#0a0a0a] to-[#050505]' : 'from-emerald-950/20 via-[#0a0a0a] to-[#050505]';
     if (inferredDirection === 'SELL') return 'from-red-950/20 via-[#0a0a0a] to-[#050505]';
     return 'from-[#050505] via-[#0a0a0a] to-[#050505]';
@@ -1105,7 +1137,7 @@ export default function Home() {
             <div className="flex items-center gap-4 mb-4">
               <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
               {isTradeActive && (
-                <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
+                <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg animate-pulse ${
                   inferredDirection === 'BUY' 
                     ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') 
                     : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
@@ -1164,7 +1196,7 @@ export default function Home() {
                   inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') :
                   inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'
               }`}>
-                {(activeProb * 100).toFixed(1)}%
+                <AnimatedNumber value={activeProb * 100} />%
               </div>
             </div>
             {isTradeActive ? (
@@ -1240,7 +1272,7 @@ export default function Home() {
   };
 
   const widgetMap: Record<string, React.ReactNode> = {
-    'chart': <TradingChart symbol={activePair} />,
+    'chart': <TradingChart symbol={activePair} mode={marketMode} />,
     'ai_panel': renderAiAnalysisWidget(),
     'liquidations': marketMode === 'CRYPTO' && cryptoMode === 'standard' ? <LiquidationsBar /> : null
   };
@@ -1287,6 +1319,15 @@ export default function Home() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
+        @keyframes custom-gradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-bg-gradient {
+          background-size: 200% 200%;
+          animation: custom-gradient 15s ease infinite;
+        }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(39, 39, 42, 0.8); border-radius: 10px; }
@@ -1408,7 +1449,7 @@ export default function Home() {
         </aside>
 
         {/* MAIN PANEL */}
-        <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
+        <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()}`}>
           <div className="max-w-[1400px] mx-auto w-full">
             
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
