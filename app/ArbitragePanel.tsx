@@ -119,7 +119,7 @@ const SpreadHistoryChart = ({ data, color }: { data?: ChartPoint[], color: strin
 export const SpatialArbitragePanel = ({ arbData }: { arbData?: SpatialArbData }) => {
   const [volume, setVolume] = useState<number>(1);
   
-  if (!arbData) return (
+  if (!arbData || !arbData.id) return (
     <div className="w-full bg-[#050505]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-10 flex items-center justify-center text-zinc-500 font-mono text-sm shadow-2xl relative z-10">
       <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
       SYNCING SPATIAL MATRICES...
@@ -156,7 +156,7 @@ export const SpatialArbitragePanel = ({ arbData }: { arbData?: SpatialArbData })
               </div>
             </div>
             <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <span className="text-emerald-400 font-bold text-lg tracking-wider">{(arbData?.spreadPercent || 0) > 0 ? '+' : ''}{(arbData?.spreadPercent || 0)}% SPREAD</span>
+              <span className="text-emerald-400 font-bold text-lg tracking-wider">{(arbData?.spreadPercent || 0) > 0 ? '+' : ''}{(arbData?.spreadPercent || 0).toFixed(2)}% SPREAD</span>
             </div>
           </div>
           <p className="text-sm text-zinc-400 italic mt-3 ml-14">Exploits price differences of the same asset across different exchanges.</p>
@@ -212,7 +212,7 @@ export const SpatialArbitragePanel = ({ arbData }: { arbData?: SpatialArbData })
 export const TriangularArbitragePanel = ({ arbData }: { arbData?: TriangularArbData }) => {
   const [volume, setVolume] = useState<number>(1000);
   
-  if (!arbData) return (
+  if (!arbData || !arbData.id) return (
     <div className="w-full bg-[#050505]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-10 flex items-center justify-center text-zinc-500 font-mono text-sm shadow-2xl relative z-10">
       <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
       SYNCING TRIANGULAR LOOPS...
@@ -250,7 +250,7 @@ export const TriangularArbitragePanel = ({ arbData }: { arbData?: TriangularArbD
               </div>
             </div>
             <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-              <span className="text-emerald-400 font-bold text-lg tracking-wider">{(arbData?.expectedProfitPercent || 0) > 0 ? '+' : ''}{(arbData?.expectedProfitPercent || 0)}% EXPECTED</span>
+              <span className="text-emerald-400 font-bold text-lg tracking-wider">{(arbData?.expectedProfitPercent || 0) > 0 ? '+' : ''}{(arbData?.expectedProfitPercent || 0).toFixed(2)}% EXPECTED</span>
             </div>
           </div>
           <p className="text-sm text-zinc-400 italic mt-3 ml-14">Executes a sequence of three trades to profit from currency cross-rate inefficiencies.</p>
@@ -303,7 +303,7 @@ export const TriangularArbitragePanel = ({ arbData }: { arbData?: TriangularArbD
 };
 
 export const FundingRatesPanel = ({ data }: { data?: FundingRateData }) => {
-  if (!data) return (
+  if (!data || !data.id) return (
     <div className="w-full bg-[#050505]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-10 flex items-center justify-center text-zinc-500 font-mono text-sm shadow-2xl relative z-10">
       <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
       SYNCING EXCHANGE RATES...
