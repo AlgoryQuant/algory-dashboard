@@ -155,17 +155,28 @@ const customCollisionDetection = (args: any) => {
 };
 
 // === INTERACTIVE COMPONENTS ===
-
 const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }: { baseClass: string, defaultText: string, colorTheme: 'emerald' | 'red' | 'blue' | 'purple' | 'orange', disabled?: boolean }) => {
   const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
+
+  useEffect(() => {
+    let t1: NodeJS.Timeout;
+    let t2: NodeJS.Timeout;
+    if (state === 'loading') {
+      t1 = setTimeout(() => {
+        setState('success');
+      }, 1500);
+    } else if (state === 'success') {
+      t2 = setTimeout(() => setState('idle'), 1000);
+    }
+    return () => {
+      if (t1) clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+    };
+  }, [state]);
 
   const handleClick = () => {
     if (state !== 'idle' || disabled) return;
     setState('loading');
-    setTimeout(() => {
-      setState('success');
-      setTimeout(() => setState('idle'), 1000);
-    }, 1500);
   };
 
   let bgClass = '';
@@ -180,7 +191,7 @@ const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }:
   }
 
   return (
-    <button onClick={handleClick} disabled={disabled} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative overflow-hidden`}>
+    <button onClick={handleClick} disabled={disabled || state !== 'idle'} className={`${baseClass} ${bgClass} flex items-center justify-center transition-all duration-300 relative overflow-hidden`}>
       <div className={`transition-all duration-300 ${state !== 'idle' ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
         {defaultText}
       </div>
@@ -275,7 +286,7 @@ const LiquidationsBar = () => {
   const shortPct = (LIQUIDATIONS_MOCK.shortsRekt / total) * 100;
 
   return (
-    <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 mt-6 shadow-2xl">
+    <div className="w-full bg--[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 mt-6 shadow-2xl">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
           <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
@@ -378,8 +389,6 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
   const isProfitable = netProfit > 0;
   
   const chartColor = arbData.status === 'ACTIVE' ? '#34d399' : arbData.status === 'DEGRADING' ? '#fbbf24' : '#ef4444';
-  const gaugeRotation = isProfitable ? 45 : -45; 
-  const needleColor = isProfitable ? '#34d399' : '#ef4444';
 
   return (
     <div className="w-full bg-[#050505] backdrop-blur-2xl border border-blue-500/20 rounded-[2rem] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.15)] transition-all duration-300">
@@ -571,11 +580,11 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
         <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6">CURRENT 8H FUNDING RATES</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {[
-            { name: 'Binance', rate: data.binanceRate },
-            { name: 'Bybit', rate: data.bybitRate },
-            { name: 'OKX', rate: data.okxRate }
+            { id: 'ex-binance', name: 'Binance', rate: data.binanceRate },
+            { id: 'ex-bybit', name: 'Bybit', rate: data.bybitRate },
+            { id: 'ex-okx', name: 'OKX', rate: data.okxRate }
           ].map(ex => (
-             <div key={ex.name} className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner flex flex-col items-center">
+             <div key={ex.id} className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-inner flex flex-col items-center">
                <div className="text-[10px] font-bold text-white mb-4 uppercase tracking-widest">{ex.name}</div>
                <div className={`text-4xl font-mono font-black ${ex.rate > 0 ? 'text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.3)]' : 'text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]'}`}>
                  {ex.rate > 0 ? '+' : ''}{(ex.rate * 100).toFixed(4)}%
@@ -709,7 +718,6 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
 };
 
 // === SIDEBAR ITEM COMPONENTS ===
-
 interface SidebarItemProps { ticker: string; prob?: number; isActive: boolean; isFavorite: boolean; onClick: () => void; onToggleFavorite: (ticker: string) => void; isOverlay?: boolean; dragListeners?: any; dragAttributes?: any; setNodeRef?: (node: HTMLElement | null) => void; style?: React.CSSProperties; }
 
 const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggleFavorite, isOverlay, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
@@ -830,7 +838,6 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   
-  const [showLanding, setShowLanding] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
   const [nickname, setNickname] = useState('');
@@ -865,6 +872,7 @@ export default function Home() {
   };
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     const loadData = () => {
       fetch(`https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json?t=${new Date().getTime()}`)
         .then(res => res.json())
@@ -874,16 +882,17 @@ export default function Home() {
     };
     if (isAuthenticated || showAuthGate) {
        loadData();
-       const interval = setInterval(loadData, 15 * 60 * 1000);
-       return () => clearInterval(interval);
+       interval = setInterval(loadData, 15 * 60 * 1000);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isAuthenticated, showAuthGate]);
 
   const toggleFavorite = (ticker: string) => { setFavorites(prev => prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]); };
 
   const handleSeedFirebase = async () => {
     try {
-      // Provedeme PATCH pouze na uzel /crypto.json, aby se zachovala případná ostatní data (forex atd.)
       await fetch('https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results/crypto.json', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -976,6 +985,43 @@ export default function Home() {
     return relevantFavs.map(ticker => <SortableSidebarItem key={ticker} ticker={ticker} prob={allPairsMap[ticker] || 0} isActive={activePair === ticker} isFavorite={true} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />);
   };
 
+  // --- LOGIC FOR CARD RENDERING ---
+  const getProbForTicker = (ticker: string) => {
+    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
+    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? fallbackCrypto?.[ticker] ?? 0;
+  };
+  
+  const activeProb = getProbForTicker(activePair);
+  const activeParams = data.parameters?.[activePair];
+  const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
+
+  const clampedProb = Math.max(0, Math.min(1, activeProb));
+  const gaugeRotation = (clampedProb * 180) - 90; 
+
+  let inferredDirection = "NEUTRAL";
+  let isTradeActive = false;
+
+  if (clampedProb >= 0.52) { inferredDirection = "BUY"; isTradeActive = true; } 
+  else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
+
+  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
+
+  const getPageBackground = () => {
+    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-[#0a0a0a] to-[#050505]';
+    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/20 via-[#0a0a0a] to-[#050505]' : 'from-emerald-950/20 via-[#0a0a0a] to-[#050505]';
+    if (inferredDirection === 'SELL') return 'from-red-950/20 via-[#0a0a0a] to-[#050505]';
+    return 'from-[#050505] via-[#0a0a0a] to-[#050505]';
+  };
+  
+  const getGlowColor = () => {
+    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'shadow-[0_0_60px_rgba(59,130,246,0.05)]';
+    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'shadow-[0_0_60px_rgba(59,130,246,0.05)]' : 'shadow-[0_0_60px_rgba(52,211,153,0.05)]';
+    if (inferredDirection === 'SELL') return 'shadow-[0_0_60px_rgba(239,68,68,0.05)]';
+    return 'shadow-2xl';
+  };
+
+  const displayedNews = marketMode === 'FOREX' ? FOREX_NEWS_MOCK : CRYPTO_NEWS_MOCK;
+
   if (!marketMode) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -1014,43 +1060,6 @@ export default function Home() {
       </div>
     );
   }
-
-  // --- LOGIC FOR CARD RENDERING ---
-  const getProbForTicker = (ticker: string) => {
-    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
-    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? fallbackCrypto?.[ticker] ?? 0;
-  };
-  
-  const activeProb = getProbForTicker(activePair);
-  const activeParams = data.parameters?.[activePair];
-  const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
-
-  const clampedProb = Math.max(0, Math.min(1, activeProb));
-  const gaugeRotation = (clampedProb * 180) - 90; 
-
-  let inferredDirection = "NEUTRAL";
-  let isTradeActive = false;
-
-  if (clampedProb >= 0.52) { inferredDirection = "BUY"; isTradeActive = true; } 
-  else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
-
-  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
-
-  const getPageBackground = () => {
-    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/20 via-[#0a0a0a] to-[#050505]';
-    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/20 via-[#0a0a0a] to-[#050505]' : 'from-emerald-950/20 via-[#0a0a0a] to-[#050505]';
-    if (inferredDirection === 'SELL') return 'from-red-950/20 via-[#0a0a0a] to-[#050505]';
-    return 'from-[#050505] via-[#0a0a0a] to-[#050505]';
-  };
-  
-  const getGlowColor = () => {
-    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'shadow-[0_0_60px_rgba(59,130,246,0.05)]';
-    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'shadow-[0_0_60px_rgba(59,130,246,0.05)]' : 'shadow-[0_0_60px_rgba(52,211,153,0.05)]';
-    if (inferredDirection === 'SELL') return 'shadow-[0_0_60px_rgba(239,68,68,0.05)]';
-    return 'shadow-2xl';
-  };
-
-  const displayedNews = marketMode === 'FOREX' ? FOREX_NEWS_MOCK : CRYPTO_NEWS_MOCK;
 
   return (
     <>
@@ -1180,7 +1189,6 @@ export default function Home() {
               </>
             )}
 
-            {/* DEV SYNC BUTTON pro naplnění Firebase - můžeš ho pak smazat */}
             <div className="px-6 mt-8 mb-6">
               <button
                 onClick={handleSeedFirebase}
@@ -1219,7 +1227,7 @@ export default function Home() {
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' && MOCK_FUNDING_RATES[activePair] ? (
                     <FundingRatesPanel data={MOCK_FUNDING_RATES[activePair]} />
                   ) : (
-                    // === STANDARD MAIN PANEL (Chart + AI Analysis) ===
+                    // === STANDARD MAIN PANEL ===
                     <>
                       <TradingChart symbol={activePair} />
                       
@@ -1361,7 +1369,6 @@ export default function Home() {
                         )}
                       </div>
                       
-                      {/* LIQUIDATIONS BAR */}
                       {marketMode === 'CRYPTO' && cryptoMode === 'standard' && (
                         <LiquidationsBar />
                       )}
