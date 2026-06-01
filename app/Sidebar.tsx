@@ -11,11 +11,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// === INTERFACES & MOCK DATA ===
 type ArbStatus = 'ACTIVE' | 'DEGRADING' | 'CLOSED';
 interface ChartPoint { time: string; spread: number; }
-interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; status: ArbStatus; chartData: ChartPoint[]; }
-interface TriangularArbData { id: string; pairName: string; path: string[]; rate1: number; rate2: number; rate3: number; expectedProfitPercent: number; status: ArbStatus; chartData: ChartPoint[]; }
-interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
+export interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; status: ArbStatus; chartData: ChartPoint[]; }
+export interface TriangularArbData { id: string; pairName: string; path: string[]; rate1: number; rate2: number; rate3: number; expectedProfitPercent: number; status: ArbStatus; chartData: ChartPoint[]; }
+export interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
 
 const MOCK_CRYPTO_PAIRS: Record<string, number> = {
   "BTCUSD": 0.85, "ETHUSD": 0.72, "SOLUSD": 0.65, "ADAUSD": 0.55, "BNBUSD": 0.60, 
@@ -30,24 +31,25 @@ const MOCK_CRYPTO_PAIRS: Record<string, number> = {
   "EGLDUSD": 0.47, "FLOWUSD": 0.33, "AXSUSD": 0.36, "CHZUSD": 0.41, "ENJUSD": 0.34
 };
 
-const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
-  "ARB-BTC-1": { id: "ARB-BTC-1", asset: "BTC/USDT", buyExchange: "Binance", sellExchange: "Kraken", askPrice: 64200.50, bidPrice: 64970.90, spreadPercent: 1.2, estimatedFeePercent: 0.2, status: 'ACTIVE', chartData: [] },
-  "ARB-ETH-1": { id: "ARB-ETH-1", asset: "ETH/USDT", buyExchange: "KuCoin", sellExchange: "Binance", askPrice: 3450.10, bidPrice: 3481.15, spreadPercent: 0.9, estimatedFeePercent: 0.2, status: 'DEGRADING', chartData: [] },
-  "ARB-SOL-1": { id: "ARB-SOL-1", asset: "SOL/USDT", buyExchange: "Bybit", sellExchange: "Coinbase", askPrice: 142.20, bidPrice: 145.75, spreadPercent: 2.5, estimatedFeePercent: 0.25, status: 'ACTIVE', chartData: [] },
-  "ARB-PEPE-1": { id: "ARB-PEPE-1", asset: "PEPE/USDT", buyExchange: "HTX", sellExchange: "Binance", askPrice: 0.0000105, bidPrice: 0.0000101, spreadPercent: -3.8, estimatedFeePercent: 0.3, status: 'CLOSED', chartData: [] },
-};
-
-const MOCK_TRIANGULAR_ARB: Record<string, TriangularArbData> = {
-  "TRI-1": { id: "TRI-1", pairName: "USDT ➔ BTC ➔ ETH ➔ USDT", path: ["USDT", "BTC", "ETH", "USDT"], rate1: 64000, rate2: 18.5, rate3: 3500, expectedProfitPercent: 1.15, status: 'ACTIVE', chartData: [] },
-  "TRI-2": { id: "TRI-2", pairName: "USDT ➔ SOL ➔ BNB ➔ USDT", path: ["USDT", "SOL", "BNB", "USDT"], rate1: 145, rate2: 0.24, rate3: 610, expectedProfitPercent: 0.85, status: 'DEGRADING', chartData: [] },
-  "TRI-3": { id: "TRI-3", pairName: "USDT ➔ ADA ➔ XRP ➔ USDT", path: ["USDT", "ADA", "XRP", "USDT"], rate1: 0.45, rate2: 1.2, rate3: 0.55, expectedProfitPercent: 0.1, status: 'CLOSED', chartData: [] },
-};
-
-const MOCK_FUNDING_RATES: Record<string, FundingRateData> = {
-  "FUND-SOL": { id: "FUND-SOL", asset: "SOL Perpetuals", binanceRate: 0.015, bybitRate: 0.002, okxRate: -0.012, optimalLong: "OKX", optimalShort: "Binance", netYield: 0.027, status: 'ACTIVE', chartData: [] },
-  "FUND-XRP": { id: "FUND-XRP", asset: "XRP Perpetuals", binanceRate: -0.005, bybitRate: 0.018, okxRate: 0.015, optimalLong: "Binance", optimalShort: "Bybit", netYield: 0.023, status: 'DEGRADING', chartData: [] },
-  "FUND-BTC": { id: "FUND-BTC", asset: "BTC Perpetuals", binanceRate: 0.010, bybitRate: 0.011, okxRate: 0.001, optimalLong: "OKX", optimalShort: "Bybit", netYield: 0.010, status: 'CLOSED', chartData: [] },
-};
+export interface SidebarProps {
+  marketMode: 'FOREX' | 'CRYPTO' | null;
+  setMarketMode: (mode: 'FOREX' | 'CRYPTO' | null) => void;
+  cryptoMode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates';
+  setCryptoMode: (mode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates') => void;
+  activePair: string;
+  setActivePair: (pair: string) => void;
+  data: any;
+  spatialArbData: Record<string, SpatialArbData>;
+  triangularArbData: Record<string, TriangularArbData>;
+  fundingRateData: Record<string, FundingRateData>;
+  openGroups: Record<string, boolean>;
+  setOpenGroups: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  favorites: string[];
+  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
+  activeDragId: string | null;
+  setActiveDragId: React.Dispatch<React.SetStateAction<string | null>>;
+  handleSeedFirebase: () => void;
+}
 
 const customCollisionDetection = (args: any) => {
   const pointerCollisions = pointerWithin(args);
@@ -103,6 +105,7 @@ const SortableSidebarItem = (props: any) => {
 
 const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isActive: boolean, onClick: () => void, type: 'spatial' | 'triangular' | 'funding' }) => {
   let containerClasses = `w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex flex-col justify-between group border cursor-pointer `;
+  
   if (isActive) {
     if (type === 'spatial') containerClasses += 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]';
     else if (type === 'triangular') containerClasses += 'bg-purple-500/10 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]';
@@ -155,26 +158,10 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
   }
 };
 
-export interface SidebarProps {
-  marketMode: 'FOREX' | 'CRYPTO' | null;
-  setMarketMode: (mode: 'FOREX' | 'CRYPTO' | null) => void;
-  cryptoMode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates';
-  setCryptoMode: (mode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates') => void;
-  activePair: string;
-  setActivePair: (pair: string) => void;
-  data: any;
-  openGroups: Record<string, boolean>;
-  setOpenGroups: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-  favorites: string[];
-  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
-  activeDragId: string | null;
-  setActiveDragId: React.Dispatch<React.SetStateAction<string | null>>;
-  handleSeedFirebase: () => void;
-}
-
 export default function Sidebar({
   marketMode, setMarketMode, cryptoMode, setCryptoMode, activePair, setActivePair,
-  data, openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
+  data, spatialArbData, triangularArbData, fundingRateData,
+  openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
 }: SidebarProps) {
 
   const sensors = useSensors(
@@ -314,7 +301,7 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
-                {Object.values(MOCK_SPATIAL_ARB).map((arb) => (
+                {Object.values(spatialArbData).map((arb) => (
                    <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
                 ))}
               </div>
@@ -330,7 +317,7 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
-                {Object.values(MOCK_TRIANGULAR_ARB).map((arb) => (
+                {Object.values(triangularArbData).map((arb) => (
                    <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
                 ))}
               </div>
@@ -346,7 +333,7 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
-                {Object.values(MOCK_FUNDING_RATES).map((arb) => (
+                {Object.values(fundingRateData).map((arb) => (
                    <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
                 ))}
               </div>

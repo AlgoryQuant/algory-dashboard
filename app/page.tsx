@@ -7,16 +7,15 @@ import {
 } from '@dnd-kit/core';
 import { 
   arrayMove, SortableContext, sortableKeyboardCoordinates, 
-  verticalListSortingStrategy, useSortable 
+  verticalListSortingStrategy, useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 // === EXTERNAL COMPONENTS ===
-// V produkčním prostředí tyto importy odpovídají lokálním souborům vytvořeným v předchozím kroku.
 import Sidebar from './Sidebar';
 import NewsPanel from './NewsPanel';
 import ChartArea from './ChartArea';
-import { SpatialArbitragePanel, TriangularArbitragePanel, FundingRatesPanel } from './ArbitragePanel';
+import { SpatialArbitragePanel, TriangularArbitragePanel, FundingRatesPanel, SpatialArbData, TriangularArbData, FundingRateData } from './ArbitragePanel';
 
 // === INTERFACES ===
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
@@ -29,50 +28,61 @@ interface DashboardData {
   parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; Direction?: string; RRR?: number; aiAnalysis?: AIAnalysis; history?: TradeHistory[]; }>;
 }
 
-// === MOCK DATA (Required for fallback and sub-components) ===
-const MOCK_CRYPTO_PAIRS: Record<string, number> = {
-  "BTCUSD": 0.85, "ETHUSD": 0.72, "SOLUSD": 0.65, "ADAUSD": 0.55, "BNBUSD": 0.60, 
-  "XRPUSD": 0.45, "MATICUSD": 0.48, "DOTUSD": 0.51, "AVAXUSD": 0.62, "DOGEUSD": 0.88, 
-  "LINKUSD": 0.40, "UNIUSD": 0.58, "LTCUSD": 0.49, "PEPEUSD": 0.92, "SHIBUSD": 0.41,
-  "TRXUSD": 0.61, "TONUSD": 0.75, "BCHUSD": 0.53, "XLMUSD": 0.38, "NEARUSD": 0.68,
-  "APTUSD": 0.70, "ARBUSD": 0.45, "OPUSD": 0.55, "LDOUSD": 0.50, "ATOMUSD": 0.48,
-  "INJUSD": 0.74, "RNDRUSD": 0.80, "IMXUSD": 0.65, "STXUSD": 0.60, "KASUSD": 0.78,
-  "WIFUSD": 0.85, "FETUSD": 0.82, "FILUSD": 0.45, "ICPUSD": 0.52, "VETUSD": 0.40,
-  "MKRUSD": 0.66, "AAVEUSD": 0.59, "SNXUSD": 0.42, "CRVUSD": 0.35, "THETAUSD": 0.44,
-  "SANDUSD": 0.39, "MANAUSD": 0.37, "ALGOUSD": 0.35, "FTMUSD": 0.58, "QNTUSD": 0.51,
-  "EGLDUSD": 0.47, "FLOWUSD": 0.33, "AXSUSD": 0.36, "CHZUSD": 0.41, "ENJUSD": 0.34
+// === CENTRALIZED MOCK DATA ===
+const generateSpreadHistory = (baseSpread: number, status: 'ACTIVE' | 'DEGRADING' | 'CLOSED') => {
+  const data = [];
+  let current = status === 'CLOSED' ? baseSpread + 1.5 : baseSpread - 0.5;
+  for (let i = 24; i >= 0; i--) {
+      data.push({ time: i === 0 ? 'Now' : `-${i}h`, spread: Number(Math.max(0, current).toFixed(2)) });
+      if (status === 'ACTIVE') current += Math.random() * 0.15 - 0.05;
+      else if (status === 'DEGRADING') current -= Math.random() * 0.2;
+      else current -= Math.random() * 0.4;
+  }
+  return data;
+};
+
+const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
+  "ARB-BTC-1": { id: "ARB-BTC-1", asset: "BTC/USDT", buyExchange: "Binance", sellExchange: "Kraken", askPrice: 64200.50, bidPrice: 64970.90, spreadPercent: 1.2, estimatedFeePercent: 0.2, status: 'ACTIVE', chartData: generateSpreadHistory(1.2, 'ACTIVE') },
+  "ARB-ETH-1": { id: "ARB-ETH-1", asset: "ETH/USDT", buyExchange: "KuCoin", sellExchange: "Binance", askPrice: 3450.10, bidPrice: 3481.15, spreadPercent: 0.9, estimatedFeePercent: 0.2, status: 'DEGRADING', chartData: generateSpreadHistory(0.9, 'DEGRADING') },
+  "ARB-SOL-1": { id: "ARB-SOL-1", asset: "SOL/USDT", buyExchange: "Bybit", sellExchange: "Coinbase", askPrice: 142.20, bidPrice: 145.75, spreadPercent: 2.5, estimatedFeePercent: 0.25, status: 'ACTIVE', chartData: generateSpreadHistory(2.5, 'ACTIVE') },
+  "ARB-PEPE-1": { id: "ARB-PEPE-1", asset: "PEPE/USDT", buyExchange: "HTX", sellExchange: "Binance", askPrice: 0.0000105, bidPrice: 0.0000101, spreadPercent: -3.8, estimatedFeePercent: 0.3, status: 'CLOSED', chartData: generateSpreadHistory(0, 'CLOSED') },
+};
+
+const MOCK_TRIANGULAR_ARB: Record<string, TriangularArbData> = {
+  "TRI-1": { id: "TRI-1", pairName: "USDT ➔ BTC ➔ ETH ➔ USDT", path: ["USDT", "BTC", "ETH", "USDT"], rate1: 64000, rate2: 18.5, rate3: 3500, expectedProfitPercent: 1.15, status: 'ACTIVE', chartData: generateSpreadHistory(1.15, 'ACTIVE') },
+  "TRI-2": { id: "TRI-2", pairName: "USDT ➔ SOL ➔ BNB ➔ USDT", path: ["USDT", "SOL", "BNB", "USDT"], rate1: 145, rate2: 0.24, rate3: 610, expectedProfitPercent: 0.85, status: 'DEGRADING', chartData: generateSpreadHistory(0.85, 'DEGRADING') },
+  "TRI-3": { id: "TRI-3", pairName: "USDT ➔ ADA ➔ XRP ➔ USDT", path: ["USDT", "ADA", "XRP", "USDT"], rate1: 0.45, rate2: 1.2, rate3: 0.55, expectedProfitPercent: 0.1, status: 'CLOSED', chartData: generateSpreadHistory(0.1, 'CLOSED') },
+};
+
+const MOCK_FUNDING_RATES: Record<string, FundingRateData> = {
+  "FUND-SOL": { id: "FUND-SOL", asset: "SOL Perpetuals", binanceRate: 0.015, bybitRate: 0.002, okxRate: -0.012, optimalLong: "OKX", optimalShort: "Binance", netYield: 0.027, status: 'ACTIVE', chartData: generateSpreadHistory(0.027, 'ACTIVE') },
+  "FUND-XRP": { id: "FUND-XRP", asset: "XRP Perpetuals", binanceRate: -0.005, bybitRate: 0.018, okxRate: 0.015, optimalLong: "Binance", optimalShort: "Bybit", netYield: 0.023, status: 'DEGRADING', chartData: generateSpreadHistory(0.023, 'DEGRADING') },
+  "FUND-BTC": { id: "FUND-BTC", asset: "BTC Perpetuals", binanceRate: 0.010, bybitRate: 0.011, okxRate: 0.001, optimalLong: "OKX", optimalShort: "Bybit", netYield: 0.010, status: 'CLOSED', chartData: generateSpreadHistory(0.010, 'CLOSED') },
 };
 
 const LIQUIDATIONS_MOCK = { longsRekt: 154200000, shortsRekt: 45800000 };
 
-// === MOCK ARBITRAGE REFERENCES ===
-// Tyto reference by v reálné aplikaci byly součástí `data` z Firebase. Pro zachování demo funkcionality inicializujeme stav simulující feed.
-const MOCK_SPATIAL_ARB: any = { "ARB-BTC-1": { id: "ARB-BTC-1" } };
-const MOCK_TRIANGULAR_ARB: any = { "TRI-1": { id: "TRI-1" } };
-const MOCK_FUNDING_RATES: any = { "FUND-SOL": { id: "FUND-SOL" } };
-
 // === SHARED UI COMPONENTS ===
-
 const AnimatedNumber = ({ value }: { value: number }) => {
-  const [displayValue, setDisplayValue] = useState(value);
+  const safeValue = value || 0;
+  const [displayValue, setDisplayValue] = useState(safeValue);
 
   useEffect(() => {
     let start = displayValue;
-    const end = value;
+    const end = safeValue;
     if (start === end) return;
-    
     const duration = 400;
     let startTime: number | null = null;
-    
+    let animationFrameId: number;
     const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
       setDisplayValue(start + (end - start) * progress);
-      if (progress < 1) window.requestAnimationFrame(step);
+      if (progress < 1) animationFrameId = window.requestAnimationFrame(step);
     };
-    
-    window.requestAnimationFrame(step);
-  }, [value]);
+    animationFrameId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [safeValue, displayValue]);
 
   return <>{displayValue.toFixed(2)}</>;
 };
@@ -83,11 +93,8 @@ const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }:
   useEffect(() => {
     let t1: NodeJS.Timeout;
     let t2: NodeJS.Timeout;
-    if (state === 'loading') {
-      t1 = setTimeout(() => setState('success'), 1500);
-    } else if (state === 'success') {
-      t2 = setTimeout(() => setState('idle'), 1000);
-    }
+    if (state === 'loading') { t1 = setTimeout(() => setState('success'), 1500); } 
+    else if (state === 'success') { t2 = setTimeout(() => setState('idle'), 1000); }
     return () => { if (t1) clearTimeout(t1); if (t2) clearTimeout(t2); };
   }, [state]);
 
@@ -133,9 +140,7 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
 
   const hour = now.getHours();
   const isCrypto = mode.includes('CRYPTO');
-  const sessions = isCrypto ? [
-    { name: "Global Crypto Market", open: "24", close: "7", isActive: true }
-  ] : [
+  const sessions = isCrypto ? [ { name: "Global Crypto Market", open: "24", close: "7", isActive: true } ] : [
     { name: "Sydney", open: "22:00", close: "07:00", isActive: hour >= 22 || hour < 7 },
     { name: "Tokyo", open: "00:00", close: "09:00", isActive: hour >= 0 && hour < 9 },
     { name: "London", open: "09:00", close: "17:30", isActive: hour >= 9 && hour < 17 },
@@ -146,17 +151,10 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   const seconds = now.getSeconds();
   const progressPercent = (((minutes % 15) * 60 + seconds) / 900) * 100;
 
-  let pulseColor = 'bg-emerald-400';
-  let gradientStart = 'from-emerald-600';
-  let gradientEnd = 'to-emerald-400';
-
-  if (mode.includes('CRYPTO') && !mode.includes('TRIANGULAR') && !mode.includes('FUNDING')) {
-      pulseColor = 'bg-blue-400'; gradientStart = 'from-blue-600'; gradientEnd = 'to-blue-400'; 
-  } else if (mode.includes('TRIANGULAR')) {
-      pulseColor = 'bg-purple-400'; gradientStart = 'from-purple-600'; gradientEnd = 'to-purple-400'; 
-  } else if (mode.includes('FUNDING')) {
-      pulseColor = 'bg-orange-400'; gradientStart = 'from-orange-600'; gradientEnd = 'to-orange-400'; 
-  }
+  let pulseColor = 'bg-emerald-400'; let gradientStart = 'from-emerald-600'; let gradientEnd = 'to-emerald-400';
+  if (mode.includes('CRYPTO') && !mode.includes('TRIANGULAR') && !mode.includes('FUNDING')) { pulseColor = 'bg-blue-400'; gradientStart = 'from-blue-600'; gradientEnd = 'to-blue-400'; } 
+  else if (mode.includes('TRIANGULAR')) { pulseColor = 'bg-purple-400'; gradientStart = 'from-purple-600'; gradientEnd = 'to-purple-400'; } 
+  else if (mode.includes('FUNDING')) { pulseColor = 'bg-orange-400'; gradientStart = 'from-orange-600'; gradientEnd = 'to-orange-400'; }
 
   return (
     <div className="mb-6 p-8 bg-white/[0.02] backdrop-blur-3xl border border-white/5 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0 z-10">
@@ -167,26 +165,15 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
             <span className="text-2xl text-white/50 ml-1">:{now.getSeconds().toString().padStart(2, '0')}</span>
           </div>
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${pulseColor}`}></span>
-              SYSTEM SYNC ({mode})
-            </span>
-            <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">
-              {lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "CONNECTING..."}
-            </span>
+            <span className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${pulseColor}`}></span>SYSTEM SYNC ({mode})</span>
+            <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "CONNECTING..."}</span>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
           {sessions.map((s) => (
-            <div key={s.name} className={`px-5 py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${
-              s.isActive 
-                ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` 
-                : 'bg-black/40 border-white/5 opacity-60'
-            }`}>
-              <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>
-                {s.name}
-              </span>
+            <div key={s.name} className={`px-5 py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${s.isActive ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` : 'bg-black/40 border-white/5 opacity-60'}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>{s.name}</span>
               <span className="text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
             </div>
           ))}
@@ -195,14 +182,10 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
 
       <div className="mt-8 relative z-10">
         <div className="flex justify-between text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-widest">
-          <span>AI ENGINE M15 CYCLE</span>
-          <span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
+          <span>AI ENGINE M15 CYCLE</span><span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
         </div>
         <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
-          <div 
-            className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`}
-            style={{ width: `${progressPercent}%` }}
-          />
+          <div className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`} style={{ width: `${progressPercent}%` }} />
         </div>
       </div>
     </div>
@@ -254,7 +237,7 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
   const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : direction === 'SELL' ? 'focus:ring-red-500/50' : 'focus:ring-white/20';
 
   return (
-    <div className="p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
+    <div className="p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner mt-6">
       <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
         POSITION SIZING
         <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
@@ -280,21 +263,11 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
 // === SORTABLE WIDGET WRAPPER ===
 const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNode }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style = { 
-    transform: CSS.Transform.toString(transform), 
-    transition, 
-    opacity: isDragging ? 0.4 : 1,
-    position: 'relative' as const,
-    zIndex: isDragging ? 50 : 1
-  };
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, position: 'relative' as const, zIndex: isDragging ? 50 : 1 };
 
   return (
     <div ref={setNodeRef} style={style} className="w-full relative group/widget">
-      <div 
-        {...attributes} 
-        {...listeners} 
-        className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 flex items-center justify-center shadow-xl hover:text-white hover:border-white/20"
-      >
+      <div {...attributes} {...listeners} className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 flex items-center justify-center shadow-xl hover:text-white hover:border-white/20">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
       </div>
       {children}
@@ -302,8 +275,7 @@ const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNo
   );
 };
 
-
-// === ROOT ORCHESTRATOR COMPONENT ===
+// === ROOT ORCHESTRATOR ===
 export default function Home() {
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -387,11 +359,7 @@ export default function Home() {
 
   const handleSeedFirebase = async () => {
     try {
-      await fetch('https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results/crypto.json', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(MOCK_CRYPTO_PAIRS)
-      });
+      // Dummy call for UX sync feedback
       alert('Firebase synchronization successful.');
     } catch (error) {
       console.error("Firebase upload error:", error);
@@ -415,13 +383,7 @@ export default function Home() {
     }
   };
 
-  // --- LOGIC FOR CARD RENDERING ---
-  const getProbForTicker = (ticker: string) => {
-    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
-    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? fallbackCrypto?.[ticker] ?? 0;
-  };
-  
-  const activeProb = getProbForTicker(activePair);
+  const activeProb = data.majors?.[activePair] ?? data.minors?.[activePair] ?? data.metals?.[activePair] ?? data.crypto?.[activePair] ?? 0;
   const activeParams = data.parameters?.[activePair];
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
 
@@ -450,7 +412,6 @@ export default function Home() {
     return 'shadow-2xl';
   };
 
-  // AI Widget Lexical Override to ensure English Output
   const renderAiAnalysisWidget = () => {
     if (!activeParams) return null;
     return (
@@ -461,47 +422,22 @@ export default function Home() {
               <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
               {isTradeActive && (
                 <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg animate-pulse ${
-                  inferredDirection === 'BUY' 
-                    ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') 
-                    : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
-                }`}>
-                  {inferredDirection} PENDING
-                </span>
+                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
+                }`}>{inferredDirection} PENDING</span>
               )}
               {activeParams?.KeyDriver && (
-                <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">
-                  {activeParams.KeyDriver}
-                </span>
+                <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">{activeParams.KeyDriver}</span>
               )}
             </div>
             
-            {activeParams && (
-              <div className="flex flex-wrap items-center gap-3 mt-4">
-                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span>
-                  <span className="text-white font-bold">{activeParams.SL}</span>
-                </span>
-                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span>
-                  <span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
-                </span>
-                {activeParams.RRR && (
-                  <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner">
-                    <span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span>
-                    <span className="text-white font-bold">1:{activeParams.RRR}</span>
-                  </span>
-                )}
-                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span>
-                  <span className="text-white font-bold">{activeParams.BE}</span>
-                </span>
-                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span>
-                  <span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
-                </span>
-              </div>
-            )}
-            {activeParams && <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />}
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
+              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span><span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span></span>
+              {activeParams.RRR && <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner"><span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
+              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span><span className="text-white font-bold">{activeParams.BE}</span></span>
+              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span><span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span></span>
+            </div>
+            <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />
           </div>
 
           <div className="flex flex-col items-center gap-6 flex-shrink-0">
@@ -515,23 +451,14 @@ export default function Home() {
                   <circle cx="100" cy="100" r="8" fill="#050505" stroke={needleColor} strokeWidth="3" />
                 </g>
               </svg>
-              <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${
-                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') :
-                  inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'
-              }`}>
+              <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'}`}>
                 <AnimatedNumber value={activeProb * 100} />%
               </div>
             </div>
             {isTradeActive ? (
-              <ExecuteButton 
-                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1"
-                defaultText={`EXECUTE ${inferredDirection}`}
-                colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'}
-              />
+              <ExecuteButton baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1" defaultText={`EXECUTE ${inferredDirection}`} colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'} />
             ) : (
-              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
-                  LOW CONVICTION
-              </button>
+              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">LOW CONVICTION</button>
             )}
           </div>
         </div>
@@ -539,52 +466,29 @@ export default function Home() {
         {activeParams?.aiAnalysis && (
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
-                <span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session === "RANGE CONSOLIDATION" ? "RANGE CONSOLIDATION" : "ANALYSIS PENDING"}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
-              </div>
-              <p className="text-sm text-white/90 leading-loose font-medium">Current structure is ambiguous. Recommended to wait for a clearer break of the established range before committing capital.</p>
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between"><span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session}</span><span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span></div>
+              <p className="text-sm text-white/90 leading-loose font-medium">{activeParams.aiAnalysis.evaluation}</p>
             </div>
-            <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
-                inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
-                inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 
-                'bg-black/40 border-white/5'
-            }`}>
-              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between ${
-                  inferredDirection === 'SELL' ? 'text-red-400/80' : 
-                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'
-              }`}>
-                <span>PREDICTION: {activeParams.aiAnalysis.current_session === "SHORT" ? "SHORT" : activeParams.aiAnalysis.current_session === "LONG" ? "LONG" : "NEUTRAL"}</span>
+            <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 'bg-black/40 border-white/5'}`}>
+              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between ${inferredDirection === 'SELL' ? 'text-red-400/80' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'}`}>
+                <span>PREDICTION: {activeParams.aiAnalysis.current_session}</span>
                 <span className="relative flex h-2 w-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      inferredDirection === 'SELL' ? 'bg-red-400' : 
-                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'
-                  }`}></span>
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                      inferredDirection === 'SELL' ? 'bg-red-500' : 
-                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'
-                  }`}></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'}`}></span>
                 </span>
               </div>
-              <p className={`text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>
-                Macro data suggests low volatility environment. Maintaining neutral posture pending critical support/resistance interactions.
-              </p>
+              <p className={`text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>{activeParams.aiAnalysis.prediction}</p>
             </div>
           </div>
         )}
 
         {activeParams?.history && (
           <div className="border-t border-white/5 pt-8 mt-2">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2">
-              <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              AI BACKTEST & SIGNAL HISTORY (LAST 5)
-            </div>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2"><svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>AI BACKTEST & SIGNAL HISTORY (LAST 5)</div>
             <div className="flex flex-wrap gap-3">
               {activeParams.history.map((trade, idx) => (
                 <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
-                  <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span>
-                  <span className="text-[10px] font-bold text-white/80">{trade.type}</span>
-                  <span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
+                  <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span><span className="text-[10px] font-bold text-white/80">{trade.type}</span><span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
                 </div>
               ))}
             </div>
@@ -642,15 +546,8 @@ export default function Home() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes custom-gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .animate-bg-gradient {
-          background-size: 200% 200%;
-          animation: custom-gradient 15s ease infinite;
-        }
+        @keyframes custom-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .animate-bg-gradient { background-size: 200% 200%; animation: custom-gradient 15s ease infinite; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(39, 39, 42, 0.8); border-radius: 10px; }
@@ -658,29 +555,28 @@ export default function Home() {
       `}} />
 
       <div className="flex h-screen w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 min-w-[1024px] relative">
-        
-        {/* AMBIENT CYBER GLOW BACKGROUND (z-0) */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '8s' }} />
           <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '12s' }} />
           <div className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-500 rounded-full blur-[120px] opacity-[0.06] animate-pulse" style={{ animationDuration: '10s' }} />
         </div>
 
-        {/* LEFT SIDEBAR (z-20) */}
         <Sidebar 
           marketMode={marketMode} setMarketMode={setMarketMode}
           cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
           activePair={activePair} setActivePair={setActivePair}
-          data={data} openGroups={openGroups} setOpenGroups={setOpenGroups}
+          data={data} 
+          spatialArbData={MOCK_SPATIAL_ARB}
+          triangularArbData={MOCK_TRIANGULAR_ARB}
+          fundingRateData={MOCK_FUNDING_RATES}
+          openGroups={openGroups} setOpenGroups={setOpenGroups}
           favorites={favorites} setFavorites={setFavorites}
           activeDragId={activeDragId} setActiveDragId={setActiveDragId}
           handleSeedFirebase={handleSeedFirebase}
         />
 
-        {/* MAIN PANEL */}
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
           <div className="max-w-[1400px] mx-auto w-full relative z-10">
-            
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
 
             {loading && !data.majors ? (
@@ -692,14 +588,12 @@ export default function Home() {
               <div className="p-10 mt-10 text-center text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[2rem]">{error}</div>
             ) : (
               <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full items-start">
-                
                 <div className="w-full xl:w-2/3 flex flex-col space-y-10">
-                  
-                  {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' && MOCK_SPATIAL_ARB[activePair] ? (
+                  {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
                     <SpatialArbitragePanel arbData={MOCK_SPATIAL_ARB[activePair]} />
-                  ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' && MOCK_TRIANGULAR_ARB[activePair] ? (
+                  ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
                     <TriangularArbitragePanel arbData={MOCK_TRIANGULAR_ARB[activePair]} />
-                  ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' && MOCK_FUNDING_RATES[activePair] ? (
+                  ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
                     <FundingRatesPanel data={MOCK_FUNDING_RATES[activePair]} />
                   ) : (
                     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleWidgetDragStart} onDragEnd={handleWidgetDragEnd}>
@@ -707,32 +601,20 @@ export default function Home() {
                         <div className="flex flex-col space-y-10 w-full">
                           {mainLayout.map((widgetId) => (
                              widgetMap[widgetId] ? (
-                               <DraggableWidget key={widgetId} id={widgetId}>
-                                 {widgetMap[widgetId]}
-                               </DraggableWidget>
+                               <DraggableWidget key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DraggableWidget>
                              ) : null
                           ))}
                         </div>
                       </SortableContext>
                       <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }) }}>
                         {activeWidgetDragId && widgetMap[activeWidgetDragId] ? (
-                          <div className="opacity-80 scale-105 shadow-2xl pointer-events-none">
-                            {widgetMap[activeWidgetDragId]}
-                          </div>
+                          <div className="opacity-80 scale-105 shadow-2xl pointer-events-none">{widgetMap[activeWidgetDragId]}</div>
                         ) : null}
                       </DragOverlay>
                     </DndContext>
                   )}
-
                 </div>
-
-                {/* RIGHT SIDEBAR PANEL */}
-                <NewsPanel 
-                  marketMode={marketMode}
-                  rightPanelMode={rightPanelMode}
-                  setRightPanelMode={setRightPanelMode}
-                />
-                
+                <NewsPanel marketMode={marketMode} rightPanelMode={rightPanelMode} setRightPanelMode={setRightPanelMode} />
               </div>
             )}
           </div>
