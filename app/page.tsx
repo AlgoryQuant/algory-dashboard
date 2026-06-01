@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
-  KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
+  KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent,
+  defaultDropAnimationSideEffects
 } from '@dnd-kit/core';
 import { 
   arrayMove, SortableContext, sortableKeyboardCoordinates, 
@@ -50,58 +51,18 @@ const generateSpreadHistory = (baseSpread: number, status: ArbStatus): ChartPoin
   return data;
 };
 
-// === FULL MOCK CRYPTO PAIRS (50 ASSETS) ===
+// === FULL MOCK CRYPTO PAIRS ===
 const MOCK_CRYPTO_PAIRS: Record<string, number> = {
-  "BTCUSD": 0.85, 
-  "ETHUSD": 0.72, 
-  "SOLUSD": 0.65, 
-  "ADAUSD": 0.55, 
-  "BNBUSD": 0.60, 
-  "XRPUSD": 0.45, 
-  "MATICUSD": 0.48, 
-  "DOTUSD": 0.51, 
-  "AVAXUSD": 0.62, 
-  "DOGEUSD": 0.88, 
-  "LINKUSD": 0.40, 
-  "UNIUSD": 0.58, 
-  "LTCUSD": 0.49, 
-  "PEPEUSD": 0.92, 
-  "SHIBUSD": 0.41,
-  "TRXUSD": 0.61,
-  "TONUSD": 0.75,
-  "BCHUSD": 0.53,
-  "XLMUSD": 0.38,
-  "NEARUSD": 0.68,
-  "APTUSD": 0.70,
-  "ARBUSD": 0.45,
-  "OPUSD": 0.55,
-  "LDOUSD": 0.50,
-  "ATOMUSD": 0.48,
-  "INJUSD": 0.74,
-  "RNDRUSD": 0.80,
-  "IMXUSD": 0.65,
-  "STXUSD": 0.60,
-  "KASUSD": 0.78,
-  "WIFUSD": 0.85,
-  "FETUSD": 0.82,
-  "FILUSD": 0.45,
-  "ICPUSD": 0.52,
-  "VETUSD": 0.40,
-  "MKRUSD": 0.66,
-  "AAVEUSD": 0.59,
-  "SNXUSD": 0.42,
-  "CRVUSD": 0.35,
-  "THETAUSD": 0.44,
-  "SANDUSD": 0.39,
-  "MANAUSD": 0.37,
-  "ALGOUSD": 0.35,
-  "FTMUSD": 0.58,
-  "QNTUSD": 0.51,
-  "EGLDUSD": 0.47,
-  "FLOWUSD": 0.33,
-  "AXSUSD": 0.36,
-  "CHZUSD": 0.41,
-  "ENJUSD": 0.34
+  "BTCUSD": 0.85, "ETHUSD": 0.72, "SOLUSD": 0.65, "ADAUSD": 0.55, "BNBUSD": 0.60, 
+  "XRPUSD": 0.45, "MATICUSD": 0.48, "DOTUSD": 0.51, "AVAXUSD": 0.62, "DOGEUSD": 0.88, 
+  "LINKUSD": 0.40, "UNIUSD": 0.58, "LTCUSD": 0.49, "PEPEUSD": 0.92, "SHIBUSD": 0.41,
+  "TRXUSD": 0.61, "TONUSD": 0.75, "BCHUSD": 0.53, "XLMUSD": 0.38, "NEARUSD": 0.68,
+  "APTUSD": 0.70, "ARBUSD": 0.45, "OPUSD": 0.55, "LDOUSD": 0.50, "ATOMUSD": 0.48,
+  "INJUSD": 0.74, "RNDRUSD": 0.80, "IMXUSD": 0.65, "STXUSD": 0.60, "KASUSD": 0.78,
+  "WIFUSD": 0.85, "FETUSD": 0.82, "FILUSD": 0.45, "ICPUSD": 0.52, "VETUSD": 0.40,
+  "MKRUSD": 0.66, "AAVEUSD": 0.59, "SNXUSD": 0.42, "CRVUSD": 0.35, "THETAUSD": 0.44,
+  "SANDUSD": 0.39, "MANAUSD": 0.37, "ALGOUSD": 0.35, "FTMUSD": 0.58, "QNTUSD": 0.51,
+  "EGLDUSD": 0.47, "FLOWUSD": 0.33, "AXSUSD": 0.36, "CHZUSD": 0.41, "ENJUSD": 0.34
 };
 
 const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
@@ -222,15 +183,6 @@ const InfoTooltip = ({ info }: { info: string }) => (
   </span>
 );
 
-const NavTooltip = ({ info }: { info: string }) => (
-  <div className="relative group/navtt ml-1 flex items-center justify-center">
-    <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-    <div className="absolute z-50 hidden group-hover/navtt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-1/2 -translate-x-1/2 text-left font-normal normal-case tracking-normal">
-      {info}
-    </div>
-  </div>
-);
-
 const StatusBadge = ({ status }: { status: ArbStatus }) => {
   const colors = {
       ACTIVE: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
@@ -286,7 +238,7 @@ const LiquidationsBar = () => {
   const shortPct = (LIQUIDATIONS_MOCK.shortsRekt / total) * 100;
 
   return (
-    <div className="w-full bg--[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 mt-6 shadow-2xl">
+    <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] p-6 shadow-2xl">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
           <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
@@ -325,7 +277,7 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
   const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : direction === 'SELL' ? 'focus:ring-red-500/50' : 'focus:ring-white/20';
 
   return (
-    <div className="mt-6 p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
+    <div className="p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
       <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
         POSITION SIZING
         <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
@@ -339,8 +291,8 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
           <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">RISK (%)</label>
           <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
         </div>
-        <div className={`w-1/3 flex flex-col items-center justify-center py-2 px-4 rounded-lg border shadow-inner ${direction === 'BUY' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
-          <span className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : 'text-red-500/70'}`}>VOLUME</span>
+        <div className={`w-1/3 flex flex-col items-center justify-center py-2 px-4 rounded-lg border shadow-inner ${direction === 'BUY' ? 'bg-emerald-500/5 border-emerald-500/10' : direction === 'SELL' ? 'bg-red-500/5 border-red-500/10' : 'bg-zinc-900 border-white/5'}`}>
+          <span className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : direction === 'SELL' ? 'text-red-500/70' : 'text-zinc-500'}`}>VOLUME</span>
           <span className="text-xl font-bold text-white font-mono">{lotSize} <span className="text-xs text-zinc-500 font-normal font-sans tracking-normal">Lots</span></span>
         </div>
       </div>
@@ -408,6 +360,10 @@ const SpatialArbitragePanel = ({ arbData }: { arbData: SpatialArbData }) => {
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
           <span className="text-emerald-400 font-bold text-lg tracking-wider">{arbData.spreadPercent > 0 ? '+' : ''}{arbData.spreadPercent}% SPREAD</span>
         </div>
+      </div>
+      
+      <div className="px-8 pt-6 pb-2 text-sm text-zinc-400 font-medium border-b border-white/5 bg-[#0a0a0a]">
+        Exploits price differences of the same asset across different exchanges.
       </div>
 
       <div className="p-8">
@@ -496,6 +452,10 @@ const TriangularArbitragePanel = ({ arbData }: { arbData: TriangularArbData }) =
         </div>
       </div>
 
+      <div className="px-8 pt-6 pb-2 text-sm text-zinc-400 font-medium border-b border-white/5 bg-[#0a0a0a]">
+        Executes a sequence of three trades to profit from currency cross-rate inefficiencies.
+      </div>
+
       <div className="p-8">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-12 relative">
           <div className="absolute top-1/2 left-0 w-full h-[2px] bg-white/5 hidden lg:block -z-10"></div>
@@ -574,6 +534,10 @@ const FundingRatesPanel = ({ data }: { data: FundingRateData }) => {
         <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
           <span className="text-emerald-400 font-bold text-lg tracking-wider">{(data.netYield * 100).toFixed(3)}% DAILY YIELD</span>
         </div>
+      </div>
+
+      <div className="px-8 pt-6 pb-2 text-sm text-zinc-400 font-medium border-b border-white/5 bg-[#0a0a0a]">
+        Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences.
       </div>
 
       <div className="p-8">
@@ -717,6 +681,94 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
   );
 };
 
+// === LIVE WHALES PANEL ===
+const LiveWhalesPanel = () => {
+  const [whales, setWhales] = useState<WhaleAlert[]>(WHALE_ALERTS_MOCK);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const assets = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'USDT', 'USDC', 'ADA'];
+      const types: ('bullish' | 'bearish' | 'neutral')[] = ['bullish', 'bearish', 'neutral'];
+      const actions = ['transferred from Unknown Wallet to', 'transferred from', 'minted at', 'burned at'];
+      const exchanges = ['Binance', 'Coinbase', 'Kraken', 'Unknown Wallet', 'Ripple Escrow'];
+      
+      const asset = assets[Math.floor(Math.random() * assets.length)];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const action = actions[Math.floor(Math.random() * actions.length)];
+      const exchange = exchanges[Math.floor(Math.random() * exchanges.length)];
+      
+      let amount = 0;
+      if (asset === 'BTC') amount = Math.floor(Math.random() * 5000) + 100;
+      else if (asset === 'ETH') amount = Math.floor(Math.random() * 50000) + 1000;
+      else amount = Math.floor(Math.random() * 50000000) + 1000000;
+
+      const newAlert: WhaleAlert = {
+        id: `W-${Date.now()}`,
+        text: `${amount.toLocaleString()} ${asset} ${action} ${exchange}`,
+        type,
+        time: 'Just now',
+        amountUsd: `$${(Math.random() * 900 + 10).toFixed(1)}M`
+      };
+
+      setWhales(prev => [newAlert, ...prev.slice(0, 4)]);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {whales.map((alert) => (
+        <div key={alert.id} className="block pb-5 border-b border-white/5 last:border-0 last:pb-0 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
+                {alert.time}
+              </span>
+              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${
+                alert.type === 'bullish' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                alert.type === 'bearish' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
+              }`}>
+                {alert.type}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono font-bold text-white/90">{alert.amountUsd}</span>
+          </div>
+          <h4 className="text-sm font-medium text-white/70 leading-relaxed mt-1">
+            {alert.text}
+          </h4>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// === SORTABLE WIDGET WRAPPER ===
+const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { 
+    transform: CSS.Transform.toString(transform), 
+    transition, 
+    opacity: isDragging ? 0.4 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 50 : 1
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="w-full relative group/widget">
+      <div 
+        {...attributes} 
+        {...listeners} 
+        className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 flex items-center justify-center shadow-xl hover:text-white hover:border-white/20"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+      </div>
+      {children}
+    </div>
+  );
+};
+
 // === SIDEBAR ITEM COMPONENTS ===
 interface SidebarItemProps { ticker: string; prob?: number; isActive: boolean; isFavorite: boolean; onClick: () => void; onToggleFavorite: (ticker: string) => void; isOverlay?: boolean; dragListeners?: any; dragAttributes?: any; setNodeRef?: (node: HTMLElement | null) => void; style?: React.CSSProperties; }
 
@@ -835,8 +887,11 @@ export default function Home() {
   });
 
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [mainLayout, setMainLayout] = useState<string[]>(['chart', 'ai_panel', 'liquidations']);
+  
   const [isMounted, setIsMounted] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [activeWidgetDragId, setActiveWidgetDragId] = useState<string | null>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
@@ -851,9 +906,16 @@ export default function Home() {
     if (savedUser) setIsAuthenticated(true);
     const savedFavs = localStorage.getItem('algory_favorites');
     if (savedFavs) { try { setFavorites(JSON.parse(savedFavs)); } catch (e) {} }
+    const savedLayout = localStorage.getItem('algory_main_layout');
+    if (savedLayout) { try { setMainLayout(JSON.parse(savedLayout)); } catch (e) {} }
   }, []);
 
-  useEffect(() => { if (isMounted) localStorage.setItem('algory_favorites', JSON.stringify(favorites)); }, [favorites, isMounted]);
+  useEffect(() => { 
+    if (isMounted) {
+      localStorage.setItem('algory_favorites', JSON.stringify(favorites)); 
+      localStorage.setItem('algory_main_layout', JSON.stringify(mainLayout));
+    }
+  }, [favorites, mainLayout, isMounted]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -877,7 +939,7 @@ export default function Home() {
       fetch(`https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json?t=${new Date().getTime()}`)
         .then(res => res.json())
         .then(jsonData => { setData(jsonData || {}); setLastRefresh(new Date()); setError(null); })
-        .catch(() => setError("Failed to sync"))
+        .catch(() => setError("Failed to sync data stream."))
         .finally(() => setLoading(false));
     };
     if (isAuthenticated || showAuthGate) {
@@ -898,10 +960,10 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(MOCK_CRYPTO_PAIRS)
       });
-      alert('Hotovo! Všechny chybějící krypto páry byly úspěšně přidány do tvé Firebase databáze.');
+      alert('Firebase synchronization successful.');
     } catch (error) {
       console.error("Firebase upload error:", error);
-      alert('Něco se pokazilo při odesílání párů do Firebase.');
+      alert('System failure during Firebase synchronization.');
     }
   };
 
@@ -918,6 +980,17 @@ export default function Home() {
       const oldIndex = favorites.indexOf(active.id as string);
       const newIndex = favorites.indexOf(over.id as string);
       if (oldIndex !== -1 && newIndex !== -1) setFavorites((items) => arrayMove(items, oldIndex, newIndex));
+    }
+  };
+
+  const handleWidgetDragStart = (event: DragStartEvent) => setActiveWidgetDragId(event.active.id as string);
+  const handleWidgetDragEnd = (event: DragEndEvent) => {
+    setActiveWidgetDragId(null);
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = mainLayout.indexOf(active.id as string);
+      const newIndex = mainLayout.indexOf(over.id as string);
+      if (oldIndex !== -1 && newIndex !== -1) setMainLayout((items) => arrayMove(items, oldIndex, newIndex));
     }
   };
 
@@ -1022,6 +1095,156 @@ export default function Home() {
 
   const displayedNews = marketMode === 'FOREX' ? FOREX_NEWS_MOCK : CRYPTO_NEWS_MOCK;
 
+  // AI Widget Lexical Override to ensure English Output
+  const renderAiAnalysisWidget = () => {
+    if (!activeParams) return null;
+    return (
+      <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 ${getGlowColor()}`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
+          <div className="w-full">
+            <div className="flex items-center gap-4 mb-4">
+              <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
+              {isTradeActive && (
+                <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
+                  inferredDirection === 'BUY' 
+                    ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') 
+                    : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
+                }`}>
+                  {inferredDirection} PENDING
+                </span>
+              )}
+              {activeParams?.KeyDriver && (
+                <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">
+                  {activeParams.KeyDriver}
+                </span>
+              )}
+            </div>
+            
+            {activeParams && (
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span>
+                  <span className="text-white font-bold">{activeParams.SL}</span>
+                </span>
+                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span>
+                  <span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
+                </span>
+                {activeParams.RRR && (
+                  <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner">
+                    <span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span>
+                    <span className="text-white font-bold">1:{activeParams.RRR}</span>
+                  </span>
+                )}
+                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span>
+                  <span className="text-white font-bold">{activeParams.BE}</span>
+                </span>
+                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
+                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span>
+                  <span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
+                </span>
+              </div>
+            )}
+            {activeParams && <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />}
+          </div>
+
+          <div className="flex flex-col items-center gap-6 flex-shrink-0">
+            <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
+              <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
+                <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
+                <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                  <polygon points="96,100 104,100 100,25" fill={needleColor} filter="url(#glow)" opacity="0.9" />
+                  <circle cx="100" cy="100" r="8" fill="#050505" stroke={needleColor} strokeWidth="3" />
+                </g>
+              </svg>
+              <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${
+                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') :
+                  inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'
+              }`}>
+                {(activeProb * 100).toFixed(1)}%
+              </div>
+            </div>
+            {isTradeActive ? (
+              <ExecuteButton 
+                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1"
+                defaultText={`EXECUTE ${inferredDirection}`}
+                colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'}
+              />
+            ) : (
+              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
+                  LOW CONVICTION
+              </button>
+            )}
+          </div>
+        </div>
+
+        {activeParams?.aiAnalysis && (
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
+              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
+                <span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session === "RANGE CONSOLIDATION" ? "RANGE CONSOLIDATION" : "ANALYSIS PENDING"}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+              </div>
+              <p className="text-sm text-white/90 leading-loose font-medium">Current structure is ambiguous. Recommended to wait for a clearer break of the established range before committing capital.</p>
+            </div>
+            <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
+                inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
+                inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 
+                'bg-black/40 border-white/5'
+            }`}>
+              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between ${
+                  inferredDirection === 'SELL' ? 'text-red-400/80' : 
+                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'
+              }`}>
+                <span>PREDICTION: {activeParams.aiAnalysis.current_session === "SHORT" ? "SHORT" : activeParams.aiAnalysis.current_session === "LONG" ? "LONG" : "NEUTRAL"}</span>
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      inferredDirection === 'SELL' ? 'bg-red-400' : 
+                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'
+                  }`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                      inferredDirection === 'SELL' ? 'bg-red-500' : 
+                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'
+                  }`}></span>
+                </span>
+              </div>
+              <p className={`text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>
+                Macro data suggests low volatility environment. Maintaining neutral posture pending critical support/resistance interactions.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeParams?.history && (
+          <div className="border-t border-white/5 pt-8 mt-2">
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2">
+              <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              AI BACKTEST & SIGNAL HISTORY (LAST 5)
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {activeParams.history.map((trade, idx) => (
+                <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
+                  <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span>
+                  <span className="text-[10px] font-bold text-white/80">{trade.type}</span>
+                  <span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const widgetMap: Record<string, React.ReactNode> = {
+    'chart': <TradingChart symbol={activePair} />,
+    'ai_panel': renderAiAnalysisWidget(),
+    'liquidations': marketMode === 'CRYPTO' && cryptoMode === 'standard' ? <LiquidationsBar /> : null
+  };
+
   if (!marketMode) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -1073,7 +1296,7 @@ export default function Home() {
       {/* MAIN LAYOUT WRAPPER */}
       <div className="flex h-screen w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 min-w-[1024px]">
         
-        {/* LEFT SIDEBAR (FIXED WIDTH, FLEX-SHRINK-0) */}
+        {/* LEFT SIDEBAR */}
         <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505] flex flex-col h-full z-20 hidden md:flex overflow-hidden">
           <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
             <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setMarketMode(null)}>
@@ -1088,27 +1311,9 @@ export default function Home() {
             {marketMode === 'CRYPTO' && (
               <div className="flex flex-wrap gap-1 bg-[#0a0a0a] rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
                 <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>STANDARD</button>
-                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                  SPATIAL
-                  <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-                  <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
-                    Exploits price differences of the same asset across different exchanges (e.g., Buy on Binance, Sell on Kraken).
-                  </div>
-                </button>
-                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                  TRIANGLE
-                  <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-                  <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
-                    Executes a sequence of three trades to profit from currency cross-rate inefficiencies (e.g., USDT ➔ BTC ➔ ETH ➔ USDT).
-                  </div>
-                </button>
-                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                  FUNDING
-                  <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-                  <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
-                    Delta-neutral strategy holding opposing Long/Short positions on two exchanges to collect funding rate differences.
-                  </div>
-                </button>
+                <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>SPATIAL</button>
+                <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>TRIANGLE</button>
+                <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>FUNDING</button>
               </div>
             )}
           </div>
@@ -1202,7 +1407,7 @@ export default function Home() {
           </nav>
         </aside>
 
-        {/* MAIN PANEL (FLEX-1, MIN-W-0) */}
+        {/* MAIN PANEL */}
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br ${getPageBackground()}`}>
           <div className="max-w-[1400px] mx-auto w-full">
             
@@ -1216,7 +1421,7 @@ export default function Home() {
             ) : error && !data.majors ? (
               <div className="p-10 mt-10 text-center text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[2rem]">{error}</div>
             ) : (
-              <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full">
+              <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full items-start">
                 
                 <div className="w-full xl:w-2/3 flex flex-col space-y-10">
                   
@@ -1227,159 +1432,34 @@ export default function Home() {
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' && MOCK_FUNDING_RATES[activePair] ? (
                     <FundingRatesPanel data={MOCK_FUNDING_RATES[activePair]} />
                   ) : (
-                    // === STANDARD MAIN PANEL ===
-                    <>
-                      <TradingChart symbol={activePair} />
-                      
-                      <div className={`bg-[#0a0a0a]/80 backdrop-blur-2xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/5'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 ${getGlowColor()}`}>
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
-                          <div className="w-full">
-                            <div className="flex items-center gap-4 mb-4">
-                              <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
-                              {isTradeActive && (
-                                <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-lg ${
-                                  inferredDirection === 'BUY' 
-                                    ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') 
-                                    : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
-                                }`}>
-                                  {inferredDirection} PENDING
-                                </span>
-                              )}
-                              {activeParams?.KeyDriver && (
-                                <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">
-                                  {activeParams.KeyDriver}
-                                </span>
-                              )}
-                            </div>
-                            
-                            {activeParams && (
-                              <div className="flex flex-wrap items-center gap-3 mt-4">
-                                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span>
-                                  <span className="text-white font-bold">{activeParams.SL}</span>
-                                </span>
-                                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span>
-                                  <span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
-                                </span>
-                                {activeParams.RRR && (
-                                  <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner">
-                                    <span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span>
-                                    <span className="text-white font-bold">1:{activeParams.RRR}</span>
-                                  </span>
-                                )}
-                                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span>
-                                  <span className="text-white font-bold">{activeParams.BE}</span>
-                                </span>
-                                <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner">
-                                  <span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span>
-                                  <span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
-                                </span>
-                              </div>
-                            )}
-                            {activeParams && <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />}
-                          </div>
-
-                          <div className="flex flex-col items-center gap-6 flex-shrink-0">
-                            <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
-                              <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
-                                <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
-                                <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                                <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                                <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
-                                  <line x1="100" y1="100" x2="100" y2="35" stroke={needleColor} strokeWidth="3.5" strokeLinecap="round" filter="url(#glow)" strokeOpacity="0.9" />
-                                  <circle cx="100" cy="100" r="7" fill="#050505" stroke={needleColor} strokeWidth="2.5" />
-                                </g>
-                              </svg>
-                              <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${
-                                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') :
-                                  inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'
-                              }`}>
-                                {(activeProb * 100).toFixed(1)}%
-                              </div>
-                            </div>
-                            {isTradeActive ? (
-                              <ExecuteButton 
-                                baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1"
-                                defaultText={`EXECUTE ${inferredDirection}`}
-                                colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'}
-                              />
-                            ) : (
-                              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
-                                  LOW CONVICTION
-                              </button>
-                            )}
-                          </div>
+                    // DRAGGABLE LAYOUT CONTEXT FOR MAIN DASHBOARD
+                    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleWidgetDragStart} onDragEnd={handleWidgetDragEnd}>
+                      <SortableContext items={mainLayout} strategy={verticalListSortingStrategy}>
+                        <div className="flex flex-col space-y-10 w-full">
+                          {mainLayout.map((widgetId) => (
+                             widgetMap[widgetId] ? (
+                               <DraggableWidget key={widgetId} id={widgetId}>
+                                 {widgetMap[widgetId]}
+                               </DraggableWidget>
+                             ) : null
+                          ))}
                         </div>
-
-                        {activeParams?.aiAnalysis && (
-                          <div className="grid md:grid-cols-2 gap-8 mb-8">
-                            <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
-                              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between">
-                                <span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session}</span>
-                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
-                              </div>
-                              <p className="text-sm text-white/90 leading-loose font-medium">{activeParams.aiAnalysis.evaluation}</p>
-                            </div>
-                            <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${
-                                inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : 
-                                inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 
-                                'bg-black/40 border-white/5'
-                            }`}>
-                              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between ${
-                                  inferredDirection === 'SELL' ? 'text-red-400/80' : 
-                                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'
-                              }`}>
-                                <span>PREDICTION: {activeParams.aiAnalysis.current_session}</span>
-                                <span className="relative flex h-2 w-2">
-                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                                      inferredDirection === 'SELL' ? 'bg-red-400' : 
-                                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'
-                                  }`}></span>
-                                  <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                                      inferredDirection === 'SELL' ? 'bg-red-500' : 
-                                      inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'
-                                  }`}></span>
-                                </span>
-                              </div>
-                              <p className={`text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>
-                                {activeParams.aiAnalysis.prediction}
-                              </p>
-                            </div>
+                      </SortableContext>
+                      <DragOverlay dropAnimation={defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } })}>
+                        {activeWidgetDragId && widgetMap[activeWidgetDragId] ? (
+                          <div className="opacity-80 scale-105 shadow-2xl pointer-events-none">
+                            {widgetMap[activeWidgetDragId]}
                           </div>
-                        )}
-
-                        {activeParams?.history && (
-                          <div className="border-t border-white/5 pt-8 mt-2">
-                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2">
-                              <svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              AI BACKTEST & SIGNAL HISTORY (LAST 5)
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                              {activeParams.history.map((trade, idx) => (
-                                <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
-                                  <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span>
-                                  <span className="text-[10px] font-bold text-white/80">{trade.type}</span>
-                                  <span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {marketMode === 'CRYPTO' && cryptoMode === 'standard' && (
-                        <LiquidationsBar />
-                      )}
-                    </>
+                        ) : null}
+                      </DragOverlay>
+                    </DndContext>
                   )}
 
                 </div>
 
-                {/* RIGHT SIDEBAR (FIXED WIDTH, FLEX-SHRINK-0) */}
-                <div className="w-full xl:w-80 flex-shrink-0 flex flex-col h-full">
-                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 sticky top-8 flex flex-col max-h-[85vh]">
+                {/* RIGHT SIDEBAR PANEL */}
+                <div className="w-full xl:w-80 flex-shrink-0 flex flex-col sticky top-8">
+                  <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 flex flex-col max-h-[85vh]">
                     <div className="px-6 py-6 border-b border-white/5 bg-white/[0.01]">
                       <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/5">
                         <button 
@@ -1399,11 +1479,11 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    <div className="flex flex-col p-4 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="flex flex-col p-4 overflow-y-auto custom-scrollbar flex-1 relative min-h-[300px]">
                       {rightPanelMode === 'news' ? (
                         displayedNews && displayedNews.length > 0 ? (
                           displayedNews.map((item, idx) => (
-                            <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group">
+                            <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group animate-in fade-in">
                               <div className="flex items-center gap-3 mb-2">
                                 <div className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500' : 'bg-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
                                 <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
@@ -1429,29 +1509,7 @@ export default function Home() {
                           </div>
                         )
                       ) : (
-                        // WHALE ALERTS LIST
-                        WHALE_ALERTS_MOCK.map((alert) => (
-                          <div key={alert.id} className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
-                                  {alert.time}
-                                </span>
-                                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${
-                                  alert.type === 'bullish' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                                  alert.type === 'bearish' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
-                                  'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
-                                }`}>
-                                  {alert.type}
-                                </span>
-                              </div>
-                              <span className="text-[10px] font-mono font-bold text-white/90">{alert.amountUsd}</span>
-                            </div>
-                            <h4 className="text-sm font-medium text-white/70 leading-relaxed mt-1">
-                              {alert.text}
-                            </h4>
-                          </div>
-                        ))
+                        <LiveWhalesPanel />
                       )}
                     </div>
                   </div>
