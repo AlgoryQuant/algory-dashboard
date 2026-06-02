@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
   KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
@@ -73,9 +74,9 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
   }
 
   let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
-  if (isOverlay) containerClasses += `bg-[#0a0a0a] border-white/20 shadow-2xl ring-1 ring-white/10 scale-105 rotate-2 z-50`;
-  else if (isActive) containerClasses += pairDir === 'SELL' ? 'bg-red-500/10 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] ' : 'bg-emerald-500/10 border-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.05)] ';
-  else containerClasses += 'border-transparent hover:bg-white/5';
+  if (isOverlay) containerClasses += `bg-zinc-900/90 border-white/20 shadow-2xl ring-1 ring-white/10 scale-105 rotate-2 z-50 backdrop-blur-md`;
+  else if (isActive) containerClasses += pairDir === 'SELL' ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] ' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.15)] ';
+  else containerClasses += 'border-transparent hover:bg-white/5 hover:border-white/10';
 
   return (
     <div ref={setNodeRef} style={style} className={containerClasses} onClick={!isOverlay ? onClick : undefined}>
@@ -89,7 +90,7 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
       </div>
       <div className="flex items-center gap-3">
         <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${((prob ?? 0) * 100).toFixed(0)}%`}</span>
-        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400' : 'text-zinc-600 hover:text-white'}`}>
+        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' : 'text-zinc-600 hover:text-white'}`}>
           <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         </button>
       </div>
@@ -107,20 +108,22 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
   let containerClasses = `w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex flex-col justify-between group border cursor-pointer `;
   
   if (isActive) {
-    if (type === 'spatial') containerClasses += 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]';
-    else if (type === 'triangular') containerClasses += 'bg-purple-500/10 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]';
-    else containerClasses += 'bg-orange-500/10 border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.1)]';
-  } else containerClasses += 'border-transparent hover:bg-white/5';
+    if (type === 'spatial') containerClasses += 'bg-blue-500/10 border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]';
+    else if (type === 'triangular') containerClasses += 'bg-purple-500/10 border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.15)]';
+    else containerClasses += 'bg-orange-500/10 border-orange-500/40 shadow-[0_0_15px_rgba(249,115,22,0.15)]';
+  } else containerClasses += 'border-transparent hover:bg-white/5 hover:border-white/10';
 
   if (type === 'spatial') {
     return (
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-1">
           <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
           </div>
-          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{data.spreadPercent > 0 ? '+' : ''}{data.spreadPercent.toFixed(2)}%</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${data.spreadPercent > 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30'}`}>
+            {data.spreadPercent > 0 ? '+' : ''}{data.spreadPercent.toFixed(2)}%
+          </span>
         </div>
         <div className="flex items-center text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
           <span>{data.buyExchange}</span><svg className="w-3 h-3 mx-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg><span>{data.sellExchange}</span>
@@ -132,10 +135,10 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-2">
           <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-[11px] ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.id}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-purple-400 animate-pulse' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+            <span className={`font-bold tracking-wide text-[11px] ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{data.id}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.8)]' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
           </div>
-          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">{data.expectedProfitPercent > 0 ? '+' : ''}{data.expectedProfitPercent.toFixed(2)}%</span>
+          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">{data.expectedProfitPercent > 0 ? '+' : ''}{data.expectedProfitPercent.toFixed(2)}%</span>
         </div>
         <div className="text-[9px] font-mono text-zinc-500 break-words">{data.pairName}</div>
       </div>
@@ -145,10 +148,10 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-1">
           <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-orange-400 animate-pulse' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
+            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(249,115,22,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-orange-400 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
           </div>
-          <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">{(data.netYield * 100).toFixed(2)}% APY</span>
+          <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/30">{(data.netYield * 100).toFixed(2)}% APY</span>
         </div>
         <div className="flex items-center text-[9px] font-medium text-zinc-500 mt-1 uppercase tracking-widest">
           L: {data.optimalLong} / S: {data.optimalShort}
@@ -216,7 +219,7 @@ export default function Sidebar({
           {tooltipInfo && (
             <div className="relative group/navtt ml-auto mr-2">
               <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-              <div className="absolute z-50 hidden group-hover/navtt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-1/2 -translate-y-1/2 right-full mr-2 text-left font-normal normal-case tracking-normal break-words">
+              <div className="absolute z-50 hidden group-hover/navtt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-1/2 -translate-y-1/2 right-full mr-2 text-left font-normal normal-case tracking-normal break-words backdrop-blur-md">
                 {tooltipInfo}
               </div>
             </div>
@@ -244,7 +247,7 @@ export default function Sidebar({
     });
 
     if (relevantFavs.length === 0) return (
-      <div className="w-full text-[10px] uppercase tracking-widest font-bold px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600">
+      <div className="w-full text-[10px] uppercase tracking-widest font-bold px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600 bg-zinc-900/20">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         CLICK STAR TO PIN
       </div>
@@ -254,50 +257,50 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-[#050505]/60 backdrop-blur-xl flex flex-col h-full z-20 hidden md:flex overflow-hidden">
+    <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden md:flex overflow-hidden shadow-2xl">
       <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
-        <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setMarketMode(null)}>
-          Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500' : 'text-emerald-500'}>.</span>
+        <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => setMarketMode(null)}>
+          Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
         </h2>
         
-        <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/5">
-          <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>FOREX</button>
-          <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>CRYPTO</button>
+        <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/10 shadow-inner">
+          <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
+          <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
         </div>
 
         {marketMode === 'CRYPTO' && (
-          <div className="flex flex-wrap gap-1 bg-[#0a0a0a] rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-            <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>STANDARD</button>
-            <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
+            <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
+            <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               SPATIAL
-              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
                 Exploits price differences of the same asset across different exchanges.
               </div>
             </button>
-            <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+            <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               TRIANGLE
-              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
                 Executes a sequence of three trades to profit from currency cross-rate inefficiencies.
               </div>
             </button>
-            <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}>
+            <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               FUNDING
-              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal">
+              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
                 Delta-neutral strategy collecting funding rate differences.
               </div>
             </button>
-          </div>
+          </motion.div>
         )}
       </div>
 
       <nav className="flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col">
         {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-          <div className="pb-10">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="pb-10">
             <div className="mb-6">
               <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                  <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center">SPATIAL ARBITRAGE</span>
+                  <svg className="w-3.5 h-3.5 text-blue-500 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                  <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]">SPATIAL ARBITRAGE</span>
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
@@ -306,14 +309,14 @@ export default function Sidebar({
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-          <div className="pb-10">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="pb-10">
             <div className="mb-6">
               <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                  <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center">TRIANGULAR LOOPS</span>
+                  <svg className="w-3.5 h-3.5 text-purple-500 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(168,85,247,0.3)]">TRIANGULAR LOOPS</span>
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
@@ -322,14 +325,14 @@ export default function Sidebar({
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-          <div className="pb-10">
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="pb-10">
             <div className="mb-6">
               <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center">CROSS-EXCHANGE RATES</span>
+                  <svg className="w-3.5 h-3.5 text-orange-500 drop-shadow-[0_0_5px_rgba(249,115,22,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">CROSS-EXCHANGE RATES</span>
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
@@ -338,12 +341,12 @@ export default function Sidebar({
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full z-10 relative`}>
-                <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90' : 'text-emerald-500/90'}`}>
+                <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90 drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]' : 'text-emerald-500/90 drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]'}`}>
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> FAVORITES
                 </div>
                 <div className="px-3 w-full space-y-1.5 min-h-[60px]">
@@ -362,13 +365,13 @@ export default function Sidebar({
                 <>{renderSidebarGroup('Crypto Assets', data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS)}</>
               )}
             </div>
-          </>
+          </motion.div>
         )}
 
         <div className="px-6 mt-8 mb-6 z-10 relative">
           <button
             onClick={handleSeedFirebase}
-            className="w-full py-3 bg-zinc-900/50 border border-zinc-800 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all shadow-inner flex items-center justify-center gap-2"
+            className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             SYNC ALL PAIRS TO FIREBASE
