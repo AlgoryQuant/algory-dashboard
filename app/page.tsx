@@ -26,40 +26,13 @@ interface DashboardData {
   minors?: Record<string, number>;
   metals?: Record<string, number>;
   crypto?: Record<string, number>;
-  parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; Direction?: string; RRR?: number; aiAnalysis?: AIAnalysis; history?: TradeHistory[]; }>;
+  crypto_arb?: {
+    spatial?: Record<string, SpatialArbData>;
+    triangular?: Record<string, TriangularArbData>;
+    funding?: Record<string, FundingRateData>;
+  };
+  parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; Direction?: string; RRR?: number; LivePrice?: number; aiAnalysis?: AIAnalysis; history?: TradeHistory[]; }>;
 }
-
-// === CENTRALIZED MOCK DATA ===
-const generateSpreadHistory = (baseSpread: number, status: 'ACTIVE' | 'DEGRADING' | 'CLOSED') => {
-  const data = [];
-  let current = status === 'CLOSED' ? baseSpread + 1.5 : baseSpread - 0.5;
-  for (let i = 24; i >= 0; i--) {
-      data.push({ time: i === 0 ? 'Now' : `-${i}h`, spread: Number(Math.max(0, current).toFixed(2)) });
-      if (status === 'ACTIVE') current += Math.random() * 0.15 - 0.05;
-      else if (status === 'DEGRADING') current -= Math.random() * 0.2;
-      else current -= Math.random() * 0.4;
-  }
-  return data;
-};
-
-const MOCK_SPATIAL_ARB: Record<string, SpatialArbData> = {
-  "ARB-BTC-1": { id: "ARB-BTC-1", asset: "BTC/USDT", buyExchange: "Binance", sellExchange: "Kraken", askPrice: 64200.50, bidPrice: 64970.90, spreadPercent: 1.2, estimatedFeePercent: 0.2, status: 'ACTIVE', chartData: generateSpreadHistory(1.2, 'ACTIVE') },
-  "ARB-ETH-1": { id: "ARB-ETH-1", asset: "ETH/USDT", buyExchange: "KuCoin", sellExchange: "Binance", askPrice: 3450.10, bidPrice: 3481.15, spreadPercent: 0.9, estimatedFeePercent: 0.2, status: 'DEGRADING', chartData: generateSpreadHistory(0.9, 'DEGRADING') },
-  "ARB-SOL-1": { id: "ARB-SOL-1", asset: "SOL/USDT", buyExchange: "Bybit", sellExchange: "Coinbase", askPrice: 142.20, bidPrice: 145.75, spreadPercent: 2.5, estimatedFeePercent: 0.25, status: 'ACTIVE', chartData: generateSpreadHistory(2.5, 'ACTIVE') },
-  "ARB-PEPE-1": { id: "ARB-PEPE-1", asset: "PEPE/USDT", buyExchange: "HTX", sellExchange: "Binance", askPrice: 0.0000105, bidPrice: 0.0000101, spreadPercent: -3.8, estimatedFeePercent: 0.3, status: 'CLOSED', chartData: generateSpreadHistory(0, 'CLOSED') },
-};
-
-const MOCK_TRIANGULAR_ARB: Record<string, TriangularArbData> = {
-  "TRI-1": { id: "TRI-1", pairName: "USDT ➔ BTC ➔ ETH ➔ USDT", path: ["USDT", "BTC", "ETH", "USDT"], rate1: 64000, rate2: 18.5, rate3: 3500, expectedProfitPercent: 1.15, status: 'ACTIVE', chartData: generateSpreadHistory(1.15, 'ACTIVE') },
-  "TRI-2": { id: "TRI-2", pairName: "USDT ➔ SOL ➔ BNB ➔ USDT", path: ["USDT", "SOL", "BNB", "USDT"], rate1: 145, rate2: 0.24, rate3: 610, expectedProfitPercent: 0.85, status: 'DEGRADING', chartData: generateSpreadHistory(0.85, 'DEGRADING') },
-  "TRI-3": { id: "TRI-3", pairName: "USDT ➔ ADA ➔ XRP ➔ USDT", path: ["USDT", "ADA", "XRP", "USDT"], rate1: 0.45, rate2: 1.2, rate3: 0.55, expectedProfitPercent: 0.1, status: 'CLOSED', chartData: generateSpreadHistory(0.1, 'CLOSED') },
-};
-
-const MOCK_FUNDING_RATES: Record<string, FundingRateData> = {
-  "FUND-SOL": { id: "FUND-SOL", asset: "SOL Perpetuals", binanceRate: 0.015, bybitRate: 0.002, okxRate: -0.012, optimalLong: "OKX", optimalShort: "Binance", netYield: 0.027, status: 'ACTIVE', chartData: generateSpreadHistory(0.027, 'ACTIVE') },
-  "FUND-XRP": { id: "FUND-XRP", asset: "XRP Perpetuals", binanceRate: -0.005, bybitRate: 0.018, okxRate: 0.015, optimalLong: "Binance", optimalShort: "Bybit", netYield: 0.023, status: 'DEGRADING', chartData: generateSpreadHistory(0.023, 'DEGRADING') },
-  "FUND-BTC": { id: "FUND-BTC", asset: "BTC Perpetuals", binanceRate: 0.010, bybitRate: 0.011, okxRate: 0.001, optimalLong: "OKX", optimalShort: "Bybit", netYield: 0.010, status: 'CLOSED', chartData: generateSpreadHistory(0.010, 'CLOSED') },
-};
 
 const LIQUIDATIONS_MOCK = { longsRekt: 154200000, shortsRekt: 45800000 };
 
@@ -362,11 +335,9 @@ export default function Home() {
     };
     if (isAuthenticated || showAuthGate) {
        loadData();
-       interval = setInterval(loadData, 15 * 60 * 1000);
+       interval = setInterval(loadData, 3000); // 3-second live polling
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [isAuthenticated, showAuthGate]);
 
   const handleSeedFirebase = async () => {
@@ -447,6 +418,7 @@ export default function Home() {
               {activeParams.RRR && <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner"><span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
               <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span><span className="text-white font-bold">{activeParams.BE}</span></span>
               <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span><span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span></span>
+              {activeParams.LivePrice && <span className="px-3 py-1.5 bg-blue-900/30 rounded-lg border border-blue-500/30 font-mono text-[11px] shadow-inner ml-auto"><span className="text-blue-400 mr-2 uppercase tracking-wider">LIVE</span><span className="text-white font-bold">{activeParams.LivePrice}</span></span>}
             </div>
             <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />
           </div>
@@ -463,11 +435,13 @@ export default function Home() {
                 </g>
               </svg>
               <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'}`}>
-                <AnimatedNumber value={activeProb * 100} />%
+                {(activeProb * 100).toFixed(1)}%
               </div>
             </div>
             {isTradeActive ? (
-              <ExecuteButton baseClass="w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1" defaultText={`EXECUTE ${inferredDirection}`} colorTheme={inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'blue' : 'emerald') : 'red'} />
+              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]') : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}>
+                EXECUTE {inferredDirection}
+              </button>
             ) : (
               <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">LOW CONVICTION</button>
             )}
@@ -509,12 +483,6 @@ export default function Home() {
     );
   };
 
-  const widgetMap: Record<string, React.ReactNode> = {
-    'chart': <ChartArea symbol={activePair} mode={marketMode} />,
-    'ai_panel': renderAiAnalysisWidget(),
-    'liquidations': marketMode === 'CRYPTO' && cryptoMode === 'standard' ? <LiquidationsBar /> : null
-  };
-
   if (!marketMode) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -554,6 +522,12 @@ export default function Home() {
     );
   }
 
+  const widgetMap: Record<string, React.ReactNode> = {
+    'chart': <ChartArea symbol={activePair} mode={marketMode} />,
+    'ai_panel': renderAiAnalysisWidget(),
+    'liquidations': marketMode === 'CRYPTO' && cryptoMode === 'standard' ? <LiquidationsBar /> : null
+  };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -577,12 +551,12 @@ export default function Home() {
           cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
           activePair={activePair} setActivePair={setActivePair}
           data={data} 
-          spatialArbData={MOCK_SPATIAL_ARB}
-          triangularArbData={MOCK_TRIANGULAR_ARB}
-          fundingRateData={MOCK_FUNDING_RATES}
+          spatialArbData={data.crypto_arb?.spatial || {}}
+          triangularArbData={data.crypto_arb?.triangular || {}}
+          fundingRateData={data.crypto_arb?.funding || {}}
           openGroups={openGroups} setOpenGroups={setOpenGroups}
           favorites={favorites} setFavorites={setFavorites}
-          activeDragId={activeDragId} setActiveDragId={setActiveDragId}
+          activeDragId={null} setActiveDragId={() => {}}
           handleSeedFirebase={handleSeedFirebase}
         />
 
@@ -601,11 +575,11 @@ export default function Home() {
               <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full items-start">
                 <div className="w-full xl:w-2/3 flex flex-col space-y-10">
                   {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-                    <SpatialArbitragePanel arbData={MOCK_SPATIAL_ARB[activePair]} />
+                    <SpatialArbitragePanel arbData={data.crypto_arb?.spatial?.[activePair]} />
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-                    <TriangularArbitragePanel arbData={MOCK_TRIANGULAR_ARB[activePair]} />
+                    <TriangularArbitragePanel arbData={data.crypto_arb?.triangular?.[activePair]} />
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-                    <FundingRatesPanel data={MOCK_FUNDING_RATES[activePair]} />
+                    <FundingRatesPanel data={data.crypto_arb?.funding?.[activePair]} />
                   ) : (
                     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleWidgetDragStart} onDragEnd={handleWidgetDragEnd}>
                       <SortableContext items={mainLayout} strategy={verticalListSortingStrategy}>
