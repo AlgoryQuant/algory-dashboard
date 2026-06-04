@@ -138,7 +138,9 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
             <span className={`font-bold tracking-wide text-[11px] ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{data.id}</span>
             <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.8)]' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
           </div>
-          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">{data.expectedProfitPercent > 0 ? '+' : ''}{data.expectedProfitPercent.toFixed(2)}%</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${data.expectedProfitPercent > 0 ? 'text-purple-400 bg-purple-500/10 border-purple-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30'}`}>
+            {data.expectedProfitPercent > 0 ? '+' : ''}{data.expectedProfitPercent.toFixed(2)}%
+          </span>
         </div>
         <div className="text-[9px] font-mono text-zinc-500 break-words">{data.pairName}</div>
       </div>
@@ -148,13 +150,16 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
       <div className={containerClasses} onClick={onClick}>
         <div className="flex justify-between items-center w-full mb-1">
           <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(249,115,22,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset}</span>
+            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(249,115,22,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{data.asset.replace(' Perpetuals', '')}</span>
             <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'ACTIVE' ? 'bg-orange-400 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]' : data.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
           </div>
-          <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/30">{(data.netYield * 100).toFixed(2)}% APY</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${data.netYield > 0 ? 'text-orange-400 bg-orange-500/10 border-orange-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30'}`}>
+            {(data.netYield).toFixed(3)}%
+          </span>
         </div>
-        <div className="flex items-center text-[9px] font-medium text-zinc-500 mt-1 uppercase tracking-widest">
-          L: {data.optimalLong} / S: {data.optimalShort}
+        <div className="flex items-center justify-between text-[9px] font-medium text-zinc-500 mt-1 uppercase tracking-widest w-full">
+          <span className="text-emerald-500/70">L: {data.optimalLong}</span>
+          <span className="text-red-500/70">S: {data.optimalShort}</span>
         </div>
       </div>
     );
@@ -271,19 +276,34 @@ export default function Sidebar({
         {marketMode === 'CRYPTO' && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
             <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
-            <button onClick={() => { setCryptoMode('spatial_arb'); setActivePair("ARB-BTC-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+            <button onClick={() => { 
+                setCryptoMode('spatial_arb'); 
+                const firstId = Object.keys(spatialArbData)[0];
+                if (firstId) setActivePair(firstId); 
+              }} 
+              className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               SPATIAL
               <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
                 Exploits price differences of the same asset across different exchanges.
               </div>
             </button>
-            <button onClick={() => { setCryptoMode('triangular_arb'); setActivePair("TRI-1"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+            <button onClick={() => { 
+                setCryptoMode('triangular_arb'); 
+                const firstId = Object.keys(triangularArbData)[0];
+                if (firstId) setActivePair(firstId); 
+              }} 
+              className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               TRIANGLE
               <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
                 Executes a sequence of three trades to profit from currency cross-rate inefficiencies.
               </div>
             </button>
-            <button onClick={() => { setCryptoMode('funding_rates'); setActivePair("FUND-SOL"); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+            <button onClick={() => { 
+                setCryptoMode('funding_rates'); 
+                const firstId = Object.keys(fundingRateData)[0];
+                if (firstId) setActivePair(firstId); 
+              }} 
+              className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               FUNDING
               <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
                 Delta-neutral strategy collecting funding rate differences.
@@ -304,9 +324,9 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
-                {Object.values(spatialArbData).map((arb) => (
+                {Object.keys(spatialArbData).length > 0 ? Object.values(spatialArbData).map((arb) => (
                    <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
-                ))}
+                )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MARKETS...</div>}
               </div>
             </div>
           </motion.div>
@@ -320,9 +340,9 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
-                {Object.values(triangularArbData).map((arb) => (
+                {Object.keys(triangularArbData).length > 0 ? Object.values(triangularArbData).map((arb) => (
                    <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
-                ))}
+                )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MATRICES...</div>}
               </div>
             </div>
           </motion.div>
@@ -336,9 +356,9 @@ export default function Sidebar({
                 </div>
               </div>
               <div className="space-y-2 px-3 z-10 relative">
-                {Object.values(fundingRateData).map((arb) => (
+                {Object.keys(fundingRateData).length > 0 ? Object.values(fundingRateData).map((arb) => (
                    <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
-                ))}
+                )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SYNCING RATES...</div>}
               </div>
             </div>
           </motion.div>

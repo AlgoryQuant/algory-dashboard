@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 interface NewsItem { title: string; publisher: string; link: string; time: string; sentiment: 'positive' | 'negative' | 'neutral'; }
 interface WhaleAlert { id: string; text: string; type: 'bullish' | 'bearish' | 'neutral'; time: string; amountUsd: string; }
@@ -68,16 +69,22 @@ const LiveWhalesPanel = () => {
   return (
     <div className="flex flex-col gap-4">
       {whales.map((alert) => (
-        <div key={alert.id} className="block pb-5 border-b border-white/5 last:border-0 last:pb-0 animate-in fade-in slide-in-from-top-4 duration-700 ease-out">
+        <motion.div 
+          layout 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          key={alert.id} 
+          className="block pb-5 border-b border-white/5 last:border-0 last:pb-0"
+        >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
                 {alert.time}
               </span>
               <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border shadow-inner ${
-                alert.type === 'bullish' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                alert.type === 'bearish' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
-                'text-zinc-400 bg-zinc-500/10 border-zinc-500/20'
+                alert.type === 'bullish' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.2)]' :
+                alert.type === 'bearish' ? 'text-red-400 bg-red-500/10 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' :
+                'text-zinc-400 bg-zinc-500/10 border-zinc-500/30 shadow-[0_0_10px_rgba(255,255,255,0.05)]'
               }`}>
                 {alert.type}
               </span>
@@ -87,7 +94,7 @@ const LiveWhalesPanel = () => {
           <h4 className="text-sm font-medium text-white/70 leading-relaxed mt-1">
             {alert.text}
           </h4>
-        </div>
+        </motion.div>
       ))}
     </div>
   );
@@ -97,20 +104,23 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
   const displayedNews = marketMode === 'FOREX' ? FOREX_NEWS_MOCK : CRYPTO_NEWS_MOCK;
 
   return (
-    <div className="w-full xl:w-80 flex-shrink-0 flex flex-col sticky top-8">
-      <div className="bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 flex flex-col max-h-[85vh]">
+    <div className="w-full xl:w-80 flex-shrink-0 flex flex-col sticky top-8 z-10">
+      <motion.div 
+        layout
+        className="bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 flex flex-col max-h-[85vh]"
+      >
         <div className="px-6 py-6 border-b border-white/5 bg-white/[0.01]">
-          <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/5">
+          <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
             <button 
               onClick={() => setRightPanelMode('news')} 
-              className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${rightPanelMode === 'news' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${rightPanelMode === 'news' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
             >
               MARKET NEWS
             </button>
             {marketMode === 'CRYPTO' && (
               <button 
                 onClick={() => setRightPanelMode('whales')} 
-                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
               >
                 WHALES 🚨
               </button>
@@ -122,9 +132,15 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
           {rightPanelMode === 'news' ? (
             displayedNews && displayedNews.length > 0 ? (
               displayedNews.map((item, idx) => (
-                <a key={idx} href={item.link} target="_blank" rel="noreferrer" className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group animate-in fade-in">
+                <motion.a 
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  key={idx} href={item.link} target="_blank" rel="noreferrer" 
+                  className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group"
+                >
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`w-2 h-2 rounded-full ${item.sentiment === 'positive' ? 'bg-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500' : 'bg-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
+                    <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${item.sentiment === 'positive' ? 'bg-emerald-500 text-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500 text-red-500' : 'bg-zinc-500 text-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
                     <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
                       {item.time}
                     </span>
@@ -139,7 +155,7 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
                   <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors mt-1">
                     {item.title}
                   </h4>
-                </a>
+                </motion.a>
               ))
             ) : (
               <div className="p-10 text-center text-[10px] text-zinc-500 font-bold uppercase tracking-widest flex flex-col items-center gap-4">
@@ -151,7 +167,7 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
             <LiveWhalesPanel />
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
