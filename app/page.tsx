@@ -13,13 +13,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion } from 'framer-motion';
 
-// === EXTERNAL COMPONENTS ===
 import Sidebar from './Sidebar';
 import NewsPanel from './NewsPanel';
 import ChartArea from './ChartArea';
 import { SpatialArbitragePanel, TriangularArbitragePanel, FundingRatesPanel, SpatialArbData, TriangularArbData, FundingRateData } from './ArbitragePanel';
 
-// === INTERFACES ===
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
 interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
 interface DashboardData {
@@ -37,18 +35,10 @@ interface DashboardData {
 
 const LIQUIDATIONS_MOCK = { longsRekt: 154200000, shortsRekt: 45800000 };
 
-// === DND-KIT ANIMATION CONFIG ===
 const dropAnimationConfig: DropAnimation = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: '0.4',
-      },
-    },
-  }),
+  sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
 };
 
-// === SHARED UI COMPONENTS ===
 const AnimatedNumber = ({ value }: { value: number }) => {
   const safeValue = value || 0;
   const [displayValue, setDisplayValue] = useState(safeValue);
@@ -116,15 +106,12 @@ const InfoTooltip = ({ info }: { info: string }) => (
   </span>
 );
 
+// === STATICKÝ MARKET MONITOR ===
+// Zrušen vteřinový interval. React tuto komponentu nepřekreslí, dokud lastRefresh nepřijde z Firebase.
 const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: string }) => {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const hour = now.getHours();
+  const displayTime = lastRefresh || new Date();
+  const hour = displayTime.getHours();
+  
   const isCrypto = mode.includes('CRYPTO');
   const sessions = isCrypto ? [ { name: "Global Crypto Market", open: "24", close: "7", isActive: true } ] : [
     { name: "Sydney", open: "22:00", close: "07:00", isActive: hour >= 22 || hour < 7 },
@@ -133,8 +120,8 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
     { name: "New York", open: "14:30", close: "22:00", isActive: hour >= 14 && hour < 22 },
   ];
 
-  const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
+  const minutes = displayTime.getMinutes();
+  const seconds = displayTime.getSeconds();
   const progressPercent = (((minutes % 15) * 60 + seconds) / 900) * 100;
 
   let pulseColor = 'bg-emerald-400'; let gradientStart = 'from-emerald-600'; let gradientEnd = 'to-emerald-400';
@@ -147,12 +134,12 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white">
-            {now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-            <span className="text-2xl text-white/50 ml-1">:{now.getSeconds().toString().padStart(2, '0')}</span>
+            {displayTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+            <span className="text-2xl text-white/50 ml-1">:{displayTime.getSeconds().toString().padStart(2, '0')}</span>
           </div>
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full animate-pulse ${pulseColor}`}></span>SYSTEM SYNC ({mode})</span>
-            <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "CONNECTING..."}</span>
+            <span className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full ${isCrypto ? 'animate-pulse ' + pulseColor : 'bg-emerald-400'}`}></span>SYSTEM SYNC ({mode})</span>
+            <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? "CONNECTED" : "WAITING FOR DATA..."}</span>
           </div>
         </div>
 
@@ -246,7 +233,6 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
   );
 };
 
-// === SORTABLE WIDGET WRAPPER ===
 const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNode }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, position: 'relative' as const, zIndex: isDragging ? 50 : 1 };
@@ -261,14 +247,12 @@ const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNo
   );
 };
 
-// === ROOT ORCHESTRATOR ===
 export default function Home() {
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  // Modes & States
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>(null);
   const [cryptoMode, setCryptoMode] = useState<'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates'>('standard');
   const [rightPanelMode, setRightPanelMode] = useState<'news' | 'whales'>('news');
@@ -282,7 +266,6 @@ export default function Home() {
   const [mainLayout, setMainLayout] = useState<string[]>(['chart', 'ai_panel', 'liquidations']);
   
   const [isMounted, setIsMounted] = useState(false);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeWidgetDragId, setActiveWidgetDragId] = useState<string | null>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -336,7 +319,7 @@ export default function Home() {
     };
     if (isAuthenticated || showAuthGate) {
        loadData();
-       interval = setInterval(loadData, 3000); // 3-second live polling
+       interval = setInterval(loadData, 3000);
     }
     return () => clearInterval(interval);
   }, [isAuthenticated, showAuthGate]);
@@ -484,19 +467,6 @@ export default function Home() {
     );
   };
 
-  const DragWidgetWrapper = ({ id, children }: { id: string, children: React.ReactNode }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-    const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, position: 'relative' as const, zIndex: isDragging ? 50 : 1 };
-    return (
-      <div ref={setNodeRef} style={style} className="w-full relative group/widget">
-        <div {...attributes} {...listeners} className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 flex items-center justify-center shadow-xl hover:text-white hover:border-white/20">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-        </div>
-        {children}
-      </div>
-    );
-  };
-
   const widgetMap: Record<string, React.ReactNode> = {
     'chart': <ChartArea symbol={activePair} mode={marketMode} />,
     'ai_panel': renderAiAnalysisWidget(),
@@ -616,20 +586,6 @@ export default function Home() {
       </div>
     );
   }
-  // ==========================================
-
-  if (showAuthGate && !isAuthenticated) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
-        <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
-          <div className="text-center mb-4"><h2 className="text-2xl font-bold tracking-tight text-white mb-2">REQUEST ACCESS</h2><p className="text-[10px] text-zinc-400 uppercase tracking-widest">CONNECT TO ALGORY ENGINE</p></div>
-          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">TRADER NICKNAME</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
-          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">EMAIL ADDRESS</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
-          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "CONNECTING..." : "ENTER TERMINAL"}</button>
-        </form>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -665,17 +621,7 @@ export default function Home() {
 
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
           <div className="max-w-[1400px] mx-auto w-full relative z-10">
-            <div className="mb-6 p-8 bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0 z-10">
-              <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                  <div className="text-5xl font-semibold tracking-tight text-white">LIVE SYNC</div>
-                  <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
-                    <span className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full animate-pulse bg-emerald-400`}></span>SYSTEM SYNC ({marketMode})</span>
-                    <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? lastRefresh.toLocaleTimeString('en-US', { hour12: false }) : "CONNECTING..."}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
 
             {loading && !data.majors ? (
               <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
@@ -699,7 +645,7 @@ export default function Home() {
                         <div className="flex flex-col space-y-10 w-full">
                           {mainLayout.map((widgetId) => (
                              widgetMap[widgetId] ? (
-                               <DragWidgetWrapper key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DragWidgetWrapper>
+                               <DraggableWidget key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DraggableWidget>
                              ) : null
                           ))}
                         </div>
