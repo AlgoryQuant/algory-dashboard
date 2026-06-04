@@ -17,6 +17,7 @@ import Sidebar from './Sidebar';
 import NewsPanel from './NewsPanel';
 import ChartArea from './ChartArea';
 import { SpatialArbitragePanel, TriangularArbitragePanel, FundingRatesPanel, SpatialArbData, TriangularArbData, FundingRateData } from './ArbitragePanel';
+import BacktestLab from './BacktestLab';
 
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
 interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
@@ -106,9 +107,7 @@ const InfoTooltip = ({ info }: { info: string }) => (
   </span>
 );
 
-// === STATICKÝ MARKET MONITOR ===
-// Zrušen vteřinový interval. React tuto komponentu nepřekreslí, dokud lastRefresh nepřijde z Firebase.
-const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: string }) => {
+const MarketMonitor = ({ lastRefresh, mode, activeView }: { lastRefresh: Date | null, mode: string, activeView: 'terminal' | 'laboratory' }) => {
   const displayTime = lastRefresh || new Date();
   const hour = displayTime.getHours();
   
@@ -134,33 +133,46 @@ const MarketMonitor = ({ lastRefresh, mode }: { lastRefresh: Date | null, mode: 
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
         <div className="flex flex-col gap-2 w-full md:w-auto">
           <div className="text-5xl font-semibold tracking-tight text-white">
-            {displayTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-            <span className="text-2xl text-white/50 ml-1">:{displayTime.getSeconds().toString().padStart(2, '0')}</span>
+            {activeView === 'terminal' ? (
+              <>
+                {displayTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                <span className="text-2xl text-white/50 ml-1">:{displayTime.getSeconds().toString().padStart(2, '0')}</span>
+              </>
+            ) : "AI BACKTEST LAB"}
           </div>
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full ${isCrypto ? 'animate-pulse ' + pulseColor : 'bg-emerald-400'}`}></span>SYSTEM SYNC ({mode})</span>
-            <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? "CONNECTED" : "WAITING FOR DATA..."}</span>
+            <span className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${activeView === 'terminal' ? (isCrypto ? 'animate-pulse ' + pulseColor : 'bg-emerald-400') : 'bg-zinc-500'}`}></span>
+              {activeView === 'terminal' ? `SYSTEM SYNC (${mode})` : 'STRATEGY SIMULATOR ENVIRONMENT'}
+            </span>
+            {activeView === 'terminal' && (
+              <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? "CONNECTED" : "WAITING FOR DATA..."}</span>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          {sessions.map((s) => (
-            <div key={s.name} className={`px-5 py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${s.isActive ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` : 'bg-black/40 border-white/5 opacity-60'}`}>
-              <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>{s.name}</span>
-              <span className="text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
-            </div>
-          ))}
-        </div>
+        {activeView === 'terminal' && (
+          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+            {sessions.map((s) => (
+              <div key={s.name} className={`px-5 py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${s.isActive ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` : 'bg-black/40 border-white/5 opacity-60'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>{s.name}</span>
+                <span className="text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="mt-8 relative z-10">
-        <div className="flex justify-between text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-widest">
-          <span>AI ENGINE M15 CYCLE</span><span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
+      {activeView === 'terminal' && (
+        <div className="mt-8 relative z-10">
+          <div className="flex justify-between text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-widest">
+            <span>AI ENGINE M15 CYCLE</span><span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
+          </div>
+          <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
+            <div className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`} style={{ width: `${progressPercent}%` }} />
+          </div>
         </div>
-        <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
-          <div className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`} style={{ width: `${progressPercent}%` }} />
-        </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -253,6 +265,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
+  // === STATE PRO VIEW SWITCH ===
+  const [activeView, setActiveView] = useState<'terminal' | 'laboratory'>('terminal');
+
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>(null);
   const [cryptoMode, setCryptoMode] = useState<'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates'>('standard');
   const [rightPanelMode, setRightPanelMode] = useState<'news' | 'whales'>('news');
@@ -266,6 +281,7 @@ export default function Home() {
   const [mainLayout, setMainLayout] = useState<string[]>(['chart', 'ai_panel', 'liquidations']);
   
   const [isMounted, setIsMounted] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeWidgetDragId, setActiveWidgetDragId] = useState<string | null>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -365,6 +381,7 @@ export default function Home() {
   const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
 
   const getPageBackground = () => {
+    if (activeView === 'laboratory') return 'from-indigo-950/20 via-zinc-950/20 to-[#050505]/40';
     if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/10 via-zinc-950/20 to-[#050505]/40';
     if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/10 via-[#0a0a0a]/40 to-[#050505]/40' : 'from-emerald-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
     if (inferredDirection === 'SELL') return 'from-red-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
@@ -491,98 +508,47 @@ export default function Home() {
     ) : null
   };
 
-  // ==========================================
-  // HERO SECTION / WELCOME SCREEN (NO MARKET SELECTED)
-  // ==========================================
   if (!marketMode) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-full relative overflow-hidden font-sans bg-[#050505]">
-        {/* Deep Space Radial Gradient Background */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
+        <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, -30, 0], scale: [1, 1.1, 1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-600 rounded-full blur-[120px] opacity-10 z-0 pointer-events-none" />
 
-        {/* Floating 3D Orbs (Glassmorphism + Framer Motion) */}
-        <motion.div
-          animate={{ y: [0, -40, 0], x: [0, 20, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none"
-        />
-        <motion.div
-          animate={{ y: [0, 50, 0], x: [0, -30, 0] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none"
-        />
-        <motion.div
-          animate={{ y: [0, -30, 0], scale: [1, 1.1, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-600 rounded-full blur-[120px] opacity-10 z-0 pointer-events-none"
-        />
-
-        {/* Main Content Wrapper */}
         <div className="relative z-10 flex flex-col items-center text-center px-4 w-full max-w-5xl">
-          
-          {/* Welcome Text & Hero */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex flex-col items-center"
-          >
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] md:text-xs mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-              WELCOME TO ALGORY
-            </span>
-            <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-6">
-              Algory<span className="text-zinc-600">.</span>
-            </h1>
-            <p className="text-zinc-400 text-sm md:text-lg font-light tracking-wide max-w-2xl leading-relaxed">
-              Advanced quantitative analysis & real-time execution engine.
-            </p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] md:text-xs mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">WELCOME TO ALGORY</span>
+            <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-6">Algory<span className="text-zinc-600">.</span></h1>
+            <p className="text-zinc-400 text-sm md:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
           </motion.div>
 
-          {/* 3D Glassmorphism Selection Cards */}
           <div className="flex flex-col md:flex-row gap-8 mt-20 w-full justify-center" style={{ perspective: "1000px" }}>
-            
-            {/* FOREX CARD */}
-            <motion.button
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              whileHover={{ scale: 1.05, rotateX: 5, rotateY: -5 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
-              className="group relative w-full md:w-80 p-10 bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[2rem] flex flex-col items-center gap-6 overflow-hidden transition-colors duration-500 hover:border-emerald-500/50 hover:bg-emerald-500/5 shadow-2xl hover:shadow-[0_0_50px_rgba(16,185,129,0.2)]"
-            >
+            <motion.button initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }} whileHover={{ scale: 1.05, rotateX: 5, rotateY: -5 }} whileTap={{ scale: 0.98 }} onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative w-full md:w-80 p-10 bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[2rem] flex flex-col items-center gap-6 overflow-hidden transition-colors duration-500 hover:border-emerald-500/50 hover:bg-emerald-500/5 shadow-2xl hover:shadow-[0_0_50px_rgba(16,185,129,0.2)]">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg>
-              </div>
-              <div className="flex flex-col items-center gap-2 relative z-10">
-                <span className="text-xl font-bold tracking-widest text-white group-hover:text-emerald-400 transition-colors">FOREX & METALS</span>
-                <span className="text-xs text-zinc-500 font-medium">Fiat Currencies & Commodities</span>
-              </div>
+              <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]"><svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg></div>
+              <div className="flex flex-col items-center gap-2 relative z-10"><span className="text-xl font-bold tracking-widest text-white group-hover:text-emerald-400 transition-colors">FOREX & METALS</span><span className="text-xs text-zinc-500 font-medium">Fiat Currencies & Commodities</span></div>
             </motion.button>
-
-            {/* CRYPTO CARD */}
-            <motion.button
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              whileHover={{ scale: 1.05, rotateX: 5, rotateY: 5 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
-              className="group relative w-full md:w-80 p-10 bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[2rem] flex flex-col items-center gap-6 overflow-hidden transition-colors duration-500 hover:border-blue-500/50 hover:bg-blue-500/5 shadow-2xl hover:shadow-[0_0_50px_rgba(59,130,246,0.2)]"
-            >
+            <motion.button initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }} whileHover={{ scale: 1.05, rotateX: 5, rotateY: 5 }} whileTap={{ scale: 0.98 }} onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative w-full md:w-80 p-10 bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[2rem] flex flex-col items-center gap-6 overflow-hidden transition-colors duration-500 hover:border-blue-500/50 hover:bg-blue-500/5 shadow-2xl hover:shadow-[0_0_50px_rgba(59,130,246,0.2)]">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-              </div>
-              <div className="flex flex-col items-center gap-2 relative z-10">
-                <span className="text-xl font-bold tracking-widest text-white group-hover:text-blue-400 transition-colors">CRYPTO ASSETS</span>
-                <span className="text-xs text-zinc-500 font-medium">Spot & Arbitrage Matrices</span>
-              </div>
+              <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]"><svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></div>
+              <div className="flex flex-col items-center gap-2 relative z-10"><span className="text-xl font-bold tracking-widest text-white group-hover:text-blue-400 transition-colors">CRYPTO ASSETS</span><span className="text-xs text-zinc-500 font-medium">Spot & Arbitrage Matrices</span></div>
             </motion.button>
-
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (showAuthGate && !isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
+        <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
+          <div className="text-center mb-4"><h2 className="text-2xl font-bold tracking-tight text-white mb-2">REQUEST ACCESS</h2><p className="text-[10px] text-zinc-400 uppercase tracking-widest">CONNECT TO ALGORY ENGINE</p></div>
+          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">TRADER NICKNAME</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
+          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">EMAIL ADDRESS</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
+          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "CONNECTING..." : "ENTER TERMINAL"}</button>
+        </form>
       </div>
     );
   }
@@ -606,6 +572,7 @@ export default function Home() {
         </div>
 
         <Sidebar 
+          activeView={activeView} setActiveView={setActiveView}
           marketMode={marketMode} setMarketMode={setMarketMode}
           cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
           activePair={activePair} setActivePair={setActivePair}
@@ -621,9 +588,11 @@ export default function Home() {
 
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
           <div className="max-w-[1400px] mx-auto w-full relative z-10">
-            <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} />
+            <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
 
-            {loading && !data.majors ? (
+            {activeView === 'laboratory' ? (
+              <BacktestLab />
+            ) : loading && !data.majors ? (
               <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
                 <div className={`w-10 h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
                 <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">SYSTEM SCANNING...</span>

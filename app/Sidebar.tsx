@@ -12,27 +12,17 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// === INTERFACES & MOCK DATA ===
 type ArbStatus = 'ACTIVE' | 'DEGRADING' | 'CLOSED';
 interface ChartPoint { time: string; spread: number; }
 export interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; status: ArbStatus; chartData: ChartPoint[]; }
 export interface TriangularArbData { id: string; pairName: string; path: string[]; rate1: number; rate2: number; rate3: number; expectedProfitPercent: number; status: ArbStatus; chartData: ChartPoint[]; }
 export interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
 
-const MOCK_CRYPTO_PAIRS: Record<string, number> = {
-  "BTCUSD": 0.85, "ETHUSD": 0.72, "SOLUSD": 0.65, "ADAUSD": 0.55, "BNBUSD": 0.60, 
-  "XRPUSD": 0.45, "MATICUSD": 0.48, "DOTUSD": 0.51, "AVAXUSD": 0.62, "DOGEUSD": 0.88, 
-  "LINKUSD": 0.40, "UNIUSD": 0.58, "LTCUSD": 0.49, "PEPEUSD": 0.92, "SHIBUSD": 0.41,
-  "TRXUSD": 0.61, "TONUSD": 0.75, "BCHUSD": 0.53, "XLMUSD": 0.38, "NEARUSD": 0.68,
-  "APTUSD": 0.70, "ARBUSD": 0.45, "OPUSD": 0.55, "LDOUSD": 0.50, "ATOMUSD": 0.48,
-  "INJUSD": 0.74, "RNDRUSD": 0.80, "IMXUSD": 0.65, "STXUSD": 0.60, "KASUSD": 0.78,
-  "WIFUSD": 0.85, "FETUSD": 0.82, "FILUSD": 0.45, "ICPUSD": 0.52, "VETUSD": 0.40,
-  "MKRUSD": 0.66, "AAVEUSD": 0.59, "SNXUSD": 0.42, "CRVUSD": 0.35, "THETAUSD": 0.44,
-  "SANDUSD": 0.39, "MANAUSD": 0.37, "ALGOUSD": 0.35, "FTMUSD": 0.58, "QNTUSD": 0.51,
-  "EGLDUSD": 0.47, "FLOWUSD": 0.33, "AXSUSD": 0.36, "CHZUSD": 0.41, "ENJUSD": 0.34
-};
-
 export interface SidebarProps {
+  // === NOVÉ PROPS PRO VIEW SWITCHING ===
+  activeView: 'terminal' | 'laboratory';
+  setActiveView: (view: 'terminal' | 'laboratory') => void;
+  // ===================================
   marketMode: 'FOREX' | 'CRYPTO' | null;
   setMarketMode: (mode: 'FOREX' | 'CRYPTO' | null) => void;
   cryptoMode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates';
@@ -167,6 +157,7 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
 };
 
 export default function Sidebar({
+  activeView, setActiveView,
   marketMode, setMarketMode, cryptoMode, setCryptoMode, activePair, setActivePair,
   data, spatialArbData, triangularArbData, fundingRateData,
   openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
@@ -193,8 +184,7 @@ export default function Sidebar({
   };
 
   const getProbForTicker = (ticker: string) => {
-    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
-    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? fallbackCrypto?.[ticker] ?? 0;
+    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? data.crypto?.[ticker] ?? 0;
   };
 
   const getSidebarIcon = (title: string) => {
@@ -206,10 +196,9 @@ export default function Sidebar({
   };
 
   const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined, tooltipInfo?: string) => {
-    const finalPairs = title === 'Crypto Assets' && (!pairs || Object.keys(pairs).length === 0) ? MOCK_CRYPTO_PAIRS : pairs;
-    if (!finalPairs || Object.keys(finalPairs).length === 0) return null;
+    if (!pairs || Object.keys(pairs).length === 0) return null;
     
-    const availablePairs = Object.entries(finalPairs).filter(([ticker]) => !favorites.includes(ticker)).sort((a, b) => b[1] - a[1]);
+    const availablePairs = Object.entries(pairs).filter(([ticker]) => !favorites.includes(ticker)).sort((a, b) => b[1] - a[1]);
     const isOpen = openGroups[title]; 
 
     return (
@@ -241,11 +230,9 @@ export default function Sidebar({
   };
 
   const renderFavorites = () => {
-    const fallbackCrypto = data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS;
-    const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...fallbackCrypto };
-    
+    const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...data.crypto };
     const relevantFavs = favorites.filter(ticker => {
-      const isCryptoTicker = Object.keys(fallbackCrypto || {}).includes(ticker);
+      const isCryptoTicker = Object.keys(data.crypto || {}).includes(ticker);
       if (marketMode === 'CRYPTO') return isCryptoTicker;
       if (marketMode === 'FOREX') return !isCryptoTicker;
       return true;
@@ -268,54 +255,53 @@ export default function Sidebar({
           Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
         </h2>
         
-        <div className="flex bg-black/60 rounded-xl p-1 mt-6 border border-white/10 shadow-inner">
-          <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
-          <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
+        {/* === VIEW SWITCHER (TERMINAL vs LABORATORY) === */}
+        <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
+          <button 
+            onClick={() => setActiveView('terminal')} 
+            className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'terminal' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+          >
+            TERMINAL
+          </button>
+          <button 
+            onClick={() => setActiveView('laboratory')} 
+            className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${activeView === 'laboratory' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+            LABORATORY
+          </button>
+          <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'laboratory' ? 'translate-x-[100%] ml-2' : 'translate-x-0 left-1'}`}></div>
         </div>
 
-        {marketMode === 'CRYPTO' && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-            <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
-            <button onClick={() => { 
-                setCryptoMode('spatial_arb'); 
-                const firstId = Object.keys(spatialArbData)[0];
-                if (firstId) setActivePair(firstId); 
-              }} 
-              className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
-              SPATIAL
-              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
-                Exploits price differences of the same asset across different exchanges.
-              </div>
-            </button>
-            <button onClick={() => { 
-                setCryptoMode('triangular_arb'); 
-                const firstId = Object.keys(triangularArbData)[0];
-                if (firstId) setActivePair(firstId); 
-              }} 
-              className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
-              TRIANGLE
-              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
-                Executes a sequence of three trades to profit from currency cross-rate inefficiencies.
-              </div>
-            </button>
-            <button onClick={() => { 
-                setCryptoMode('funding_rates'); 
-                const firstId = Object.keys(fundingRateData)[0];
-                if (firstId) setActivePair(firstId); 
-              }} 
-              className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
-              FUNDING
-              <div className="absolute z-50 hidden group-hover/tt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-full left-0 text-left font-normal normal-case tracking-normal backdrop-blur-md">
-                Delta-neutral strategy collecting funding rate differences.
-              </div>
-            </button>
+        {/* Filters only visible in Terminal view */}
+        {activeView === 'terminal' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
+            <div className="flex bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
+              <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
+              <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
+            </div>
+
+            {marketMode === 'CRYPTO' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
+                <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
+                <button onClick={() => { setCryptoMode('spatial_arb'); const firstId = Object.keys(spatialArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                  SPATIAL
+                </button>
+                <button onClick={() => { setCryptoMode('triangular_arb'); const firstId = Object.keys(triangularArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                  TRIANGLE
+                </button>
+                <button onClick={() => { setCryptoMode('funding_rates'); const firstId = Object.keys(fundingRateData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                  FUNDING
+                </button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col">
+      <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${activeView === 'laboratory' ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
         {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="pb-10">
+          <div className="pb-10">
             <div className="mb-6">
               <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                 <div className="flex items-center gap-2">
@@ -329,9 +315,9 @@ export default function Sidebar({
                 )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MARKETS...</div>}
               </div>
             </div>
-          </motion.div>
+          </div>
         ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="pb-10">
+          <div className="pb-10">
             <div className="mb-6">
               <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                 <div className="flex items-center gap-2">
@@ -345,9 +331,9 @@ export default function Sidebar({
                 )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MATRICES...</div>}
               </div>
             </div>
-          </motion.div>
+          </div>
         ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="pb-10">
+          <div className="pb-10">
             <div className="mb-6">
               <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                 <div className="flex items-center gap-2">
@@ -361,9 +347,9 @@ export default function Sidebar({
                 )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SYNCING RATES...</div>}
               </div>
             </div>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <div>
             <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full z-10 relative`}>
                 <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90 drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]' : 'text-emerald-500/90 drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]'}`}>
@@ -382,16 +368,17 @@ export default function Sidebar({
               {marketMode === 'FOREX' ? (
                 <>{renderSidebarGroup('Major Liquidity', data.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data.minors)}{renderSidebarGroup('Precious Metals', data.metals)}</>
               ) : (
-                <>{renderSidebarGroup('Crypto Assets', data.crypto && Object.keys(data.crypto).length > 0 ? data.crypto : MOCK_CRYPTO_PAIRS)}</>
+                <>{renderSidebarGroup('Crypto Assets', data.crypto)}</>
               )}
             </div>
-          </motion.div>
+          </div>
         )}
 
         <div className="px-6 mt-8 mb-6 z-10 relative">
           <button
             onClick={handleSeedFirebase}
-            className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+            disabled={activeView === 'laboratory'}
+            className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             SYNC ALL PAIRS TO FIREBASE
