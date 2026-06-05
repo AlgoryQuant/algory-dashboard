@@ -42,14 +42,13 @@ def run_forex_backtest(symbol, timeframe, capital):
             "maxDrawdown": -4.2,
             "netProfit": 3200.00
         },
-        "equityCurve": [{"trade": i, "equity": val} for i, val in enumerate(df['equity'].dropna())],
+        "equityCurve": [{"time": str(t), "equity": val} for t, val in zip(df['time'], df['equity'].dropna())],
         "logs": ["[INFO] Strategy executed successfully."]
     }
 `;
 
 // === OPTIONS PRO FOREX UI ===
 const CURRENCIES = ["USD", "EUR", "GBP", "CZK"];
-// PŘIDÁNO ZLATO (XAUUSD)
 const FOREX_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD", "USDCHF", "GBPJPY", "EURJPY", "XAUUSD"];
 const TIMEFRAMES = [
   { label: "M1 (1 Minute)", value: "M1" },
@@ -61,21 +60,16 @@ const TIMEFRAMES = [
 ];
 
 export default function BacktestLab() {
-  // === STATE MANAGEMENT ===
   const [isSimulating, setIsSimulating] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   
-  // Editor State
   const [code, setCode] = useState(PYTHON_TEMPLATE);
-  
-  // Forex Parameters State
   const [currency, setCurrency] = useState("USD");
   const [capital, setCapital] = useState("10000");
   const [pair, setPair] = useState("EURUSD");
   const [timeframe, setTimeframe] = useState("M15");
 
-  // Results State pro graf a metriky
   const [chartData, setChartData] = useState<any[]>([]);
   const [metrics, setMetrics] = useState({ 
     totalTrades: 0, winRate: 0, profitFactor: 0, sharpeRatio: 0, maxDrawdown: 0, netProfit: 0 
@@ -83,48 +77,39 @@ export default function BacktestLab() {
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll v terminálu, když naskakují nové hlášky
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Pomocná funkce pro vygenerování reálné křivky zisku pro fallback (Zubatá Random Walk)
+  // Fallback generátor pro zubatou křivku, když API spadne
   const generateRealisticEquityCurve = (startCapital: number, numTrades: number) => {
     let currCap = startCapital;
     let peak = currCap;
     let maxDd = 0;
-    const curve = [{ trade: 0, equity: currCap }];
+    const curve = [{ time: "Trade 0", equity: currCap }];
 
     for (let i = 1; i <= numTrades; i++) {
-      // Pravděpodobnost výhry a stochastický šum
       const isWin = Math.random() < 0.58; 
       const move = isWin ? (Math.random() * 45 + 10) : -(Math.random() * 60 + 15);
       const noise = (Math.random() * 20) - 10;
       
       currCap += move + noise;
-      
-      // Detekce propadu (Drawdown)
       if (currCap > peak) peak = currCap;
       const drawdown = (currCap - peak) / peak;
       if (drawdown < maxDd) maxDd = drawdown;
       
-      // Pro Recharts graf potřebujeme pole s definovanými klíči: { trade: number, equity: number }
-      curve.push({ trade: i, equity: Number(currCap.toFixed(2)) });
+      curve.push({ time: `Trade ${i}`, equity: Number(currCap.toFixed(2)) });
     }
 
     return { curve, finalCap: currCap, maxDrawdown: maxDd };
   };
 
-  // === HLAVNÍ API CALL LOGIKA ===
   const handleRunSimulation = async () => {
     setShowResults(false);
     setIsSimulating(true);
     setLogs(["[INFO] Initializing Quantum Engine API..."]);
     
-    let isSuccess = false;
-
     try {
-      // 1. Zkouška fetch na produkční backend
       setLogs(prev => [...prev, "[INFO] Establishing connection to Python backend (localhost:8000)..."]);
       setLogs(prev => [...prev, `[INFO] Payload configuration: ${pair} | ${timeframe} | ${capital} ${currency}`]);
 
@@ -145,26 +130,29 @@ export default function BacktestLab() {
       }
 
       const backendData = await response.json();
+      console.log("🚀 Úspěšně přijatá data z Python API:", backendData);
+      
       setLogs(prev => [...prev, ...backendData.logs]);
       setMetrics(backendData.metrics);
       setChartData(backendData.equityCurve);
-      isSuccess = true;
+
+      setTimeout(() => {
+        setIsSimulating(false);
+        setShowResults(true);
+      }, 1000);
 
     } catch (err) {
-      // 2. FALLBACK BLOK PRO VERCEL / CORS / VYPnutý localhost
       setLogs(prev => [...prev, "[ERROR] Backend unreachable (Mixed Content / Connection Refused)."]);
       setLogs(prev => [...prev, "[INFO] Switching to fallback Local Simulator Engine to preserve UI..."]);
       
-      // Umělá simulace výpočtu, abychom viděli terminál
       await new Promise(resolve => setTimeout(resolve, 2000));
       setLogs(prev => [...prev, `[INFO] Simulating vectorized backtest for ${pair} on ${timeframe}...`]);
+      
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Generování zubatých dat pro graf (např. 650 tradů)
       const initCap = parseFloat(capital) || 10000;
       const { curve, finalCap, maxDrawdown } = generateRealisticEquityCurve(initCap, 650);
       
-      // Nastavení metrik do UI
       setMetrics({
         totalTrades: 650,
         winRate: 58.2,
@@ -174,22 +162,13 @@ export default function BacktestLab() {
         netProfit: parseFloat((finalCap - initCap).toFixed(2))
       });
       
-      // Uložení pole dat do Recharts 
       setChartData(curve);
-
       setLogs(prev => [...prev, "[SUCCESS] Fallback backtest computation complete."]);
-      isSuccess = true;
-    } finally {
-      // 3. Po skončení fetche a vygenerování dat vždycky vypneme loading
-      if (isSuccess) {
-        setTimeout(() => {
-          setIsSimulating(false);
-          setShowResults(true);
-        }, 1000); // 1 vteřina na přečtení posledního logu
-      } else {
-        // Záchranná brzda, kdyby to vyletělo z paměti
+
+      setTimeout(() => {
         setIsSimulating(false);
-      }
+        setShowResults(true);
+      }, 1000);
     }
   };
 
@@ -207,7 +186,6 @@ export default function BacktestLab() {
             <h2 className="text-sm font-bold uppercase tracking-widest text-white">PYTHON FOREX STRATEGY</h2>
           </div>
           
-          {/* MONACO EDITOR CONTAINER */}
           <div className="relative group flex-1 flex flex-col min-h-[400px] border border-white/10 rounded-xl overflow-hidden shadow-inner transition-all hover:border-white/20">
             <div className="absolute top-0 left-0 w-full h-8 bg-[#1e1e1e] border-b border-white/5 flex items-center px-4 gap-2 z-10">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500/80"></span>
@@ -234,7 +212,6 @@ export default function BacktestLab() {
             </div>
           </div>
 
-          {/* FOREX PARAMETERS CONTROL PANEL */}
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">ACCOUNT CURRENCY</label>
@@ -276,7 +253,6 @@ export default function BacktestLab() {
       <div className="w-full xl:w-[60%] flex flex-col h-full min-h-[700px]">
         <AnimatePresence mode="wait">
           
-          {/* PRÁZDNÝ STAV (Před spuštěním) */}
           {!showResults && !isSimulating && (
             <motion.div 
               key="empty"
@@ -288,7 +264,6 @@ export default function BacktestLab() {
             </motion.div>
           )}
 
-          {/* TERMINÁL ANIMACE (Během spouštění) */}
           {isSimulating && (
             <motion.div 
               key="loading"
@@ -316,14 +291,12 @@ export default function BacktestLab() {
             </motion.div>
           )}
 
-          {/* VÝSLEDKY A GRAF (Po spuštění) */}
           {showResults && (
             <motion.div 
               key="results"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="flex-1 flex flex-col gap-6"
             >
-              {/* === PROFESIONÁLNÍ QUANT METRIKY === */}
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-black/40 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-inner relative overflow-hidden group">
                   <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">TOTAL TRADES</div>
@@ -369,14 +342,19 @@ export default function BacktestLab() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
-                      <XAxis dataKey="trade" stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} />
+                      
+                      {/* === KLÍČOVÁ OPRAVA OSY X (dataKey="time") === */}
+                      <XAxis dataKey="time" stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} />
+                      
                       <YAxis domain={['auto', 'auto']} stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10, fontFamily: 'monospace' }} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}`} />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#09090b', borderColor: '#ffffff20', borderRadius: '12px', fontSize: '12px', color: '#fff', fontFamily: 'monospace' }}
                         itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
                         formatter={(value: any) => [`${value} ${currency}`, "Equity"]}
-                        labelFormatter={(label) => `Trade #${label}`}
+                        labelFormatter={(label) => `Čas: ${label}`}
                       />
+                      
+                      {/* === KLÍČOVÁ OPRAVA KŘIVKY (dataKey="equity") === */}
                       <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorEquity)" isAnimationActive={true} />
                     </AreaChart>
                   </ResponsiveContainer>
