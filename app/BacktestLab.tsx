@@ -397,8 +397,6 @@ export default function BacktestLab() {
                     STRATEGY EQUITY CURVE ({pair})
                   </h3>
                 </div>
-                
-                {console.log("DATA PRO RECHARTS:", chartData)}
 
                 {/* FIX VÝŠKY: Pevná minimální výška pomocí inline stylů a ochrana datového pole */}
                 <div style={{ width: "100%", height: "400px", minHeight: "400px" }}>
