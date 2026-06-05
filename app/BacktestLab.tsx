@@ -28,8 +28,7 @@ df = yf.Ticker(yf_symbol).history(period=period, interval=interval)
 if df.empty:
     final_results = {"error": f"Nepodařilo se stáhnout tržní data pro {symbol}."}
 else:
-    # 2. Vektorizovaný výpočet strategie (Zde vlož svůj kód)
-    # Pro Recharts je nutné vyčistit NaN a Infinity hodnoty!
+    # 2. Vektorizovaný výpočet strategie
     df = df.ffill().bfill()
     df['SMA_20'] = df['Close'].rolling(window=20).mean()
     df['SMA_50'] = df['Close'].rolling(window=50).mean()
@@ -43,8 +42,7 @@ else:
     current_equity = capital
     leverage = 30
     
-    # Formát klíčů "time" a "equity" musí být přesný pro zobrazení v Reactu
-    equity_curve = [{"time": df.index[0].strftime("%Y-%m-%d %H:%M"), "equity": round(current_equity, 2)}]
+    equity_curve = [{"time": df.index[0].strftime("%Y-%m-%dT%H:%M:%S"), "equity": round(current_equity, 2)}]
     
     trade_count = 0
     winning_trades = 0
@@ -59,7 +57,7 @@ else:
     for index, row in df.iterrows():
         pos = row['Position']
         price = row['Close']
-        time_str = index.strftime("%Y-%m-%d %H:%M")
+        time_str = index.strftime("%Y-%m-%dT%H:%M:%S")
         
         # Zavíráme stávající pozici
         if current_pos != 0 and pos != current_pos:
@@ -78,7 +76,6 @@ else:
                 
             equity_curve.append({"time": time_str, "equity": round(current_equity, 2)})
             
-            # Sledování maximálního propadu (Drawdown)
             if current_equity > peak: peak = current_equity
             dd = (peak - current_equity) / peak
             if dd > max_dd: max_dd = dd
@@ -130,6 +127,7 @@ export default function BacktestLab() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const [code, setCode] = useState(PYTHON_TEMPLATE);
   const [currency, setCurrency] = useState("USD");
@@ -144,36 +142,31 @@ export default function BacktestLab() {
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll terminálu na poslední log
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Fallback generátor (Zubatá křivka) - pro případ, že Vercel nedosáhne na localhost
-  const generateRealisticEquityCurve = (startCapital: number, numTrades: number) => {
-    let currCap = startCapital;
-    let peak = currCap;
-    let maxDd = 0;
-    const curve = [{ time: "Start", equity: currCap }];
-
-    for (let i = 1; i <= numTrades; i++) {
-      const isWin = Math.random() < 0.58; 
-      const move = isWin ? (Math.random() * 45 + 15) : -(Math.random() * 60 + 20);
-      const noise = (Math.random() * 20) - 10;
-      
-      currCap += move + noise;
-      if (currCap > peak) peak = currCap;
-      const drawdown = (currCap - peak) / peak;
-      if (drawdown < maxDd) maxDd = drawdown;
-      
-      curve.push({ time: `Obchod ${i}`, equity: Number(currCap.toFixed(2)) });
+  // Pomocná funkce pro formátování času na ose X a v Tooltipu
+  const formatDateString = (timeStr: string) => {
+    if (!timeStr) return '';
+    try {
+      const date = new Date(timeStr);
+      if (isNaN(date.getTime())) return timeStr;
+      const day = date.getDate();
+      const month = date.getMonth() + 1;
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${day}. ${month}. ${hours}:${minutes}`;
+    } catch (e) {
+      return timeStr;
     }
-
-    return { curve, finalCap: currCap, maxDrawdown: maxDd };
   };
 
   const handleRunSimulation = async () => {
     setShowResults(false);
     setIsSimulating(true);
+    setConnectionError(null);
     setLogs(["[INFO] Inicializuji Quantum Engine API..."]);
     
     try {
@@ -208,27 +201,13 @@ export default function BacktestLab() {
       }, 1000);
 
     } catch (err) {
-      setLogs(prev => [...prev, "[ERROR] Lokální backend nedostupný (Connection Refused / CORS)."]);
-      setLogs(prev => [...prev, "[INFO] Přepínám na interní simulátor kódů pro zachování UI..."]);
+      // ŽÁDNÝ FALLBACK - PŘÍMÉ ZACHYCENÍ CHYBY
+      setLogs(prev => [...prev, "[ERROR] Spojení se serverem selhalo (Mixed Content / CORS / Server je vypnutý)."]);
+      setConnectionError("Backend connection failed. For local testing, run the frontend via localhost:3000.");
       
-      await new Promise(resolve => setTimeout(resolve, 1800));
-      setLogs(prev => [...prev, `[INFO] Spouštím vektorizovanou simulaci pro pár ${pair} na ${timeframe}...`]);
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      const initCap = parseFloat(capital) || 10000;
-      const { curve, finalCap, maxDrawdown } = generateRealisticEquityCurve(initCap, 342);
-      
-      setMetrics({
-        totalTrades: 342,
-        winRate: 58.2,
-        profitFactor: 1.45,
-        sharpeRatio: 1.28,
-        maxDrawdown: parseFloat((maxDrawdown * 100).toFixed(2)),
-        netProfit: parseFloat((finalCap - initCap).toFixed(2))
-      });
-      
-      setChartData(curve);
-      setLogs(prev => [...prev, "[SUCCESS] Lokální simulace úspěšně dokončena."]);
+      // Vynulování dat
+      setMetrics({ totalTrades: 0, winRate: 0, profitFactor: 0, sharpeRatio: 0, maxDrawdown: 0, netProfit: 0 });
+      setChartData([]);
 
       setTimeout(() => {
         setIsSimulating(false);
@@ -362,6 +341,14 @@ export default function BacktestLab() {
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               className="flex-1 flex flex-col gap-6"
             >
+              {/* CHYBOVÁ HLÁŠKA V PŘÍPADĚ SELHÁNÍ API */}
+              {connectionError && (
+                <div className="w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3 shadow-inner">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <span className="text-sm font-semibold text-red-400">{connectionError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-black/40 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-inner relative overflow-hidden group">
                   <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">TOTAL TRADES</div>
@@ -389,7 +376,7 @@ export default function BacktestLab() {
                 </div>
               </div>
 
-              {/* EQUITY CURVE CHART S FIXNÍ VÝŠKOU */}
+              {/* EQUITY CURVE CHART */}
               <div className="flex-1 bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-2xl relative flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-300 flex items-center gap-2">
@@ -397,8 +384,7 @@ export default function BacktestLab() {
                     STRATEGY EQUITY CURVE ({pair})
                   </h3>
                 </div>
-
-                {/* FIX VÝŠKY: Pevná minimální výška pomocí inline stylů a ochrana datového pole */}
+                
                 <div style={{ width: "100%", height: "400px", minHeight: "400px" }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -409,14 +395,33 @@ export default function BacktestLab() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
-                      <XAxis dataKey="time" stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} />
-                      <YAxis domain={['auto', 'auto']} stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10, fontFamily: 'monospace' }} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}`} />
+                      
+                      {/* Osa X nyní využívá naši funkci formatDateString */}
+                      <XAxis 
+                        dataKey="time" 
+                        stroke="#ffffff30" 
+                        tick={{ fill: '#71717a', fontSize: 10 }} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={formatDateString}
+                      />
+                      
+                      <YAxis 
+                        domain={['auto', 'auto']} 
+                        stroke="#ffffff30" 
+                        tick={{ fill: '#71717a', fontSize: 10, fontFamily: 'monospace' }} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        tickFormatter={(val) => `${val}`} 
+                      />
+                      
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#09090b', borderColor: '#ffffff20', borderRadius: '12px', fontSize: '12px', color: '#fff', fontFamily: 'monospace' }}
                         itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
                         formatter={(value: any) => [`${value} ${currency}`, "Equity"]}
-                        labelFormatter={(label) => `Čas: ${label}`}
+                        labelFormatter={(label) => `Čas: ${formatDateString(label as string)}`}
                       />
+                      
                       <Area type="monotone" dataKey="equity" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorEquity)" isAnimationActive={true} />
                     </AreaChart>
                   </ResponsiveContainer>
