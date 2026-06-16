@@ -8,6 +8,5 @@ scikit-learn
 xgboost
 lightgbm
 ccxt
-pandas-ta
 colorama
 openai
