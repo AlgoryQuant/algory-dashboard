@@ -496,7 +496,6 @@ export default function Home() {
             <p className="text-zinc-400 text-sm md:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
           </motion.div>
 
-          {/* Vylepšený Grid s Novým Layoutem Karet */}
           <div className="w-full max-w-4xl flex flex-col gap-6 mt-16 relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <motion.div 
@@ -532,7 +531,6 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* ZMĚNA 1: Široká AI laboratoř dole pod nima */}
             <motion.div 
               initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }}
               whileHover={{ scale: 1.01, y: -3 }} whileTap={{ scale: 0.99 }}
@@ -601,7 +599,6 @@ export default function Home() {
           <div className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-500 rounded-full blur-[120px] opacity-[0.06] animate-pulse" style={{ animationDuration: '10s' }} />
         </div>
 
-        {/* ZMĚNA 3: Zcela skrytý levý Sidebar, pokud jsme v laboratoři */}
         {activeView !== 'laboratory' && (
           <Sidebar 
             activeView={activeView} setActiveView={setActiveView}
@@ -619,14 +616,14 @@ export default function Home() {
           />
         )}
 
-        {/* ZMĚNA 3 (pokračování): Změna kontejneru laboratoře na 100% šířku monitoru pro IDE zážitek */}
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
           <div className={`${activeView === 'laboratory' ? 'w-full max-w-full' : 'max-w-[1400px] mx-auto w-full'} relative z-10 transition-all duration-500`}>
             
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
 
             {activeView === 'laboratory' ? (
-              <BacktestLab />
+              // PROPOJENÍ LOGIKY: Předání funkce onBack do komponenty laboratoře
+              <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
             ) : loading && !data.majors ? (
               <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
                 <div className={`w-10 h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
