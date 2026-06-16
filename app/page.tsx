@@ -696,7 +696,11 @@ export default function Home() {
                     </DndContext>
                   )}
                 </div>
-                <NewsPanel />
+                  <NewsPanel 
+                     marketMode={marketMode} 
+                      rightPanelMode={rightPanelMode} 
+                       setRightPanelMode={setRightPanelMode} 
+                        />
               </div>
             )}
           </div>
