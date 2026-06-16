@@ -10,7 +10,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-# Kvantitativní stack
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -20,10 +19,9 @@ _LOG = logging.getLogger("QuantEngine")
 
 app = FastAPI(title="Algory Institutional Cloud Engine", version="5.1.0")
 
-# ── PRODUKČNÍ CORS ──
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Zde v produkci doplň svou doménu (např. Vercel)
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,9 +36,6 @@ class BacktestRequest(BaseModel):
     confidence: float 
     sandbox_mode: bool = False
 
-# ══════════════════════════════════════════════════════════════
-#  1. CLOUDOVÝ DATA FEED S GARANTOVANÝM FALLBACKEM
-# ══════════════════════════════════════════════════════════════
 def fetch_historical_data_cloud(symbol: str, timeframe: str) -> pd.DataFrame:
     _LOG.info(f"Stahuji data z Yahoo Finance pro {symbol} ({timeframe})...")
     ticker_map = {
@@ -70,9 +65,6 @@ def fetch_historical_data_cloud(symbol: str, timeframe: str) -> pd.DataFrame:
         closes = np.cumsum(np.random.normal(0, 0.5, 4000)) + (2300 if "XAU" in symbol else 1.10)
         return pd.DataFrame({"time": dates.astype('int64') // 10**9, "open": closes - 0.1, "high": closes + 0.3, "low": closes - 0.3, "close": closes, "volume": np.random.randint(100, 1000, 4000)})
 
-# ══════════════════════════════════════════════════════════════
-#  2. VIRTUÁLNÍ PORTEFEJ & STATE CONTROLLER
-# ══════════════════════════════════════════════════════════════
 class VirtualPosition:
     def __init__(self, ticket: int, order_type: int, symbol: str, volume: float, price_open: float, sl: float=0.0, tp: float=0.0, magic: int=0):
         self.ticket, self.type, self.symbol, self.volume, self.price_open = ticket, order_type, symbol, volume, price_open
@@ -91,9 +83,6 @@ class EngineState:
         self._current_idx: int = 0
         self._master_df: Optional[pd.DataFrame] = None
 
-# ══════════════════════════════════════════════════════════════
-#  3. MOCK INTERCEPTOR (Předstírá přítomnost MetaTraderu)
-# ══════════════════════════════════════════════════════════════
 class MockMT5:
     TRADE_ACTION_DEAL, TRADE_ACTION_SLTP = 1, 2
     ORDER_TYPE_BUY, ORDER_TYPE_SELL = 0, 1
@@ -174,9 +163,6 @@ class MockRequests:
     def get(self, url, *args, **kwargs): return MockResponse({"result": []}, "") if "telegram" in str(url) else MockResponse({}, "")
 sys.modules['requests'] = MockRequests()
 
-# ══════════════════════════════════════════════════════════════
-#  4. EVENT-DRIVEN SIMULAČNÍ JÁDRO
-# ══════════════════════════════════════════════════════════════
 class BacktestEngine:
     def __init__(self, data: pd.DataFrame, initial_capital: float):
         self.df = data
@@ -191,7 +177,6 @@ class BacktestEngine:
         clean_code = "\n".join([l for l in lines if not l.strip().startswith("from __future__")])
         final_code = "\n".join(future_imports) + "\n\n" + clean_code
 
-        # Sjednocený prostor pro exec (brání pádům z NameError)
         runtime_scope = globals().copy()
         runtime_scope.update({"pd": pd, "np": np, "mt5": MockMT5()})
         
@@ -280,9 +265,6 @@ class BacktestEngine:
             "netProfit": round(self.state.balance - self.equity_curve[0]["equity"], 2) if self.equity_curve else 0.0
         }
 
-# ══════════════════════════════════════════════════════════════
-#  5. API ENDPOINT (S FAILSAFE OCHRANOU A OPENAI)
-# ══════════════════════════════════════════════════════════════
 @app.post("/api/run-backtest")
 async def run_backtest(request: BacktestRequest):
     run_logs = [f"[INFO] Přijat produkční požadavek pro {request.pair}"]
@@ -305,7 +287,6 @@ async def run_backtest(request: BacktestRequest):
             
         metrics = engine.calculate_metrics()
         
-        # Odeslání výsledků do OpenAI (Klíč se bere z Renderu, kód je bezpečný!)
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             insight = f"Základní report: Win Rate {metrics['winRate']}%, Profit Factor {metrics['profitFactor']}x."
@@ -347,6 +328,5 @@ async def run_backtest(request: BacktestRequest):
         }
 
 if __name__ == "__main__":
-    # ── CLOUD READY PORT BINDING ──
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
