@@ -508,9 +508,14 @@ export default function Home() {
     ) : null
   };
 
-  if (!marketMode) {
+  // =========================================================
+  // NOVÁ ÚVODNÍ OBRAZOVKA (Včetně AI Backtest Lab karty)
+  // =========================================================
+  if (!marketMode && activeView !== 'laboratory') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-full relative overflow-hidden font-sans bg-[#050505]">
+        
+        {/* Pozadí a ambientní osvětlení */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
         <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
         <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
@@ -523,23 +528,87 @@ export default function Home() {
             <p className="text-zinc-400 text-sm md:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
           </motion.div>
 
-          <div className="flex flex-col md:flex-row gap-8 mt-20 w-full justify-center" style={{ perspective: "1000px" }}>
-            <motion.button initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }} whileHover={{ scale: 1.05, rotateX: 5, rotateY: -5 }} whileTap={{ scale: 0.98 }} onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative w-full md:w-80 p-10 bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[2rem] flex flex-col items-center gap-6 overflow-hidden transition-colors duration-500 hover:border-emerald-500/50 hover:bg-emerald-500/5 shadow-2xl hover:shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]"><svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg></div>
-              <div className="flex flex-col items-center gap-2 relative z-10"><span className="text-xl font-bold tracking-widest text-white group-hover:text-emerald-400 transition-colors">FOREX & METALS</span><span className="text-xs text-zinc-500 font-medium">Fiat Currencies & Commodities</span></div>
-            </motion.button>
-            <motion.button initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }} whileHover={{ scale: 1.05, rotateX: 5, rotateY: 5 }} whileTap={{ scale: 0.98 }} onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }} className="group relative w-full md:w-80 p-10 bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-[2rem] flex flex-col items-center gap-6 overflow-hidden transition-colors duration-500 hover:border-blue-500/50 hover:bg-blue-500/5 shadow-2xl hover:shadow-[0_0_50px_rgba(59,130,246,0.2)]">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]"><svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></div>
-              <div className="flex flex-col items-center gap-2 relative z-10"><span className="text-xl font-bold tracking-widest text-white group-hover:text-blue-400 transition-colors">CRYPTO ASSETS</span><span className="text-xs text-zinc-500 font-medium">Spot & Arbitrage Matrices</span></div>
-            </motion.button>
+          {/* NOVÝ GRID S KARTAMI */}
+          <div className="w-full max-w-4xl flex flex-col gap-6 mt-16 relative z-10">
+            
+            {/* HORNÍ ŘADA: Forex a Crypto (vedle sebe) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
+                whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
+                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-emerald-500/50 rounded-[2rem] p-8 transition-all duration-300 overflow-hidden shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
+                  <span className="text-xl">💱</span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-emerald-400 transition-colors">Global Forex</h2>
+                <p className="text-zinc-400 text-sm leading-relaxed font-sans text-left">
+                  Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
+                </p>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
+                whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
+                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-blue-500/50 rounded-[2rem] p-8 transition-all duration-300 overflow-hidden shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300">
+                  <span className="text-xl">₿</span>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-blue-400 transition-colors">Digital Assets</h2>
+                <p className="text-zinc-400 text-sm leading-relaxed font-sans text-left">
+                  Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
+                </p>
+              </motion.div>
+            </div>
+
+            {/* SPODNÍ ŘADA: Široká AI laboratoř */}
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }}
+              whileHover={{ scale: 1.01, y: -3 }} whileTap={{ scale: 0.99 }}
+              onClick={() => { setMarketMode('FOREX'); setActiveView('laboratory'); if(!isAuthenticated) setShowAuthGate(true); }}
+              className="cursor-pointer group relative bg-zinc-950/60 backdrop-blur-2xl border border-indigo-500/30 hover:border-indigo-400/80 rounded-[2rem] p-8 transition-all duration-500 overflow-hidden shadow-[0_0_50px_rgba(99,102,241,0.05)] hover:shadow-[0_0_60px_rgba(99,102,241,0.2)]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-indigo-500/5 opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="absolute -top-24 -right-24 w-56 h-56 bg-indigo-500/15 rounded-full blur-[90px] group-hover:bg-indigo-400/25 transition-colors duration-500 pointer-events-none"></div>
+              <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-purple-500/15 rounded-full blur-[90px] group-hover:bg-purple-400/25 transition-colors duration-500 pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                <div className="flex flex-col flex-1 text-left">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+                      <span className="text-white font-bold text-lg">🧪</span>
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 tracking-wide uppercase">
+                      AI Quant Laboratory
+                    </h2>
+                  </div>
+                  <p className="text-zinc-400 text-sm leading-relaxed max-w-2xl font-sans">
+                    Enter the cloud engine. Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict Prop Firm evaluation limits.
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-3 px-6 py-4 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-indigo-400 font-mono font-bold tracking-widest text-xs uppercase group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all duration-300 whitespace-nowrap">
+                  Initialize Engine
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </div>
+              </div>
+            </motion.div>
+
           </div>
         </div>
       </div>
     );
   }
 
+  // =========================================================
+  // PŘIHLAŠOVACÍ OBRAZOVKA A HLAVNÍ APLIKACE (Beze změny)
+  // =========================================================
   if (showAuthGate && !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -613,9 +682,9 @@ export default function Home() {
                       <SortableContext items={mainLayout} strategy={verticalListSortingStrategy}>
                         <div className="flex flex-col space-y-10 w-full">
                           {mainLayout.map((widgetId) => (
-                             widgetMap[widgetId] ? (
-                               <DraggableWidget key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DraggableWidget>
-                             ) : null
+                              widgetMap[widgetId] ? (
+                                <DraggableWidget key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DraggableWidget>
+                              ) : null
                           ))}
                         </div>
                       </SortableContext>
@@ -627,7 +696,7 @@ export default function Home() {
                     </DndContext>
                   )}
                 </div>
-                <NewsPanel marketMode={marketMode} rightPanelMode={rightPanelMode} setRightPanelMode={setRightPanelMode} />
+                <NewsPanel />
               </div>
             )}
           </div>

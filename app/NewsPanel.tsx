@@ -7,16 +7,16 @@ interface NewsItem { title: string; publisher: string; link: string; time: strin
 interface WhaleAlert { id: string; text: string; type: 'bullish' | 'bearish' | 'neutral'; time: string; amountUsd: string; }
 
 const FOREX_NEWS_MOCK: NewsItem[] = [
-  { title: "Fed Chair Powell hints at maintaining higher rates for longer.", publisher: "Bloomberg", link: "#", time: "14:30", sentiment: "negative" },
-  { title: "EUR/USD rallies as ECB downplays immediate rate cut risks.", publisher: "FXStreet", link: "#", time: "11:15", sentiment: "positive" },
-  { title: "Gold prices stabilize amid fluctuating US bond yields.", publisher: "ForexLive", link: "#", time: "09:45", sentiment: "neutral" },
-  { title: "BoE holds interest rates steady, sterling remains firm.", publisher: "Bloomberg", link: "#", time: "08:00", sentiment: "positive" }
+  { title: "Fed Chair Powell hints at maintaining higher rates for longer.", publisher: "Bloomberg", link: "https://www.bloomberg.com/markets", time: "14:30", sentiment: "negative" },
+  { title: "EUR/USD rallies as ECB downplays immediate rate cut risks.", publisher: "FXStreet", link: "https://www.fxstreet.com/", time: "11:15", sentiment: "positive" },
+  { title: "Gold prices stabilize amid fluctuating US bond yields.", publisher: "ForexLive", link: "https://www.forexlive.com/", time: "09:45", sentiment: "neutral" },
+  { title: "BoE holds interest rates steady, sterling remains firm.", publisher: "Bloomberg", link: "https://www.bloomberg.com/markets/currencies", time: "08:00", sentiment: "positive" }
 ];
 
 const CRYPTO_NEWS_MOCK: NewsItem[] = [
-  { title: "Bitcoin breaks key resistance as institutional inflows surge.", publisher: "CoinDesk", link: "#", time: "15:20", sentiment: "positive" },
-  { title: "Ethereum gas fees hit new lows following latest network upgrade.", publisher: "Decrypt", link: "#", time: "13:05", sentiment: "positive" },
-  { title: "SEC delays decision on spot Altcoin ETFs citing market volatility.", publisher: "CoinTelegraph", link: "#", time: "10:30", sentiment: "negative" }
+  { title: "Bitcoin breaks key resistance as institutional inflows surge.", publisher: "CoinDesk", link: "https://www.coindesk.com/", time: "15:20", sentiment: "positive" },
+  { title: "Ethereum gas fees hit new lows following latest network upgrade.", publisher: "Decrypt", link: "https://decrypt.co/", time: "13:05", sentiment: "positive" },
+  { title: "SEC delays decision on spot Altcoin ETFs citing market volatility.", publisher: "CoinTelegraph", link: "https://cointelegraph.com/", time: "10:30", sentiment: "negative" }
 ];
 
 const WHALE_ALERTS_MOCK: WhaleAlert[] = [
@@ -136,10 +136,15 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
                   layout
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  key={idx} href={item.link} target="_blank" rel="noreferrer" 
-                  className="block pb-5 mb-5 border-b border-white/5 last:border-0 last:mb-0 last:pb-0 group"
+                  key={idx} 
+                  href={item.link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="group block p-4 mb-3 bg-black/30 border border-white/5 hover:border-white/10 rounded-2xl cursor-pointer hover:bg-white/[0.03] transition-all duration-300 relative overflow-hidden"
                 >
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="absolute left-0 top-0 h-full w-[2px] bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
+                  <div className="flex items-center gap-3 mb-3">
                     <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${item.sentiment === 'positive' ? 'bg-emerald-500 text-emerald-500' : item.sentiment === 'negative' ? 'bg-red-500 text-red-500' : 'bg-zinc-500 text-zinc-500'}`} title={`Sentiment: ${item.sentiment}`} />
                     <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
                       {item.time}
@@ -152,7 +157,7 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
                       {item.publisher}
                     </span>
                   </div>
-                  <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-white transition-colors mt-1">
+                  <h4 className="text-sm font-medium text-white/70 leading-relaxed group-hover:text-emerald-400 transition-colors mt-1">
                     {item.title}
                   </h4>
                 </motion.a>
