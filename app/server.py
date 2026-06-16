@@ -13,11 +13,12 @@ import uvicorn
 import pandas as pd
 import numpy as np
 import yfinance as yf
+from unittest.mock import MagicMock
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 _LOG = logging.getLogger("QuantEngine")
 
-app = FastAPI(title="Algory Institutional Cloud Engine", version="5.1.0")
+app = FastAPI(title="Algory Institutional Cloud Engine", version="5.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +36,54 @@ class BacktestRequest(BaseModel):
     currency: str
     confidence: float 
     sandbox_mode: bool = False
+
+# ─── IMPORT SANITIZER HOOK (MONKEY PATCHING MECHANISM) ────────────────
+class SafeMockImporter:
+    """
+    Tento vyhledávač zachytí jakýkoliv pokus o import modulu, který na serveru
+    neexistuje, a podvrhne mu MagicMock, aby uživatelský skript nespadl.
+    """
+    def __init__(self):
+        self.mocked_modules = {}
+
+    def find_spec(self, fullname, path, target=None):
+        # Pokud modul reálně existuje v systému, necháme Python, ať ho načte normálně
+        if fullname in sys.modules and sys.modules[fullname] is not None:
+            return None
+            
+        # Zkusíme zjistit, zda ho standardní mechanismus umí najít
+        # Odstraněním sebe sama ze sys.meta_path zabráníme nekonečné smyčce
+        current_meta = sys.meta_path.copy()
+        if self in sys.meta_path:
+            sys.meta_path.remove(self)
+        
+        try:
+            for finder in sys.meta_path:
+                try:
+                    spec = finder.find_spec(fullname, path, target)
+                    if spec is not None:
+                        sys.meta_path = current_meta
+                        return None # Modul existuje, nebudeme ho mockovat
+                except Exception:
+                    continue
+        finally:
+            sys.meta_path = current_meta
+
+        # Pokud jsme došli až sem, modul v systému NEEXISTUJE. Vygenerujeme pro něj bezpečný Mock.
+        _LOG.info(f"[SANITIZER] Modul '{fullname}' nebyl nalezen. Aktivuji bezpečný MagicMock.")
+        
+        if fullname not in self.mocked_modules:
+            mock_obj = MagicMock()
+            # Umožníme mocku chovat se jako modul i při vnořených atributech (např. colorama.Fore.GREEN)
+            mock_obj.__file__ = "<mocked_module>"
+            mock_obj.__path__ = []
+            self.mocked_modules[fullname] = mock_obj
+            
+        sys.modules[fullname] = self.mocked_modules[fullname]
+        
+        # Vrátíme prázdný modulový spec, aby Python dokončil import bez vyvolání chyb
+        from importlib.machinery import ModuleSpec
+        return ModuleSpec(fullname, None)
 
 def fetch_historical_data_cloud(symbol: str, timeframe: str) -> pd.DataFrame:
     _LOG.info(f"Stahuji data z Yahoo Finance pro {symbol} ({timeframe})...")
@@ -180,44 +229,55 @@ class BacktestEngine:
         runtime_scope = globals().copy()
         runtime_scope.update({"pd": pd, "np": np, "mt5": MockMT5()})
         
+        # ─── AKTIVACE SAFE MOCK IMPORTERU PŘED EXEC ───
+        sanitizer = SafeMockImporter()
+        sys.meta_path.insert(0, sanitizer)
+        
         try: 
             compiled = compile(final_code, "<user_algo>", "exec")
             exec(compiled, runtime_scope)
-        except Exception: 
-            raise RuntimeError(f"Chyba syntaxe nebo importů v kódu:\n{traceback.format_exc()}")
-
-        algo_instance = runtime_scope.get("TradingEngine")
-        if algo_instance and isinstance(algo_instance, type):
-            try: algo_instance = algo_instance()
-            except Exception: raise RuntimeError(f"Třída TradingEngine havarovala při inicializaci:\n{traceback.format_exc()}")
-                
-        execute_event = getattr(algo_instance, "_on_new_bar", runtime_scope.get("_on_new_bar"))
-        if not execute_event: raise AttributeError("Nenašel jsem TradingEngine ani funkci _on_new_bar.")
-
-        ml_engine = getattr(algo_instance, "ml", None) if algo_instance else None
-        if ml_engine and hasattr(ml_engine, "train"):
-            self.state._current_idx = min(1500, len(self.df) - 50) 
-            try: ml_engine.train()
-            except Exception: raise RuntimeError(f"Chyba při tréninku ML modelu:\n{traceback.format_exc()}")
-
-        start_index = 1500 if len(self.df) > 1500 else int(len(self.df)*0.2)
-        
-        for idx in range(start_index, len(self.df)):
-            row = self.df.iloc[idx]
-            self.state._current_idx = idx
-            self.state.current_bar = row.to_dict()
             
-            self._process_sl_tp(row)
-            self._update_floating_equity(row["close"])
+            algo_instance = runtime_scope.get("TradingEngine")
+            if algo_instance and isinstance(algo_instance, type):
+                try: algo_instance = algo_instance()
+                except Exception: raise RuntimeError(f"Třída TradingEngine havarovala při inicializaci:\n{traceback.format_exc()}")
+                    
+            execute_event = getattr(algo_instance, "_on_new_bar", runtime_scope.get("_on_new_bar"))
+            if not execute_event: raise AttributeError("Nenašel jsem TradingEngine ani funkci _on_new_bar.")
+
+            ml_engine = getattr(algo_instance, "ml", None) if algo_instance else None
+            if ml_engine and hasattr(ml_engine, "train"):
+                self.state._current_idx = min(1500, len(self.df) - 50) 
+                try: ml_engine.train()
+                except Exception: raise RuntimeError(f"Chyba při tréninku ML modelu:\n{traceback.format_exc()}")
+
+            start_index = 1500 if len(self.df) > 1500 else int(len(self.df)*0.2)
             
-            try:
-                execute_event(datetime.fromtimestamp(int(row["time"])))
-                if algo_instance and hasattr(algo_instance, "_sync_and_manage"):
-                    getattr(algo_instance, "_sync_and_manage")()
-            except Exception: 
-                raise RuntimeError(f"Chyba v běhu robota (Svíčka {idx}):\n{traceback.format_exc()}")
+            for idx in range(start_index, len(self.df)):
+                row = self.df.iloc[idx]
+                self.state._current_idx = idx
+                self.state.current_bar = row.to_dict()
                 
-            self.equity_curve.append({"time": datetime.fromtimestamp(int(row["time"])).strftime("%Y-%m-%dT%H:%M:%S"), "equity": round(self.state.equity, 2)})
+                self._process_sl_tp(row)
+                self._update_floating_equity(row["close"])
+                
+                try:
+                    execute_event(datetime.fromtimestamp(int(row["time"])))
+                    if algo_instance and hasattr(algo_instance, "_sync_and_manage"):
+                        getattr(algo_instance, "_sync_and_manage")()
+                except Exception: 
+                    raise RuntimeError(f"Chyba v běhu robota (Svíčka {idx}):\n{traceback.format_exc()}")
+                    
+                self.equity_curve.append({"time": datetime.fromtimestamp(int(row["time"])).strftime("%Y-%m-%dT%H:%M:%S"), "equity": round(self.state.equity, 2)})
+
+        finally:
+            # ─── BEZPEČNÝ ÚKLID PIPELINE PO DOKONČENÍ/CHYBĚ ───
+            if sanitizer in sys.meta_path:
+                sys.meta_path.remove(sanitizer)
+            # Vyčištění podvržených modulů ze sys.modules, aby neovlivnily další uživatele
+            for mocked_mod in list(sanitizer.mocked_modules.keys()):
+                if mocked_mod in sys.modules:
+                    del sys.modules[mocked_mod]
 
     def _process_sl_tp(self, bar: pd.Series):
         for pos in list(self.state.open_positions):
@@ -282,8 +342,8 @@ async def run_backtest(request: BacktestRequest):
         
         try:
             engine.run_simulation(full_code)
-        except Exception:
-            raise RuntimeError(f"Chyba při exekuci obchodní strategie:\n{traceback.format_exc()}")
+        except Exception as sim_err:
+            raise RuntimeError(str(sim_err))
             
         metrics = engine.calculate_metrics()
         
