@@ -5,47 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Editor from '@monaco-editor/react';
 
-// ─── ŠABLONY STRATEGIÍ ──────────────────────────────────────────────
-const TEMPLATES = {
-  "AI_XGBOOST": `# Algory AI XGBoost Binary Core
-from __future__ import annotations
-import MetaTrader5 as mt5
-import numpy as np
-import pandas as pd
-from datetime import datetime
-from xgboost import XGBClassifier
-
-class TradingEngine:
-    def __init__(self):
-        self.active = True
-
-    def _on_new_bar(self, dt: datetime) -> None:
-        # Complex ML prediction logic here...
-        pass
-        
-    def _sync_and_manage(self) -> None:
-        pass
-`,
-  "MEAN_REVERSION": `# Statistical Mean Reversion (Bollinger Bands)
-from __future__ import annotations
-import MetaTrader5 as mt5
-import pandas as pd
-from datetime import datetime
-
-class TradingEngine:
-    def __init__(self):
-        self.period = 20
-        self.std_dev = 2.0
-
-    def _on_new_bar(self, dt: datetime) -> None:
-        # Calculate deviation from the mean
-        # Execute contrarian positions
-        pass
-        
-    def _sync_and_manage(self) -> None:
-        pass
-`,
-  "SMA_CROSSOVER": `# Institutional Trend Follower (SMA 50/200)
+// ─── KNIHOVNA ŠABLON ──────────────────────────────────────────────
+const TEMPLATES = [
+  {
+    id: "SMA_CROSSOVER",
+    name: "🟢 Beginner: SMA Crossover",
+    description: "Tato strategie nakupuje, když rychlý průměr (50) překříží pomalý (200) směrem nahoru. Ideální pro zachycení dlouhých trendů.",
+    code: `# Institutional Trend Follower (SMA 50/200)
 from __future__ import annotations
 import MetaTrader5 as mt5
 import pandas as pd
@@ -64,15 +30,59 @@ class TradingEngine:
     def _sync_and_manage(self) -> None:
         pass
 `
-};
+  },
+  {
+    id: "MEAN_REVERSION",
+    name: "🟡 Intermediate: RSI Mean Reversion",
+    description: "Strategie sází na návrat k průměru. Hledá extrémy a nakupuje ve chvíli, kdy je trh silně přeprodaný.",
+    code: `# Statistical Mean Reversion (RSI & Bollinger Bands)
+from __future__ import annotations
+import MetaTrader5 as mt5
+import pandas as pd
+from datetime import datetime
+
+class TradingEngine:
+    def __init__(self):
+        self.period = 20
+        self.std_dev = 2.0
+
+    def _on_new_bar(self, dt: datetime) -> None:
+        # Calculate deviation from the mean
+        # Execute contrarian positions
+        pass
+        
+    def _sync_and_manage(self) -> None:
+        pass
+`
+  },
+  {
+    id: "AI_XGBOOST",
+    name: "🔴 Pro: AI XGBoost Core",
+    description: "Pokročilý kvantitativní model využívající strojové učení (XGBoost) pro komplexní predikci směru trhu.",
+    code: `# Algory AI XGBoost Binary Core
+from __future__ import annotations
+import MetaTrader5 as mt5
+import numpy as np
+import pandas as pd
+from datetime import datetime
+from xgboost import XGBClassifier
+
+class TradingEngine:
+    def __init__(self):
+        self.active = True
+
+    def _on_new_bar(self, dt: datetime) -> None:
+        # Complex ML prediction logic here...
+        pass
+        
+    def _sync_and_manage(self) -> None:
+        pass
+`
+  }
+];
 
 const CURRENCIES = ["USD", "EUR", "GBP", "CZK"];
 const FOREX_PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD", "USDCHF", "GBPJPY", "EURJPY", "XAUUSD"];
-const AGGRESSIVENESS_LEVELS = [
-  { label: "High Frequency (Aggressive)", value: "0.38" },
-  { label: "Balanced (Standard)", value: "0.45" },
-  { label: "High Accuracy (Conservative)", value: "0.55" }
-];
 
 export default function BacktestLab() {
   const [isSimulating, setIsSimulating] = useState(false);
@@ -80,16 +90,24 @@ export default function BacktestLab() {
   const [logs, setLogs] = useState<string[]>([]);
   const [aiInsight, setAiInsight] = useState<string>("");
   
-  const [code, setCode] = useState(TEMPLATES["AI_XGBOOST"]);
+  // State Šablon
+  const [activeTemplateId, setActiveTemplateId] = useState(TEMPLATES[0].id);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const activeTemplate = TEMPLATES.find(t => t.id === activeTemplateId) || TEMPLATES[0];
+
+  const [code, setCode] = useState(activeTemplate.code);
   const [currency, setCurrency] = useState("USD");
   const [capital, setCapital] = useState("50000");
   const [pair, setPair] = useState("XAUUSD");
   const [confidence, setConfidence] = useState("0.45");
   
-  // Nové funkce State
+  // Prop Firm Evaluator State
   const [propFirmMode, setPropFirmMode] = useState(false);
-  const [challengeFailed, setChallengeFailed] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [pfProfitTarget, setPfProfitTarget] = useState(8);
+  const [pfDailyLoss, setPfDailyLoss] = useState(5);
+  const [pfMaxDrawdown, setPfMaxDrawdown] = useState(10);
+  const [challengeStatus, setChallengeStatus] = useState<"NONE" | "PASSED" | "FAILED">("NONE");
+
   const [toastMessage, setToastMessage] = useState("");
   const [elapsedTime, setElapsedTime] = useState(0);
 
@@ -119,15 +137,20 @@ export default function BacktestLab() {
   };
 
   const handleCopyReport = () => {
-    const report = `🚀 Algory AI Backtest Report\n📈 Pair: ${pair}\n💰 Net Profit: ${(metrics.netProfit > 0 ? '+' : '')}${metrics.netProfit.toFixed(2)} ${currency}\n🎯 Win Rate: ${metrics.winRate.toFixed(1)}%\n📊 Profit Factor: ${metrics.profitFactor.toFixed(2)}x\n📉 Max DD: ${Math.abs(metrics.maxDrawdown).toFixed(2)}%\n\nTest your own institutional algo at algory.com!`;
+    const statusText = challengeStatus === "PASSED" ? "🏆 PROP FIRM PASSED" : challengeStatus === "FAILED" ? "💀 PROP FIRM FAILED" : "📊 BACKTEST REPORT";
+    const report = `🚀 Algory AI: ${statusText}\n📈 Pair: ${pair}\n💰 Net Profit: ${(metrics.netProfit > 0 ? '+' : '')}${metrics.netProfit.toFixed(2)} ${currency}\n🎯 Win Rate: ${metrics.winRate.toFixed(1)}%\n📊 Profit Factor: ${metrics.profitFactor.toFixed(2)}x\n📉 Max DD: ${Math.abs(metrics.maxDrawdown).toFixed(2)}%\n\nTest your institutional algo at algory.com!`;
     navigator.clipboard.writeText(report);
     showToast("Report copied to clipboard! 📋");
   };
 
-  const loadTemplate = (templateKey: keyof typeof TEMPLATES) => {
-    setCode(TEMPLATES[templateKey]);
-    setShowTemplates(false);
-    showToast("Template loaded successfully!");
+  const loadTemplate = (id: string) => {
+    const tpl = TEMPLATES.find(t => t.id === id);
+    if (tpl) {
+      setActiveTemplateId(id);
+      setCode(tpl.code);
+      setShowTemplates(false);
+      showToast(`Loaded: ${tpl.name}`);
+    }
   };
 
   const formatTimer = (seconds: number) => {
@@ -148,12 +171,8 @@ export default function BacktestLab() {
   const renderFormattedText = (text: string) => {
     if (!text) return null;
     return text.split(/(\*\*.*?\*\*|```python[\s\S]*?```)/g).map((part, i) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="text-emerald-400 font-bold tracking-wide">{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith('```python') && part.endsWith('```')) {
-        return <pre key={i} className="bg-red-950/30 text-red-400 border border-red-500/20 p-4 rounded-xl mt-2 mb-2 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap">{part.slice(9, -3)}</pre>;
-      }
+      if (part.startsWith('**') && part.endsWith('**')) return <strong key={i} className="text-emerald-400 font-bold tracking-wide">{part.slice(2, -2)}</strong>;
+      if (part.startsWith('```python') && part.endsWith('```')) return <pre key={i} className="bg-red-950/30 text-red-400 border border-red-500/20 p-4 rounded-xl mt-2 mb-2 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap">{part.slice(9, -3)}</pre>;
       return part;
     });
   };
@@ -161,7 +180,7 @@ export default function BacktestLab() {
   const handleRunSimulation = async () => {
     setShowResults(false);
     setIsSimulating(true);
-    setChallengeFailed(false);
+    setChallengeStatus("NONE");
     setAiInsight("");
     setLogs(["[INFO] Odesílám požadavek do Cloud Enginu..."]);
     
@@ -171,9 +190,7 @@ export default function BacktestLab() {
       const response = await fetch(`${API_URL}/api/run-backtest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-            code, pair, timeframe: "M15", capital: parseFloat(capital), currency, confidence: parseFloat(confidence)
-        })
+        body: JSON.stringify({ code, pair, timeframe: "M15", capital: parseFloat(capital), currency, confidence: parseFloat(confidence) })
       });
 
       if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
@@ -189,30 +206,42 @@ export default function BacktestLab() {
       // ── PROP FIRM EVALUATOR LOGIC ──
       if (propFirmMode) {
         const dd = Math.abs(newMetrics.maxDrawdown);
-        const maxLoss = parseFloat(capital) * 0.05; // 5% Daily Loss simulace
-        if (dd >= 10.0 || newMetrics.netProfit <= -maxLoss) {
-          setChallengeFailed(true);
+        const startCapital = parseFloat(capital);
+        
+        const targetValue = startCapital * (pfProfitTarget / 100);
+        const maxDailyLossValue = startCapital * (pfDailyLoss / 100);
+
+        // Striktní kontrola: Překročil Max DD % nebo spadl účet pod denní limit (zjednodušeno pro PnL)?
+        const failedDD = dd > pfMaxDrawdown;
+        const failedDaily = newMetrics.netProfit <= -maxDailyLossValue;
+
+        if (failedDD || failedDaily) {
+          setChallengeStatus("FAILED");
+        } else if (newMetrics.netProfit >= targetValue) {
+          setChallengeStatus("PASSED");
+        } else {
+          setChallengeStatus("NONE"); // Ani nesplnil target, ani nekrachnul
         }
       }
       
     } catch (err) {
       setLogs(prev => [...prev, `[NETWORK ERROR] Selhalo spojení se serverem: ${err}`]);
-      setAiInsight(`🚨 **Chyba spojení s backendem!** 🚨\n\nNelze se spojit se serverem. Zkontroluj proměnnou NEXT_PUBLIC_API_URL nebo zda server běží.`);
+      setAiInsight(`🚨 **Chyba spojení s backendem!** 🚨\n\nNelze se spojit se serverem.`);
     } finally {
       setIsSimulating(false);
       setShowResults(true);
     }
   };
 
-  const chartColor = challengeFailed ? "#ef4444" : "#10b981"; // Červená vs Zelená
+  // Dynamická barva grafu podle stavu výzvy
+  const chartColor = challengeStatus === "FAILED" ? "#ef4444" : challengeStatus === "PASSED" ? "#eab308" : "#10b981";
 
   return (
     <div className="w-full flex flex-col xl:flex-row gap-10 mt-6 pb-20 relative">
       
-      {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="fixed top-10 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-black px-6 py-3 rounded-full font-bold shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="fixed top-10 left-1/2 -translate-x-1/2 z-50 bg-white text-black px-6 py-3 rounded-full font-bold shadow-[0_0_30px_rgba(255,255,255,0.2)]">
             {toastMessage}
           </motion.div>
         )}
@@ -220,29 +249,45 @@ export default function BacktestLab() {
 
       <div className="w-full xl:w-[40%] flex flex-col gap-6">
         <div className="bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-2xl relative flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-              <h2 className="text-sm font-bold uppercase tracking-widest text-white">PYTHON STRATEGY</h2>
-            </div>
-            {/* Tlačítko Šablon */}
+          
+          {/* NOVÁ SEKCE: KNIHOVNA ŠABLON */}
+          <div className="flex flex-col mb-6 border-b border-white/5 pb-4">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">STRATEGY TEMPLATE LIBRARY</h2>
             <div className="relative">
-              <button onClick={() => setShowTemplates(!showTemplates)} className="text-[10px] uppercase tracking-widest font-bold bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-lg text-emerald-400 transition-colors">
-                📂 Load Template
+              <button 
+                onClick={() => setShowTemplates(!showTemplates)} 
+                className="w-full bg-black/50 hover:bg-black/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-medium flex items-center justify-between transition-colors"
+              >
+                <span>{activeTemplate.name}</span>
+                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${showTemplates ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
+              
               <AnimatePresence>
                 {showTemplates && (
-                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute right-0 top-10 w-48 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl z-30 overflow-hidden flex flex-col">
-                    <button onClick={() => loadTemplate("AI_XGBOOST")} className="text-xs text-left px-4 py-3 hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 transition-colors border-b border-white/5">🤖 AI XGBoost Core</button>
-                    <button onClick={() => loadTemplate("MEAN_REVERSION")} className="text-xs text-left px-4 py-3 hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 transition-colors border-b border-white/5">📉 Mean Reversion</button>
-                    <button onClick={() => loadTemplate("SMA_CROSSOVER")} className="text-xs text-left px-4 py-3 hover:bg-emerald-500/20 text-zinc-300 hover:text-emerald-400 transition-colors">📈 SMA Crossover</button>
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} 
+                    className="absolute top-full left-0 w-full mt-2 bg-[#09090b] border border-white/10 rounded-xl shadow-2xl z-40 overflow-hidden flex flex-col"
+                  >
+                    {TEMPLATES.map((tpl) => (
+                      <button 
+                        key={tpl.id} 
+                        onClick={() => loadTemplate(tpl.id)} 
+                        className="text-left px-4 py-4 hover:bg-white/5 border-b border-white/5 transition-colors flex flex-col gap-1"
+                      >
+                        <span className="text-sm font-bold text-zinc-200">{tpl.name}</span>
+                      </button>
+                    ))}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+            {/* Popisek strategie */}
+            <p className="text-zinc-400 text-[11px] mt-3 leading-relaxed border-l-2 border-emerald-500/50 pl-3 italic">
+              {activeTemplate.description}
+            </p>
           </div>
           
-          <div className="w-full h-[450px] min-h-[450px] border border-white/10 rounded-xl overflow-hidden relative shadow-inner">
+          <div className="w-full h-[400px] min-h-[400px] border border-white/10 rounded-xl overflow-hidden relative shadow-inner">
             <div className="absolute top-0 left-0 w-full h-8 bg-[#1e1e1e] border-b border-white/5 flex items-center px-4 gap-2 z-10">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500/80"></span>
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></span>
@@ -276,15 +321,39 @@ export default function BacktestLab() {
               </select>
             </div>
             
-            {/* PROP FIRM SWITCH */}
-            <div className="flex flex-row items-center justify-between col-span-2 bg-red-950/20 border border-red-500/20 rounded-xl px-4 py-3 mt-2">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-red-400 tracking-widest uppercase">PROP FIRM STRICT MODE</span>
-                <span className="text-[9px] text-zinc-500">Evaluates Max 10% DD & 5% Daily Loss</span>
+            {/* VYLEPŠENÝ PROP FIRM SWITCH S EXPANDEM */}
+            <div className={`col-span-2 border rounded-xl px-4 py-3 mt-2 transition-colors ${propFirmMode ? 'bg-red-950/10 border-red-500/30' : 'bg-zinc-900/50 border-white/5'}`}>
+              <div className="flex flex-row items-center justify-between">
+                <div className="flex flex-col">
+                  <span className={`text-[10px] font-bold tracking-widest uppercase ${propFirmMode ? 'text-white' : 'text-zinc-500'}`}>PROP FIRM STRICT MODE</span>
+                  <span className="text-[9px] text-zinc-500">Enable custom drawdown & profit limits</span>
+                </div>
+                <div onClick={() => setPropFirmMode(!propFirmMode)} className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors flex items-center ${propFirmMode ? 'bg-red-500' : 'bg-zinc-800'}`}>
+                  <motion.div layout className="w-4 h-4 bg-white rounded-full shadow-md" animate={{ x: propFirmMode ? 24 : 0 }} />
+                </div>
               </div>
-              <div onClick={() => setPropFirmMode(!propFirmMode)} className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors flex items-center ${propFirmMode ? 'bg-red-500' : 'bg-zinc-800'}`}>
-                <motion.div layout className="w-4 h-4 bg-white rounded-full shadow-md" animate={{ x: propFirmMode ? 24 : 0 }} />
-              </div>
+              
+              {/* Dynamické inputy pro Prop Firm */}
+              <AnimatePresence>
+                {propFirmMode && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="grid grid-cols-3 gap-3 pt-4 mt-3 border-t border-white/5">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8px] text-zinc-500 uppercase tracking-widest">Profit Target (%)</label>
+                        <input type="number" value={pfProfitTarget} onChange={e => setPfProfitTarget(Number(e.target.value))} className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8px] text-zinc-500 uppercase tracking-widest">Daily Loss (%)</label>
+                        <input type="number" value={pfDailyLoss} onChange={e => setPfDailyLoss(Number(e.target.value))} className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[8px] text-zinc-500 uppercase tracking-widest">Max Drawdown (%)</label>
+                        <input type="number" value={pfMaxDrawdown} onChange={e => setPfMaxDrawdown(Number(e.target.value))} className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -333,12 +402,11 @@ export default function BacktestLab() {
                   <div className="bg-black/40 border border-white/5 rounded-2xl p-4"><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">TOTAL TRADES</div><div className="text-xl font-black text-white">{metrics?.totalTrades ?? 0}</div></div>
                   <div className="bg-black/40 border border-white/5 rounded-2xl p-4"><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">WIN RATE</div><div className="text-xl font-black text-emerald-400">{(metrics?.winRate ?? 0).toFixed(1)}%</div></div>
                   <div className="bg-black/40 border border-white/5 rounded-2xl p-4"><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">PROFIT FACTOR</div><div className="text-xl font-black text-blue-400">{(metrics?.profitFactor ?? 0).toFixed(2)}x</div></div>
-                  <div className={`border rounded-2xl p-4 ${challengeFailed ? 'bg-red-950/20 border-red-500/30' : 'bg-red-950/10 border-red-500/10'}`}><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">MAX DRAWDOWN</div><div className="text-xl font-black text-red-400">{metrics?.maxDrawdown ?? 0}%</div></div>
-                  <div className="bg-emerald-950/10 border border-emerald-500/20 rounded-2xl p-4"><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">NET PROFIT</div><div className="text-xl font-black text-emerald-400">{(metrics?.netProfit ?? 0) > 0 ? '+' : ''}{(metrics?.netProfit ?? 0).toFixed(2)} {currency}</div></div>
+                  <div className={`border rounded-2xl p-4 ${challengeStatus === "FAILED" ? 'bg-red-950/20 border-red-500/30' : 'bg-red-950/10 border-red-500/10'}`}><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">MAX DRAWDOWN</div><div className="text-xl font-black text-red-400">{metrics?.maxDrawdown ?? 0}%</div></div>
+                  <div className={`border rounded-2xl p-4 ${challengeStatus === "PASSED" ? 'bg-yellow-950/20 border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-emerald-950/10 border-emerald-500/20'}`}><div className="text-[8px] font-bold text-zinc-500 uppercase mb-1">NET PROFIT</div><div className={`text-xl font-black ${challengeStatus === "PASSED" ? 'text-yellow-400' : 'text-emerald-400'}`}>{(metrics?.netProfit ?? 0) > 0 ? '+' : ''}{(metrics?.netProfit ?? 0).toFixed(2)} {currency}</div></div>
                 </div>
               </div>
               
-              {/* TLAČÍTKO SDÍLENÍ */}
               <div className="flex justify-end">
                 <button onClick={handleCopyReport} className="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 px-5 py-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)]">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
@@ -346,14 +414,21 @@ export default function BacktestLab() {
                 </button>
               </div>
 
-              <div className={`w-full bg-zinc-950/50 border rounded-[2rem] p-6 relative overflow-hidden transition-colors ${challengeFailed ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.1)]' : 'border-white/10'}`}>
+              <div className={`w-full bg-zinc-950/50 border rounded-[2rem] p-6 relative overflow-hidden transition-colors ${challengeStatus === "FAILED" ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.15)]' : challengeStatus === "PASSED" ? 'border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.15)]' : 'border-white/10'}`}>
                 
-                {/* PROP FIRM FAILED OVERLAY */}
+                {/* PROP FIRM OVERLAYS */}
                 <AnimatePresence>
-                  {challengeFailed && (
+                  {challengeStatus === "FAILED" && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-20 bg-red-950/40 backdrop-blur-[2px] flex items-center justify-center">
                       <motion.div initial={{ scale: 3, opacity: 0, rotate: -15 }} animate={{ scale: 1, opacity: 1, rotate: -15 }} transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.2 }} className="border-4 border-red-500 text-red-500 text-4xl lg:text-6xl font-black uppercase tracking-widest p-6 lg:p-8 rounded-3xl shadow-[0_0_100px_rgba(239,68,68,0.8)] bg-black/80 whitespace-nowrap">
                         ❌ CHALLENGE FAILED
+                      </motion.div>
+                    </motion.div>
+                  )}
+                  {challengeStatus === "PASSED" && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-20 bg-yellow-950/30 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+                      <motion.div initial={{ scale: 0, opacity: 0, y: 50 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: "spring", damping: 10, stiffness: 100, delay: 0.2 }} className="border-4 border-yellow-400 text-yellow-400 text-3xl lg:text-5xl font-black uppercase tracking-widest p-6 lg:p-8 rounded-3xl shadow-[0_0_100px_rgba(234,179,8,0.6)] bg-black/80 whitespace-nowrap">
+                        ✅ CHALLENGE PASSED
                       </motion.div>
                     </motion.div>
                   )}
@@ -363,7 +438,7 @@ export default function BacktestLab() {
                   <AreaChart data={chartData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colEq" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={chartColor} stopOpacity={challengeFailed ? 0.6 : 0.4}/>
+                        <stop offset="5%" stopColor={chartColor} stopOpacity={challengeStatus !== "NONE" ? 0.6 : 0.4}/>
                         <stop offset="95%" stopColor={chartColor} stopOpacity={0}/>
                       </linearGradient>
                     </defs>
@@ -371,16 +446,17 @@ export default function BacktestLab() {
                     <XAxis dataKey="time" stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10 }} tickFormatter={formatDateString} />
                     <YAxis domain={['auto', 'auto']} stroke="#ffffff30" tick={{ fill: '#71717a', fontSize: 10 }} />
                     <Tooltip contentStyle={{ backgroundColor: '#09090b', borderColor: '#ffffff20' }} itemStyle={{ color: chartColor, fontWeight: 'bold' }} />
-                    <Area type="monotone" dataKey="equity" stroke={chartColor} strokeWidth={challengeFailed ? 4 : 2} fillOpacity={1} fill="url(#colEq)" />
+                    <Area type="monotone" dataKey="equity" stroke={chartColor} strokeWidth={challengeStatus !== "NONE" ? 4 : 2} fillOpacity={1} fill="url(#colEq)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
 
               {aiInsight && (
-                <div className={`w-full bg-zinc-950/60 border rounded-[2rem] p-8 relative ${challengeFailed ? 'border-red-500/30' : 'border-white/10'}`}>
-                  <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r opacity-70 ${challengeFailed ? 'from-red-500/20 via-red-500/80 to-red-500/20' : 'from-emerald-500/20 via-emerald-400/80 to-emerald-500/20'}`}></div>
+                <div className={`w-full bg-zinc-950/60 border rounded-[2rem] p-8 relative ${challengeStatus === "FAILED" ? 'border-red-500/30' : challengeStatus === "PASSED" ? 'border-yellow-500/30' : 'border-white/10'}`}>
+                  <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r opacity-70 ${challengeStatus === "FAILED" ? 'from-red-500/20 via-red-500/80 to-red-500/20' : challengeStatus === "PASSED" ? 'from-yellow-400/20 via-yellow-400/80 to-yellow-400/20' : 'from-emerald-500/20 via-emerald-400/80 to-emerald-500/20'}`}></div>
                   <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
-                    <span className="text-xl">{challengeFailed ? '🚨' : '✨'}</span><h3 className={`text-sm font-bold uppercase ${challengeFailed ? 'text-red-400' : 'text-emerald-400'}`}>AI Quant Insights</h3>
+                    <span className="text-xl">{challengeStatus === "FAILED" ? '🚨' : challengeStatus === "PASSED" ? '🏆' : '✨'}</span>
+                    <h3 className={`text-sm font-bold uppercase ${challengeStatus === "FAILED" ? 'text-red-400' : challengeStatus === "PASSED" ? 'text-yellow-400' : 'text-emerald-400'}`}>AI Quant Insights</h3>
                   </div>
                   <div className="text-zinc-300 text-sm leading-relaxed font-sans whitespace-pre-wrap">
                     {renderFormattedText(aiInsight)}
