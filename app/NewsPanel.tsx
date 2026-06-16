@@ -10,7 +10,7 @@ const FOREX_NEWS_MOCK: NewsItem[] = [
   { title: "Fed Chair Powell hints at maintaining higher rates for longer.", publisher: "Bloomberg", link: "https://www.bloomberg.com/markets", time: "14:30", sentiment: "negative" },
   { title: "EUR/USD rallies as ECB downplays immediate rate cut risks.", publisher: "FXStreet", link: "https://www.fxstreet.com/", time: "11:15", sentiment: "positive" },
   { title: "Gold prices stabilize amid fluctuating US bond yields.", publisher: "ForexLive", link: "https://www.forexlive.com/", time: "09:45", sentiment: "neutral" },
-  { title: "BoE holds interest rates steady, sterling remains firm.", publisher: "Bloomberg", link: "https://www.bloomberg.com/markets/currencies", time: "08:00", sentiment: "positive" }
+  { title: "BoE holds interest rates steady, sterling remains firm.", publisher: "Reuters", link: "https://www.reuters.com/markets/currencies/", time: "08:00", sentiment: "positive" }
 ];
 
 const CRYPTO_NEWS_MOCK: NewsItem[] = [
@@ -69,13 +69,7 @@ const LiveWhalesPanel = () => {
   return (
     <div className="flex flex-col gap-4">
       {whales.map((alert) => (
-        <motion.div 
-          layout 
-          initial={{ opacity: 0, y: -20 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          key={alert.id} 
-          className="block pb-5 border-b border-white/5 last:border-0 last:pb-0"
-        >
+        <motion.div layout initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} key={alert.id} className="block pb-5 border-b border-white/5 last:border-0 last:pb-0">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-zinc-400 font-mono bg-black/60 px-2 py-1 rounded-md border border-white/5 shadow-inner">
@@ -105,23 +99,14 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
 
   return (
     <div className="w-full xl:w-80 flex-shrink-0 flex flex-col sticky top-8 z-10">
-      <motion.div 
-        layout
-        className="bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 flex flex-col max-h-[85vh]"
-      >
+      <motion.div layout className="bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-300 flex flex-col max-h-[85vh]">
         <div className="px-6 py-6 border-b border-white/5 bg-white/[0.01]">
           <div className="flex w-full bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
-            <button 
-              onClick={() => setRightPanelMode('news')} 
-              className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${rightPanelMode === 'news' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
-            >
+            <button onClick={() => setRightPanelMode('news')} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${rightPanelMode === 'news' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
               MARKET NEWS
             </button>
             {marketMode === 'CRYPTO' && (
-              <button 
-                onClick={() => setRightPanelMode('whales')} 
-                className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}
-              >
+              <button onClick={() => setRightPanelMode('whales')} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all flex items-center justify-center gap-2 ${rightPanelMode === 'whales' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
                 WHALES 🚨
               </button>
             )}
@@ -132,15 +117,13 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
           {rightPanelMode === 'news' ? (
             displayedNews && displayedNews.length > 0 ? (
               displayedNews.map((item, idx) => (
+                // ZMĚNA 2: Odkaz s _blank, rel a moderním hover efektem
                 <motion.a 
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  key={idx} 
+                  layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={idx} 
                   href={item.link} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="group block p-4 mb-3 bg-black/30 border border-white/5 hover:border-white/10 rounded-2xl cursor-pointer hover:bg-white/[0.03] transition-all duration-300 relative overflow-hidden"
+                  className="group block p-4 mb-3 bg-black/30 border border-white/5 hover:border-white/10 hover:bg-white/5 rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden"
                 >
                   <div className="absolute left-0 top-0 h-full w-[2px] bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   

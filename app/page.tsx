@@ -177,32 +177,6 @@ const MarketMonitor = ({ lastRefresh, mode, activeView }: { lastRefresh: Date | 
   );
 };
 
-const LiquidationsBar = () => {
-  const total = LIQUIDATIONS_MOCK.longsRekt + LIQUIDATIONS_MOCK.shortsRekt;
-  const longPct = (LIQUIDATIONS_MOCK.longsRekt / total) * 100;
-  const shortPct = (LIQUIDATIONS_MOCK.shortsRekt / total) * 100;
-
-  return (
-    <div className="w-full bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-2xl relative z-10">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
-          <svg className="w-4 h-4 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
-          24H MARKET LIQUIDATIONS
-        </h3>
-        <span className="text-[9px] bg-white/5 px-2 py-1 rounded text-zinc-400 border border-white/5 tracking-widest uppercase font-bold">GLOBAL METRICS</span>
-      </div>
-      <div className="flex justify-between text-xs font-mono font-bold mb-2">
-        <span className="text-red-400">LONGS REKT: ${(LIQUIDATIONS_MOCK.longsRekt / 1000000).toFixed(1)}M</span>
-        <span className="text-emerald-400">SHORTS REKT: ${(LIQUIDATIONS_MOCK.shortsRekt / 1000000).toFixed(1)}M</span>
-      </div>
-      <div className="w-full h-3 rounded-full overflow-hidden flex border border-white/5 shadow-inner">
-        <div className="bg-gradient-to-r from-red-600 to-red-400 h-full transition-all duration-1000" style={{ width: `${longPct}%` }}></div>
-        <div className="bg-gradient-to-l from-emerald-600 to-emerald-400 h-full transition-all duration-1000" style={{ width: `${shortPct}%` }}></div>
-      </div>
-    </div>
-  );
-};
-
 const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: string }) => {
   const [balance, setBalance] = useState<number>(10000);
   const [riskPercent, setRiskPercent] = useState<number>(1);
@@ -265,7 +239,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  // === STATE PRO VIEW SWITCH ===
   const [activeView, setActiveView] = useState<'terminal' | 'laboratory'>('terminal');
 
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>(null);
@@ -281,7 +254,6 @@ export default function Home() {
   const [mainLayout, setMainLayout] = useState<string[]>(['chart', 'ai_panel', 'liquidations']);
   
   const [isMounted, setIsMounted] = useState(false);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeWidgetDragId, setActiveWidgetDragId] = useState<string | null>(null);
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -508,14 +480,10 @@ export default function Home() {
     ) : null
   };
 
-  // =========================================================
-  // NOVÁ ÚVODNÍ OBRAZOVKA (Včetně AI Backtest Lab karty)
-  // =========================================================
+  // ÚVODNÍ OBRAZOVKA
   if (!marketMode && activeView !== 'laboratory') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-full relative overflow-hidden font-sans bg-[#050505]">
-        
-        {/* Pozadí a ambientní osvětlení */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
         <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
         <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
@@ -528,12 +496,9 @@ export default function Home() {
             <p className="text-zinc-400 text-sm md:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
           </motion.div>
 
-          {/* NOVÝ GRID S KARTAMI */}
+          {/* Vylepšený Grid s Novým Layoutem Karet */}
           <div className="w-full max-w-4xl flex flex-col gap-6 mt-16 relative z-10">
-            
-            {/* HORNÍ ŘADA: Forex a Crypto (vedle sebe) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
               <motion.div 
                 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
                 whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
@@ -567,7 +532,7 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* SPODNÍ ŘADA: Široká AI laboratoř */}
+            {/* ZMĚNA 1: Široká AI laboratoř dole pod nima */}
             <motion.div 
               initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }}
               whileHover={{ scale: 1.01, y: -3 }} whileTap={{ scale: 0.99 }}
@@ -599,16 +564,12 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
-
           </div>
         </div>
       </div>
     );
   }
 
-  // =========================================================
-  // PŘIHLAŠOVACÍ OBRAZOVKA A HLAVNÍ APLIKACE (Beze změny)
-  // =========================================================
   if (showAuthGate && !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
@@ -640,23 +601,28 @@ export default function Home() {
           <div className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-500 rounded-full blur-[120px] opacity-[0.06] animate-pulse" style={{ animationDuration: '10s' }} />
         </div>
 
-        <Sidebar 
-          activeView={activeView} setActiveView={setActiveView}
-          marketMode={marketMode} setMarketMode={setMarketMode}
-          cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
-          activePair={activePair} setActivePair={setActivePair}
-          data={data} 
-          spatialArbData={data.crypto_arb?.spatial || {}}
-          triangularArbData={data.crypto_arb?.triangular || {}}
-          fundingRateData={data.crypto_arb?.funding || {}}
-          openGroups={openGroups} setOpenGroups={setOpenGroups}
-          favorites={favorites} setFavorites={setFavorites}
-          activeDragId={null} setActiveDragId={() => {}}
-          handleSeedFirebase={handleSeedFirebase}
-        />
+        {/* ZMĚNA 3: Zcela skrytý levý Sidebar, pokud jsme v laboratoři */}
+        {activeView !== 'laboratory' && (
+          <Sidebar 
+            activeView={activeView} setActiveView={setActiveView}
+            marketMode={marketMode} setMarketMode={setMarketMode}
+            cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
+            activePair={activePair} setActivePair={setActivePair}
+            data={data} 
+            spatialArbData={data.crypto_arb?.spatial || {}}
+            triangularArbData={data.crypto_arb?.triangular || {}}
+            fundingRateData={data.crypto_arb?.funding || {}}
+            openGroups={openGroups} setOpenGroups={setOpenGroups}
+            favorites={favorites} setFavorites={setFavorites}
+            activeDragId={null} setActiveDragId={() => {}}
+            handleSeedFirebase={handleSeedFirebase}
+          />
+        )}
 
+        {/* ZMĚNA 3 (pokračování): Změna kontejneru laboratoře na 100% šířku monitoru pro IDE zážitek */}
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
-          <div className="max-w-[1400px] mx-auto w-full relative z-10">
+          <div className={`${activeView === 'laboratory' ? 'w-full max-w-full' : 'max-w-[1400px] mx-auto w-full'} relative z-10 transition-all duration-500`}>
+            
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
 
             {activeView === 'laboratory' ? (
@@ -696,11 +662,7 @@ export default function Home() {
                     </DndContext>
                   )}
                 </div>
-                  <NewsPanel 
-                     marketMode={marketMode} 
-                      rightPanelMode={rightPanelMode} 
-                       setRightPanelMode={setRightPanelMode} 
-                        />
+                <NewsPanel marketMode={marketMode} rightPanelMode={rightPanelMode} setRightPanelMode={setRightPanelMode} />
               </div>
             )}
           </div>
