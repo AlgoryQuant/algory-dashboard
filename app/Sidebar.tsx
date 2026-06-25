@@ -1,464 +1,647 @@
 "use client";
 
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import { 
-  DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
-  KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
+  DndContext, DragOverlay, closestCorners, DragStartEvent, DragEndEvent,
+  defaultDropAnimationSideEffects, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  DropAnimation
 } from '@dnd-kit/core';
 import { 
   arrayMove, SortableContext, sortableKeyboardCoordinates, 
-  verticalListSortingStrategy, useSortable 
+  verticalListSortingStrategy, useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { motion } from 'framer-motion';
 
-// ─── TYPY A ROZHRANÍ ──────────────────────────────────────────────
+// --- LOKÁLNÍ IMPORTY (ZACHOVEJTE PRO VS CODE) ---
+// Až tento soubor zkopírujete do svého VS Code, tyto importy ODKOMENTUJTE
+// a sekci s MOCK KOMPONENTAMI níže SMAŽTE.
+/*
+import Sidebar from './Sidebar';
+import NewsPanel from './NewsPanel';
+import ChartArea from './ChartArea';
+import { SpatialArbitragePanel, TriangularArbitragePanel, FundingRatesPanel, SpatialArbData, TriangularArbData, FundingRateData } from './ArbitragePanel';
+import BacktestLab from './BacktestLab';
+*/
+
+// --- MOCK KOMPONENTY PRO NÁHLED V PROHLÍŽEČI ---
 type ArbStatus = 'ACTIVE' | 'DEGRADING' | 'CLOSED';
 interface ChartPoint { time: string; spread: number; }
 export interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; status: ArbStatus; chartData: ChartPoint[]; }
 export interface TriangularArbData { id: string; pairName: string; path: string[]; rate1: number; rate2: number; rate3: number; expectedProfitPercent: number; status: ArbStatus; chartData: ChartPoint[]; }
 export interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
 
-export interface SidebarProps {
-  activeView: 'terminal' | 'laboratory';
-  setActiveView: (view: 'terminal' | 'laboratory') => void;
-  marketMode: 'FOREX' | 'CRYPTO' | null;
-  setMarketMode: (mode: 'FOREX' | 'CRYPTO' | null) => void;
-  cryptoMode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates';
-  setCryptoMode: (mode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates') => void;
-  activePair: string;
-  setActivePair: (pair: string) => void;
-  data: any;
-  spatialArbData: Record<string, SpatialArbData>;
-  triangularArbData: Record<string, TriangularArbData>;
-  fundingRateData: Record<string, FundingRateData>;
-  openGroups: Record<string, boolean>;
-  setOpenGroups: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-  favorites: string[];
-  setFavorites: React.Dispatch<React.SetStateAction<string[]>>;
-  activeDragId: string | null;
-  setActiveDragId: React.Dispatch<React.SetStateAction<string | null>>;
-  handleSeedFirebase: () => void;
+const Sidebar = (props: any) => null; 
+const NewsPanel = (props: any) => <div className="w-full xl:w-80 border border-white/5 rounded-xl p-6 text-zinc-500 flex items-center justify-center bg-white/[0.02]">Zprávy (Mock)</div>;
+const ChartArea = (props: any) => <div className="w-full h-[400px] border border-white/5 rounded-xl p-6 text-zinc-500 flex items-center justify-center bg-white/[0.02]">Graf (Mock)</div>;
+const SpatialArbitragePanel = (props: any) => <div className="w-full h-32 border border-white/5 rounded-xl p-6 text-zinc-500 flex items-center justify-center bg-white/[0.02]">Spatial Arb (Mock)</div>;
+const TriangularArbitragePanel = (props: any) => <div className="w-full h-32 border border-white/5 rounded-xl p-6 text-zinc-500 flex items-center justify-center bg-white/[0.02]">Triangular Arb (Mock)</div>;
+const FundingRatesPanel = (props: any) => <div className="w-full h-32 border border-white/5 rounded-xl p-6 text-zinc-500 flex items-center justify-center bg-white/[0.02]">Funding Rates (Mock)</div>;
+const BacktestLab = (props: any) => (
+  <div className="w-full h-[600px] border border-white/5 rounded-[2rem] p-10 text-zinc-500 flex flex-col items-center justify-center bg-white/[0.02] gap-6">
+    <span className="text-xl tracking-widest uppercase font-bold text-white">Backtest Lab (Mock)</span>
+    <button onClick={props.onBack} className="px-6 py-3 border border-white/10 rounded-xl text-white hover:bg-white/5 transition-colors uppercase tracking-widest text-[10px] font-bold">Zpět na Terminál</button>
+  </div>
+);
+// ------------------------------------------------
+
+interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
+interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
+interface DashboardData {
+  majors?: Record<string, number>;
+  minors?: Record<string, number>;
+  metals?: Record<string, number>;
+  crypto?: Record<string, number>;
+  crypto_arb?: {
+    spatial?: Record<string, SpatialArbData>;
+    triangular?: Record<string, TriangularArbData>;
+    funding?: Record<string, FundingRateData>;
+  };
+  parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; Direction?: string; RRR?: number; LivePrice?: number; aiAnalysis?: AIAnalysis; history?: TradeHistory[]; }>;
 }
 
-// ─── HELPER FUNKCE ──────────────────────────────────────────────
-const customCollisionDetection = (args: any) => {
-  const pointerCollisions = pointerWithin(args);
-  if (pointerCollisions.length > 0) return pointerCollisions;
-  const rectCollisions = rectIntersection(args);
-  if (rectCollisions.length > 0) return rectCollisions;
-  return closestCorners(args);
+const LIQUIDATIONS_MOCK = { longsRekt: 154200000, shortsRekt: 45800000 };
+
+const dropAnimationConfig: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
 };
 
-// ─── KOMPONENTY PRO SIDEBAR ───────────────────────────────────────
-interface SidebarItemProps { ticker: string; prob?: number; isActive: boolean; isFavorite: boolean; onClick: () => void; onToggleFavorite: (ticker: string) => void; isOverlay?: boolean; dragListeners?: any; dragAttributes?: any; setNodeRef?: (node: HTMLElement | null) => void; style?: React.CSSProperties; }
+const InfoTooltip = ({ info }: { info: string }) => (
+  <span className="relative group/tt inline-flex items-center cursor-help ml-2">
+    <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover/tt:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
+      {info}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
+    </div>
+  </span>
+);
 
-const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggleFavorite, isOverlay, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
-  const displayTicker = ticker === "XAUUSD" ? "GOLD" : String(ticker || "");
-  let probColor = "text-zinc-500";
-  let pairDir = "NEUTRAL";
-  const safeProb = Number(prob) || 0;
+const MarketMonitor = ({ lastRefresh, mode, activeView }: { lastRefresh: Date | null, mode: string, activeView: 'terminal' | 'laboratory' }) => {
+  const displayTime = lastRefresh || new Date();
+  const hour = displayTime.getHours();
+  
+  const isCrypto = mode.includes('CRYPTO');
+  const sessions = isCrypto ? [ { name: "Global Crypto Market", open: "24", close: "7", isActive: true } ] : [
+    { name: "Sydney", open: "22:00", close: "07:00", isActive: hour >= 22 || hour < 7 },
+    { name: "Tokyo", open: "00:00", close: "09:00", isActive: hour >= 0 && hour < 9 },
+    { name: "London", open: "09:00", close: "17:30", isActive: hour >= 9 && hour < 17 },
+    { name: "New York", open: "14:30", close: "22:00", isActive: hour >= 14 && hour < 22 },
+  ];
 
-  if (prob !== undefined) {
-      if (safeProb >= 0.52) pairDir = "BUY";
-      else if (safeProb <= 0.48 && safeProb > 0) pairDir = "SELL";
-      probColor = pairDir === "BUY" ? (isActive ? "text-emerald-400" : "text-emerald-500/80") : (isActive ? "text-red-400" : "text-red-500/80");
-  }
+  const minutes = displayTime.getMinutes();
+  const seconds = displayTime.getSeconds();
+  const progressPercent = (((minutes % 15) * 60 + seconds) / 900) * 100;
 
-  let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
-  if (isOverlay) containerClasses += `bg-zinc-900/90 border-white/20 shadow-2xl ring-1 ring-white/10 scale-105 rotate-2 z-50 backdrop-blur-md`;
-  else if (isActive) containerClasses += pairDir === 'SELL' ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] ' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.15)] ';
-  else containerClasses += 'border-transparent hover:bg-white/5 hover:border-white/10';
+  let pulseColor = 'bg-emerald-400'; let gradientStart = 'from-emerald-600'; let gradientEnd = 'to-emerald-400';
+  if (mode.includes('CRYPTO') && !mode.includes('TRIANGULAR') && !mode.includes('FUNDING')) { pulseColor = 'bg-blue-400'; gradientStart = 'from-blue-600'; gradientEnd = 'to-blue-400'; } 
+  else if (mode.includes('TRIANGULAR')) { pulseColor = 'bg-purple-400'; gradientStart = 'from-purple-600'; gradientEnd = 'to-purple-400'; } 
+  else if (mode.includes('FUNDING')) { pulseColor = 'bg-orange-400'; gradientStart = 'from-orange-600'; gradientEnd = 'to-orange-400'; }
 
   return (
-    <div ref={setNodeRef} style={style} className={containerClasses} onClick={!isOverlay ? onClick : undefined}>
-      <div className="flex items-center gap-2">
-        {isFavorite ? (
-          <div {...dragListeners} {...dragAttributes} onClick={(e) => e.stopPropagation()} className={`cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors touch-none ${isOverlay ? 'text-white' : 'opacity-0 group-hover:opacity-100'}`}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+    <div className="mb-6 p-6 lg:p-8 bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0 z-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 lg:gap-8 relative z-10">
+        <div className="flex flex-col gap-2 w-full lg:w-auto">
+          <div className="text-4xl lg:text-5xl font-semibold tracking-tight text-white">
+            {activeView === 'terminal' ? (
+              <>
+                {displayTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                <span className="text-xl lg:text-2xl text-white/50 ml-1">:{displayTime.getSeconds().toString().padStart(2, '0')}</span>
+              </>
+            ) : "AI BACKTEST LAB"}
           </div>
-        ) : <div className="w-[14px]"></div>}
-        <span className={`font-semibold tracking-wide text-xs ${isActive || isOverlay ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`}>{displayTicker}</span>
+          <div className="text-[9px] lg:text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex flex-wrap items-center gap-2 lg:gap-3 mt-2">
+            <span className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${activeView === 'terminal' ? (isCrypto ? 'animate-pulse ' + pulseColor : 'bg-emerald-400') : 'bg-zinc-500'}`}></span>
+              {activeView === 'terminal' ? `SYSTEM SYNC (${mode})` : 'STRATEGY SIMULATOR ENVIRONMENT'}
+            </span>
+            {activeView === 'terminal' && (
+              <span className="px-3 py-1 bg-black/40 rounded-full border border-white/5 text-white/80">{lastRefresh ? "CONNECTED" : "WAITING FOR DATA..."}</span>
+            )}
+          </div>
+        </div>
+
+        {activeView === 'terminal' && (
+          <div className="flex flex-wrap gap-2 lg:gap-3 w-full lg:w-auto">
+            {sessions.map((s) => (
+              <div key={s.name} className={`flex-1 min-w-[45%] lg:min-w-0 px-3 lg:px-5 py-2 lg:py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${s.isActive ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` : 'bg-black/40 border-white/5 opacity-60'}`}>
+                <span className={`text-[8px] lg:text-[10px] font-bold uppercase tracking-widest mb-1 text-center ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>{s.name}</span>
+                <span className="text-[9px] lg:text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="flex items-center gap-3">
-        <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${(safeProb * 100).toFixed(0)}%`}</span>
-        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(String(ticker)); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' : 'text-zinc-600 hover:text-white'}`}>
-          <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
-        </button>
+
+      {activeView === 'terminal' && (
+        <div className="mt-6 lg:mt-8 relative z-10">
+          <div className="flex justify-between text-[8px] lg:text-[10px] text-zinc-500 font-bold mb-2 lg:mb-3 uppercase tracking-widest">
+            <span>AI ENGINE M15 CYCLE</span><span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
+          </div>
+          <div className="w-full h-1.5 lg:h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
+            <div className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`} style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: string }) => {
+  const [balance, setBalance] = useState<number>(10000);
+  const [riskPercent, setRiskPercent] = useState<number>(1);
+  const [lotSize, setLotSize] = useState<string>("0.00");
+
+  useEffect(() => {
+    if (slPips > 0) {
+      const riskAmount = balance * (riskPercent / 100);
+      const pipValueStandardLot = 10; 
+      const calculatedLots = riskAmount / (slPips * pipValueStandardLot);
+      setLotSize(calculatedLots.toFixed(2));
+    } else {
+      setLotSize("0.00");
+    }
+  }, [balance, riskPercent, slPips]);
+
+  const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : direction === 'SELL' ? 'focus:ring-red-500/50' : 'focus:ring-white/20';
+
+  return (
+    <div className="p-4 lg:p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner mt-6">
+      <div className="text-[9px] lg:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
+        POSITION SIZING
+        <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
+      </div>
+      <div className="flex gap-4 lg:gap-6 items-end">
+        <div className="flex flex-col gap-2 w-1/3">
+          <label className="text-[8px] lg:text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">BALANCE ($)</label>
+          <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-2 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all w-full`} />
+        </div>
+        <div className="flex flex-col gap-2 w-1/3">
+          <label className="text-[8px] lg:text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">RISK (%)</label>
+          <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-2 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all w-full`} />
+        </div>
+        <div className={`w-1/3 flex flex-col items-center justify-center py-2 px-2 lg:px-4 rounded-lg border shadow-inner transition-all duration-300 ${direction === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : direction === 'SELL' ? 'bg-red-500/10 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-zinc-900 border-white/5'}`}>
+          <span className={`text-[8px] lg:text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : direction === 'SELL' ? 'text-red-500/70' : 'text-zinc-500'}`}>VOLUME</span>
+          <span className="text-base lg:text-xl font-bold text-white font-mono">{lotSize}</span>
+        </div>
       </div>
     </div>
   );
 };
 
-const SortableSidebarItem = (props: any) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.ticker });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 };
-  return <SidebarItemNode {...props} dragListeners={listeners} dragAttributes={attributes} setNodeRef={setNodeRef} style={style} />;
+const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, position: 'relative' as const, zIndex: isDragging ? 50 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="w-full relative group/widget">
+      <div {...attributes} {...listeners} className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 items-center justify-center shadow-xl hover:text-white hover:border-white/20 hidden lg:flex">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+      </div>
+      {children}
+    </div>
+  );
 };
 
-const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isActive: boolean, onClick: () => void, type: 'spatial' | 'triangular' | 'funding' }) => {
-  const safeData = data || {};
-  let containerClasses = `w-full text-left px-4 py-3 rounded-xl transition-all duration-300 flex flex-col justify-between group border cursor-pointer `;
+export default function Home() {
+  const [data, setData] = useState<DashboardData>({});
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  if (isActive) {
-    if (type === 'spatial') containerClasses += 'bg-blue-500/10 border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)]';
-    else if (type === 'triangular') containerClasses += 'bg-purple-500/10 border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.15)]';
-    else containerClasses += 'bg-orange-500/10 border-orange-500/40 shadow-[0_0_15px_rgba(249,115,22,0.15)]';
-  } else containerClasses += 'border-transparent hover:bg-white/5 hover:border-white/10';
+  const [activeView, setActiveView] = useState<'terminal' | 'laboratory'>('terminal');
 
-  if (type === 'spatial') {
-    const spread = Number(safeData.spreadPercent || 0);
-    return (
-      <div className={containerClasses} onClick={onClick}>
-        <div className="flex justify-between items-center w-full mb-1">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{String(safeData.asset || 'N/A')}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${safeData.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]' : safeData.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
-          </div>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${spread > 0 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30'}`}>
-            {spread > 0 ? '+' : ''}{spread.toFixed(2)}%
-          </span>
-        </div>
-        <div className="flex items-center text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
-          <span>{String(safeData.buyExchange || '-')}</span><svg className="w-3 h-3 mx-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg><span>{String(safeData.sellExchange || '-')}</span>
-        </div>
-      </div>
-    );
-  } else if (type === 'triangular') {
-    const profit = Number(safeData.expectedProfitPercent || 0);
-    return (
-      <div className={containerClasses} onClick={onClick}>
-        <div className="flex justify-between items-center w-full mb-2">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-[11px] ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{String(safeData.id || 'N/A')}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${safeData.status === 'ACTIVE' ? 'bg-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.8)]' : safeData.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
-          </div>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${profit > 0 ? 'text-purple-400 bg-purple-500/10 border-purple-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30'}`}>
-            {profit > 0 ? '+' : ''}{profit.toFixed(2)}%
-          </span>
-        </div>
-        <div className="text-[9px] font-mono text-zinc-500 break-words">{String(safeData.pairName || '')}</div>
-      </div>
-    );
-  } else {
-    const yieldVal = Number(safeData.netYield || 0);
-    return (
-      <div className={containerClasses} onClick={onClick}>
-        <div className="flex justify-between items-center w-full mb-1">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold tracking-wide text-xs ${isActive ? 'text-white drop-shadow-[0_0_5px_rgba(249,115,22,0.5)]' : 'text-zinc-300 group-hover:text-white'}`}>{String(safeData.asset || 'N/A').replace(' Perpetuals', '')}</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${safeData.status === 'ACTIVE' ? 'bg-orange-400 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]' : safeData.status === 'DEGRADING' ? 'bg-yellow-400' : 'bg-red-400'}`}></div>
-          </div>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${yieldVal > 0 ? 'text-orange-400 bg-orange-500/10 border-orange-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30'}`}>
-            {yieldVal.toFixed(3)}%
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-[9px] font-medium text-zinc-500 mt-1 uppercase tracking-widest w-full">
-          <span className="text-emerald-500/70">L: {String(safeData.optimalLong || '-')}</span>
-          <span className="text-red-500/70">S: {String(safeData.optimalShort || '-')}</span>
-        </div>
-      </div>
-    );
-  }
-};
+  const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>(null);
+  const [cryptoMode, setCryptoMode] = useState<'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates'>('standard');
+  const [rightPanelMode, setRightPanelMode] = useState<'news' | 'whales'>('news');
+  const [activePair, setActivePair] = useState<string>("EURUSD"); 
+  
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    'Major Liquidity': true, 'Cross Pairs': true, 'Precious Metals': true, 'Crypto Assets': true
+  });
 
-// ─── HLAVNÍ EXPORT KOMPONENTY ─────────────────────────────────────
-export default function Sidebar({
-  activeView, setActiveView,
-  marketMode, setMarketMode, cryptoMode, setCryptoMode, activePair, setActivePair,
-  data, spatialArbData, triangularArbData, fundingRateData,
-  openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
-}: SidebarProps) {
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [mainLayout, setMainLayout] = useState<string[]>(['chart', 'ai_panel', 'liquidations']);
+  
+  const [isMounted, setIsMounted] = useState(false);
+  const [activeWidgetDragId, setActiveWidgetDragId] = useState<string | null>(null);
+  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [showAuthGate, setShowAuthGate] = useState<boolean>(false);
+  const [nickname, setNickname] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const safeData = data || {};
-  const safeSpatial = spatialArbData || {};
-  const safeTriangular = triangularArbData || {};
-  const safeFunding = fundingRateData || {};
-  const safeFavorites = Array.isArray(favorites) ? favorites.filter(f => f != null).map(String) : [];
+  useEffect(() => {
+    setIsMounted(true);
+    const savedUser = localStorage.getItem('algory_user');
+    if (savedUser) setIsAuthenticated(true);
+    const savedFavs = localStorage.getItem('algory_favorites');
+    if (savedFavs) { try { setFavorites(JSON.parse(savedFavs)); } catch (e) {} }
+    const savedLayout = localStorage.getItem('algory_main_layout');
+    if (savedLayout) { try { setMainLayout(JSON.parse(savedLayout)); } catch (e) {} }
+  }, []);
+
+  useEffect(() => { 
+    if (isMounted) {
+      localStorage.setItem('algory_favorites', JSON.stringify(favorites)); 
+      localStorage.setItem('algory_main_layout', JSON.stringify(mainLayout));
+    }
+  }, [favorites, mainLayout, isMounted]);
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEmailError("Please enter a valid email address."); return; }
+    setEmailError(null);
+    if (!nickname || !email) return;
+    setIsSubmitting(true);
+    try {
+      const FIREBASE_USERS_URL = "https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/users.json";
+      const userData = { nickname, email, registeredAt: new Date().toISOString() };
+      await fetch(FIREBASE_USERS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userData) });
+      localStorage.setItem('algory_user', JSON.stringify(userData));
+      setIsAuthenticated(true);
+      setShowAuthGate(false);
+    } catch (err) {} finally { setIsSubmitting(false); }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const loadData = () => {
+      fetch(`https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json?t=${new Date().getTime()}`)
+        .then(res => res.json())
+        .then(jsonData => { setData(jsonData || {}); setLastRefresh(new Date()); setError(null); })
+        .catch(() => setError("Failed to sync data stream."))
+        .finally(() => setLoading(false));
+    };
+    if (isAuthenticated || showAuthGate) {
+       loadData();
+       interval = setInterval(loadData, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [isAuthenticated, showAuthGate]);
+
+  const handleSeedFirebase = async () => {
+    try {
+      alert('Firebase synchronization successful.');
+    } catch (error) {
+      console.error("Firebase upload error:", error);
+      alert('System failure during Firebase synchronization.');
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = (event: DragStartEvent) => setActiveDragId(String(event.active.id));
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveDragId(null);
+  const handleWidgetDragStart = (event: DragStartEvent) => setActiveWidgetDragId(event.active.id as string);
+  const handleWidgetDragEnd = (event: DragEndEvent) => {
+    setActiveWidgetDragId(null);
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = safeFavorites.indexOf(String(active.id));
-      const newIndex = safeFavorites.indexOf(String(over.id));
-      if (oldIndex !== -1 && newIndex !== -1) {
-        setFavorites((items) => {
-          const safeItems = Array.isArray(items) ? items : [];
-          return arrayMove(safeItems, oldIndex, newIndex);
-        });
-      }
+      const oldIndex = mainLayout.indexOf(active.id as string);
+      const newIndex = mainLayout.indexOf(over.id as string);
+      if (oldIndex !== -1 && newIndex !== -1) setMainLayout((items) => arrayMove(items, oldIndex, newIndex));
     }
   };
 
-  const toggleFavorite = (ticker: string) => { 
-      setFavorites(prev => {
-        const safePrev = Array.isArray(prev) ? prev : [];
-        return safePrev.includes(ticker) ? safePrev.filter(t => t !== ticker) : [...safePrev, ticker];
-      }); 
+  const activeProb = data.majors?.[activePair] ?? data.minors?.[activePair] ?? data.metals?.[activePair] ?? data.crypto?.[activePair] ?? 0;
+  const activeParams = data.parameters?.[activePair];
+  const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
+
+  const clampedProb = Math.max(0, Math.min(1, activeProb));
+  const gaugeRotation = (clampedProb * 180) - 90; 
+
+  let inferredDirection = "NEUTRAL";
+  let isTradeActive = false;
+
+  if (clampedProb >= 0.52) { inferredDirection = "BUY"; isTradeActive = true; } 
+  else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
+
+  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
+
+  const getPageBackground = () => {
+    if (activeView === 'laboratory') return 'from-indigo-950/20 via-zinc-950/20 to-[#050505]/40';
+    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/10 via-zinc-950/20 to-[#050505]/40';
+    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/10 via-[#0a0a0a]/40 to-[#050505]/40' : 'from-emerald-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
+    if (inferredDirection === 'SELL') return 'from-red-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
+    return 'from-[#050505]/40 via-[#0a0a0a]/40 to-[#050505]/40';
+  };
+  
+  const getGlowColor = () => {
+    if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'shadow-[0_0_60px_rgba(59,130,246,0.05)]';
+    if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'shadow-[0_0_60px_rgba(59,130,246,0.05)]' : 'shadow-[0_0_60px_rgba(52,211,153,0.05)]';
+    if (inferredDirection === 'SELL') return 'shadow-[0_0_60px_rgba(239,68,68,0.05)]';
+    return 'shadow-2xl';
   };
 
-  const getProbForTicker = (ticker: string) => {
-    return safeData.majors?.[ticker] ?? safeData.minors?.[ticker] ?? safeData.metals?.[ticker] ?? safeData.crypto?.[ticker] ?? 0;
-  };
-
-  const getSidebarIcon = (title: string) => {
-    if (title.includes('Liquidity')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z" /></svg>;
-    if (title.includes('Cross')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>;
-    if (title.includes('Metals')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polygon points="12 2 2 7 12 22 22 7 12 2" /></svg>;
-    if (title.includes('Crypto Assets')) return <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>;
-    return null;
-  };
-
-  const renderSidebarGroup = (title: string, pairs: Record<string, number> | undefined, tooltipInfo?: string) => {
-    if (!pairs || typeof pairs !== 'object' || Object.keys(pairs).length === 0) return null;
-    
-    const availablePairs = Object.entries(pairs)
-      .filter(([ticker]) => !safeFavorites.includes(ticker))
-      .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0));
-
-    const isOpen = openGroups[title]; 
-
+  const renderAiAnalysisWidget = () => {
+    if (!activeParams) return null;
     return (
-      <div className="mb-6 z-10 relative">
-        <div className="w-full flex items-center justify-between px-6 py-2 mb-3 group">
-          <button onClick={() => setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }))} className="flex items-center gap-2 cursor-pointer outline-none">
-            {getSidebarIcon(title)}
-            <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 uppercase tracking-widest transition-colors flex items-center">
-              {title}
-            </span>
-          </button>
-          {tooltipInfo && (
-            <div className="relative group/navtt ml-auto mr-2">
-              <span className="flex items-center justify-center w-3 h-3 text-[8px] border border-zinc-500 text-zinc-400 rounded-full cursor-help hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-              <div className="absolute z-50 hidden group-hover/navtt:block w-64 p-3 mt-2 text-xs text-zinc-300 bg-zinc-900 border border-white/10 rounded-lg shadow-2xl top-1/2 -translate-y-1/2 right-full mr-2 text-left font-normal normal-case tracking-normal break-words backdrop-blur-md">
-                {tooltipInfo}
+      <div className={`bg-zinc-950/50 backdrop-blur-xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/10'} rounded-[2rem] overflow-hidden p-6 lg:p-8 transition-all duration-700 relative z-10 ${getGlowColor()}`}>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 border-b border-white/5 pb-8">
+          <div className="w-full">
+            <div className="flex flex-wrap items-center gap-3 lg:gap-4 mb-4">
+              <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
+              {isTradeActive && (
+                <span className={`px-3 lg:px-4 py-1.5 text-[9px] md:text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse ${
+                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
+                }`}>{inferredDirection} PENDING</span>
+              )}
+              {activeParams?.KeyDriver && (
+                <span className="px-2 lg:px-3 py-1 bg-white/5 text-white/80 text-[8px] lg:text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">{activeParams.KeyDriver}</span>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">TP</span><span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span></span>
+              {activeParams.RRR && <span className="px-2 lg:px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-400 mr-1 lg:mr-2 uppercase tracking-wider font-bold">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">BE</span><span className="text-white font-bold">{activeParams.BE}</span></span>
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">SPREAD</span><span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span></span>
+              {activeParams.LivePrice && <span className="px-2 lg:px-3 py-1.5 bg-blue-900/30 rounded-lg border border-blue-500/30 font-mono text-[9px] lg:text-[11px] shadow-inner ml-auto mt-2 lg:mt-0"><span className="text-blue-400 mr-1 lg:mr-2 uppercase tracking-wider">LIVE</span><span className="text-white font-bold">{activeParams.LivePrice}</span></span>}
+            </div>
+            <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />
+          </div>
+
+          <div className="flex flex-col items-center gap-6 flex-shrink-0 w-full lg:w-auto mt-6 lg:mt-0">
+            <div className="flex flex-col items-center justify-center relative w-48 lg:w-56 h-24 lg:h-28 mt-2">
+              <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
+                <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
+                <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
+                <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                  <polygon points="96,100 104,100 100,25" fill={needleColor} filter="url(#glow)" opacity="0.9" />
+                  <circle cx="100" cy="100" r="8" fill="#050505" stroke={needleColor} strokeWidth="3" />
+                </g>
+              </svg>
+              <div className={`absolute bottom-[-10px] text-2xl lg:text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'}`}>
+                {(activeProb * 100).toFixed(1)}%
               </div>
             </div>
-          )}
-          <svg className={`w-3.5 h-3.5 text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            {isTradeActive ? (
+              <button className={`w-full px-6 py-4 text-[10px] lg:text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]') : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}>
+                EXECUTE {inferredDirection}
+              </button>
+            ) : (
+              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[10px] lg:text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">LOW CONVICTION</button>
+            )}
+          </div>
         </div>
-        <div className={`space-y-1.5 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          {availablePairs.map(([ticker, prob]) => (
-            <SidebarItemNode key={ticker} ticker={ticker} prob={prob} isActive={activePair === ticker} isFavorite={false} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />
-          ))}
-        </div>
+
+        {activeParams?.aiAnalysis && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
+            <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
+              <div className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-3 lg:mb-4 flex items-center justify-between"><span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session}</span><span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span></div>
+              <p className="text-xs lg:text-sm text-white/90 leading-loose font-medium">{activeParams.aiAnalysis.evaluation}</p>
+            </div>
+            <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 'bg-black/40 border-white/5'}`}>
+              <div className={`text-[9px] lg:text-[10px] font-bold uppercase tracking-widest mb-3 lg:mb-4 flex items-center justify-between ${inferredDirection === 'SELL' ? 'text-red-400/80' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'}`}>
+                <span>PREDICTION: {activeParams.aiAnalysis.current_session}</span>
+                <span className="relative flex h-2 w-2">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'}`}></span>
+                </span>
+              </div>
+              <p className={`text-xs lg:text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>{activeParams.aiAnalysis.prediction}</p>
+            </div>
+          </div>
+        )}
+
+        {activeParams?.history && (
+          <div className="border-t border-white/5 pt-6 lg:pt-8 mt-2">
+            <div className="text-[9px] lg:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 lg:mb-6 flex items-center gap-2"><svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>AI BACKTEST & SIGNAL HISTORY (LAST 5)</div>
+            <div className="flex flex-wrap gap-2 lg:gap-3">
+              {activeParams.history.map((trade, idx) => (
+                <div key={idx} className={`flex items-center gap-2 lg:gap-3 px-3 py-2 lg:px-4 lg:py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
+                  <span className="text-[9px] lg:text-[10px] text-zinc-500 font-mono bg-black/40 px-1.5 py-1 lg:px-2 rounded">{trade.date}</span><span className="text-[9px] lg:text-[10px] font-bold text-white/80">{trade.type}</span><span className={`text-[9px] lg:text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
-  const renderFavorites = () => {
-    const allPairsMap = { ...(safeData.majors || {}), ...(safeData.minors || {}), ...(safeData.metals || {}), ...(safeData.crypto || {}) };
-    
-    const relevantFavs = safeFavorites.filter(ticker => {
-      if (typeof ticker !== 'string') return false; 
-      const isCryptoTicker = Object.keys(safeData.crypto || {}).includes(ticker);
-      if (marketMode === 'CRYPTO') return isCryptoTicker;
-      if (marketMode === 'FOREX') return !isCryptoTicker;
-      return true;
-    });
-
-    if (relevantFavs.length === 0) return (
-      <div className="w-full text-[10px] uppercase tracking-widest font-bold px-4 py-8 border border-dashed rounded-xl text-center flex flex-col items-center justify-center gap-2 transition-all duration-300 border-zinc-800 text-zinc-600 bg-zinc-900/20">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
-        CLICK STAR TO PIN
+  const widgetMap: Record<string, React.ReactNode> = {
+    'chart': <ChartArea symbol={activePair} mode={marketMode} />,
+    'ai_panel': renderAiAnalysisWidget(),
+    'liquidations': marketMode === 'CRYPTO' && cryptoMode === 'standard' ? (
+      <div className="w-full bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-2xl relative z-10">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
+            <svg className="w-4 h-4 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+            24H MARKET LIQUIDATIONS
+          </h3>
+          <span className="text-[9px] bg-white/5 px-2 py-1 rounded text-zinc-400 border border-white/5 tracking-widest uppercase font-bold">GLOBAL METRICS</span>
+        </div>
+        <div className="flex justify-between text-xs font-mono font-bold mb-2">
+          <span className="text-red-400">LONGS REKT: ${(LIQUIDATIONS_MOCK.longsRekt / 1000000).toFixed(1)}M</span>
+          <span className="text-emerald-400">SHORTS REKT: ${(LIQUIDATIONS_MOCK.shortsRekt / 1000000).toFixed(1)}M</span>
+        </div>
+        <div className="w-full h-3 rounded-full overflow-hidden flex border border-white/5 shadow-inner">
+          <div className="bg-gradient-to-r from-red-600 to-red-400 h-full transition-all duration-1000" style={{ width: `${(LIQUIDATIONS_MOCK.longsRekt / (LIQUIDATIONS_MOCK.longsRekt + LIQUIDATIONS_MOCK.shortsRekt)) * 100}%` }}></div>
+          <div className="bg-gradient-to-l from-emerald-600 to-emerald-400 h-full transition-all duration-1000" style={{ width: `${(LIQUIDATIONS_MOCK.shortsRekt / (LIQUIDATIONS_MOCK.longsRekt + LIQUIDATIONS_MOCK.shortsRekt)) * 100}%` }}></div>
+        </div>
       </div>
-    );
-
-    return relevantFavs.map(ticker => <SortableSidebarItem key={ticker} ticker={ticker} prob={allPairsMap[ticker] || 0} isActive={activePair === ticker} isFavorite={true} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />);
+    ) : null
   };
 
-  const mobilePairsList = marketMode === 'CRYPTO' 
-    ? (safeData.crypto ? Object.keys(safeData.crypto) : ["BTCUSD", "ETHUSD", "SOLUSD"]) 
-    : (safeData.majors ? Object.keys(safeData.majors) : ["EURUSD", "GBPUSD", "XAUUSD"]);
+  // ── ÚVODNÍ OBRAZOVKA (RESPONSIVE CYBERPUNK) ──
+  if (!marketMode && activeView !== 'laboratory') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full relative overflow-hidden font-sans bg-[#050505] p-6 lg:p-0">
+        
+        {/* Animované pozadí */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
+        <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, -30, 0], scale: [1, 1.1, 1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[30%] left-[40%] w-[40vw] lg:w-[30vw] h-[40vw] lg:h-[30vw] max-w-[500px] max-h-[500px] bg-blue-600 rounded-full blur-[80px] lg:blur-[120px] opacity-10 z-0 pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center text-center w-full max-w-5xl">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] lg:text-xs mb-4 lg:mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">WELCOME TO ALGORY</span>
+            <h1 className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-4 lg:mb-6">Algory<span className="text-zinc-600">.</span></h1>
+            <p className="text-zinc-400 text-xs md:text-sm lg:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
+          </motion.div>
+
+          {/* Karty s plným Glassmorphismem */}
+          <div className="w-full max-w-4xl flex flex-col gap-4 lg:gap-6 mt-10 lg:mt-16 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
+                whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
+                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-emerald-500/50 rounded-[1.5rem] lg:rounded-[2rem] p-6 lg:p-8 transition-all duration-300 overflow-hidden shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 lg:mb-6 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
+                  <span className="text-lg lg:text-xl">💱</span>
+                </div>
+                <h2 className="text-xl lg:text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-emerald-400 transition-colors text-left">Global Forex</h2>
+                <p className="text-zinc-400 text-xs lg:text-sm leading-relaxed font-sans text-left">
+                  Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
+                </p>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
+                whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
+                onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
+                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-blue-500/50 rounded-[1.5rem] lg:rounded-[2rem] p-6 lg:p-8 transition-all duration-300 overflow-hidden shadow-2xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 lg:mb-6 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300">
+                  <span className="text-lg lg:text-xl">₿</span>
+                </div>
+                <h2 className="text-xl lg:text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-blue-400 transition-colors text-left">Digital Assets</h2>
+                <p className="text-zinc-400 text-xs lg:text-sm leading-relaxed font-sans text-left">
+                  Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
+                </p>
+              </motion.div>
+            </div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }}
+              whileHover={{ scale: 1.01, y: -3 }} whileTap={{ scale: 0.99 }}
+              onClick={() => { setMarketMode('FOREX'); setActiveView('laboratory'); if(!isAuthenticated) setShowAuthGate(true); }}
+              className="cursor-pointer group relative bg-zinc-950/60 backdrop-blur-2xl border border-indigo-500/30 hover:border-indigo-400/80 rounded-[1.5rem] lg:rounded-[2rem] p-6 lg:p-8 transition-all duration-500 overflow-hidden shadow-[0_0_50px_rgba(99,102,241,0.05)] hover:shadow-[0_0_60px_rgba(99,102,241,0.2)]"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-indigo-500/5 opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="absolute -top-24 -right-24 w-56 h-56 bg-indigo-500/15 rounded-full blur-[90px] group-hover:bg-indigo-400/25 transition-colors duration-500 pointer-events-none"></div>
+              <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-purple-500/15 rounded-full blur-[90px] group-hover:bg-purple-400/25 transition-colors duration-500 pointer-events-none"></div>
+              
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 lg:gap-8">
+                <div className="flex flex-col flex-1 text-left">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+                      <span className="text-white font-bold text-base lg:text-lg">🧪</span>
+                    </div>
+                    <h2 className="text-xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 tracking-wide uppercase">
+                      AI Quant Laboratory
+                    </h2>
+                  </div>
+                  <p className="text-zinc-400 text-xs lg:text-sm leading-relaxed max-w-2xl font-sans">
+                    Enter the cloud engine. Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict Prop Firm evaluation limits.
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 lg:gap-3 px-4 py-3 lg:px-6 lg:py-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl lg:rounded-2xl text-indigo-400 font-mono font-bold tracking-widest text-[10px] lg:text-xs uppercase group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all duration-300 whitespace-nowrap mt-2 md:mt-0">
+                  Initialize Engine
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── AUTH GATE ──
+  if (showAuthGate && !isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full bg-[#050505] text-white relative overflow-hidden font-sans p-4">
+        <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-6 lg:p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[1.5rem] lg:rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
+          <div className="text-center mb-2 lg:mb-4"><h2 className="text-xl lg:text-2xl font-bold tracking-tight text-white mb-2">REQUEST ACCESS</h2><p className="text-[9px] lg:text-[10px] text-zinc-400 uppercase tracking-widest">CONNECT TO ALGORY ENGINE</p></div>
+          <div className="flex flex-col gap-2"><label className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">TRADER NICKNAME</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
+          <div className="flex flex-col gap-2"><label className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">EMAIL ADDRESS</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
+          <button type="submit" disabled={isSubmitting} className="mt-2 lg:mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "CONNECTING..." : "ENTER TERMINAL"}</button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* ─── DESKTOP SIDEBAR (Skrytý na mobilech, zobrazen na obrazovkách lg a větších) ─── */}
-      <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl h-full z-20 hidden lg:flex flex-col overflow-hidden shadow-2xl">
-        <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
-          <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => setMarketMode(null)}>
-            Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
-          </h2>
-          
-          <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
-            <button 
-              onClick={() => setActiveView('terminal')} 
-              className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'terminal' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              TERMINAL
-            </button>
-            <button 
-              onClick={() => setActiveView('laboratory')} 
-              className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${activeView === 'laboratory' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-              LABORATORY
-            </button>
-            <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'laboratory' ? 'translate-x-[100%] ml-2' : 'translate-x-0 left-1'}`}></div>
-          </div>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes custom-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .animate-bg-gradient { background-size: 200% 200%; animation: custom-gradient 15s ease infinite; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(39, 39, 42, 0.8); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(63, 63, 70, 1); }
+      `}} />
 
-          {activeView === 'terminal' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-              <div className="flex bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
-                <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
-                <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
-              </div>
-
-              {marketMode === 'CRYPTO' && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-                  <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
-                  <button onClick={() => { setCryptoMode('spatial_arb'); const firstId = Object.keys(safeSpatial)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>SPATIAL</button>
-                  <button onClick={() => { setCryptoMode('triangular_arb'); const firstId = Object.keys(safeTriangular)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>TRIANGLE</button>
-                  <button onClick={() => { setCryptoMode('funding_rates'); const firstId = Object.keys(safeFunding)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FUNDING</button>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
+      {/* ODSTRANĚNO min-w-[1024px] a h-screen nahrazeno h-[100dvh] pro spolehlivost na mobilech */}
+      <div className="flex h-[100dvh] w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 relative">
+        
+        {/* Původní animované pozadí (Skryté na mobilech pro lepší výkon a čitelnost) */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden hidden md:block">
+          <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '12s' }} />
+          <div className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-500 rounded-full blur-[120px] opacity-[0.06] animate-pulse" style={{ animationDuration: '10s' }} />
         </div>
 
-        <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${activeView === 'laboratory' ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
-          {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-            <div className="pb-10">
-              <div className="mb-6">
-                <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-blue-500 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                    <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]">SPATIAL ARBITRAGE</span>
-                  </div>
-                </div>
-                <div className="space-y-2 px-3 z-10 relative">
-                  {Object.keys(safeSpatial).length > 0 ? Object.values(safeSpatial).map((arb: any) => (
-                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
-                  )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MARKETS...</div>}
-                </div>
-              </div>
-            </div>
-          ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-            <div className="pb-10">
-              <div className="mb-6">
-                <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-purple-500 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(168,85,247,0.3)]">TRIANGULAR LOOPS</span>
-                  </div>
-                </div>
-                <div className="space-y-2 px-3 z-10 relative">
-                  {Object.keys(safeTriangular).length > 0 ? Object.values(safeTriangular).map((arb: any) => (
-                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
-                  )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MATRICES...</div>}
-                </div>
-              </div>
-            </div>
-          ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-            <div className="pb-10">
-              <div className="mb-6">
-                <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-orange-500 drop-shadow-[0_0_5px_rgba(249,115,22,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">CROSS-EXCHANGE RATES</span>
-                  </div>
-                </div>
-                <div className="space-y-2 px-3 z-10 relative">
-                  {Object.keys(safeFunding).length > 0 ? Object.values(safeFunding).map((arb: any) => (
-                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
-                  )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SYNCING RATES...</div>}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full z-10 relative`}>
-                  <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90 drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]' : 'text-emerald-500/90 drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]'}`}>
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> FAVORITES
-                  </div>
-                  <div className="px-3 w-full space-y-1.5 min-h-[60px]">
-                    <SortableContext items={safeFavorites} strategy={verticalListSortingStrategy}>{renderFavorites()}</SortableContext>
-                  </div>
-                </div>
-                <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-                  {activeDragId ? <SidebarItemNode ticker={activeDragId} prob={getProbForTicker(activeDragId)} isActive={activePair === activeDragId} isFavorite={true} onClick={() => {}} onToggleFavorite={() => {}} isOverlay /> : null}
-                </DragOverlay>
-              </DndContext>
-
-              <div className="flex-1 z-10 relative">
-                {marketMode === 'FOREX' ? (
-                  <>{renderSidebarGroup('Major Liquidity', safeData.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data.")}{renderSidebarGroup('Cross Pairs', safeData.minors)}{renderSidebarGroup('Precious Metals', safeData.metals)}</>
-                ) : (
-                  <>{renderSidebarGroup('Crypto Assets', safeData.crypto)}</>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="px-6 mt-8 mb-6 z-10 relative">
-            <button
-              onClick={handleSeedFirebase}
-              disabled={activeView === 'laboratory'}
-              className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-              SYNC ALL PAIRS TO FIREBASE
-            </button>
-          </div>
-        </nav>
-      </aside>
-
-      {/* ─── MOBILE BOTTOM NAVIGATION (Skrytý na lg a větších) ─── */}
-      <div className="lg:hidden fixed bottom-0 left-0 w-full bg-zinc-950/95 backdrop-blur-2xl border-t border-white/10 z-50 flex flex-col pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.8)] font-sans pb-2">
-        
-        {/* Horizontální seznam párů (Scrolluje se prstem do boku) */}
-        {activeView === 'terminal' && marketMode && (
-          <div className="flex overflow-x-auto hide-scrollbar px-4 py-3 gap-2 border-b border-white/5 w-full">
-            {mobilePairsList.map(pair => (
-              <button
-                key={pair}
-                onClick={() => setActivePair(pair)}
-                className={`px-4 py-1.5 rounded-full text-[11px] font-mono font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-                  activePair === pair
-                    ? (marketMode === 'CRYPTO' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30')
-                    : 'bg-white/5 text-zinc-400 border border-transparent'
-                }`}
-              >
-                {pair}
-              </button>
-            ))}
-          </div>
+        {activeView !== 'laboratory' && (
+          <Sidebar 
+            activeView={activeView} setActiveView={setActiveView}
+            marketMode={marketMode} setMarketMode={setMarketMode}
+            cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
+            activePair={activePair} setActivePair={setActivePair}
+            data={data} 
+            spatialArbData={data.crypto_arb?.spatial || {}}
+            triangularArbData={data.crypto_arb?.triangular || {}}
+            fundingRateData={data.crypto_arb?.funding || {}}
+            openGroups={openGroups} setOpenGroups={setOpenGroups}
+            favorites={favorites} setFavorites={setFavorites}
+            activeDragId={null} setActiveDragId={() => {}}
+            handleSeedFirebase={handleSeedFirebase}
+          />
         )}
-        
-        {/* Hlavní 3 tlačítka pro navigaci */}
-        <div className="flex justify-around items-center px-2 py-3">
-          <button 
-            onClick={() => { setMarketMode('FOREX'); setActiveView('terminal'); }} 
-            className={`flex flex-col items-center gap-1 w-1/3 transition-colors ${marketMode === 'FOREX' && activeView !== 'laboratory' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
-          >
-            <span className="text-xl">💱</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest">Forex</span>
-          </button>
-          
-          <button 
-            onClick={() => { setMarketMode('CRYPTO'); setActiveView('terminal'); setCryptoMode('standard'); }} 
-            className={`flex flex-col items-center gap-1 w-1/3 transition-colors ${marketMode === 'CRYPTO' && activeView !== 'laboratory' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
-          >
-            <span className="text-xl">₿</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest">Crypto</span>
-          </button>
-          
-          <button 
-            onClick={() => setActiveView('laboratory')} 
-            className={`flex flex-col items-center gap-1 w-1/3 transition-colors ${activeView === 'laboratory' ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-zinc-500'}`}
-          >
-            <span className="text-xl">🧪</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest">Lab</span>
-          </button>
-        </div>
+
+        {/* Zásadní změna: Přidáno pb-32 lg:pb-20, aby na mobilu obsah "nepodtekl" pod novou navigační spodní lištu. 
+            Odstraněno min-w-0 a px-6 zredukováno pro mobily.
+        */}
+        <main className={`flex-1 h-full overflow-y-auto custom-scrollbar px-4 md:px-6 lg:px-12 pt-6 md:pt-12 lg:pt-20 pb-32 lg:pb-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10 w-full`}>
+          <div className={`${activeView === 'laboratory' ? 'w-full max-w-full' : 'max-w-[1400px] mx-auto w-full'} relative z-10 transition-all duration-500`}>
+            
+            <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
+
+            {activeView === 'laboratory' ? (
+              <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
+            ) : loading && !data.majors ? (
+              <div className="p-10 md:p-20 mt-10 text-center flex flex-col items-center justify-center gap-4 lg:gap-6 border border-white/10 rounded-[1.5rem] lg:rounded-[2rem] bg-white/[0.02]">
+                <div className={`w-8 h-8 lg:w-10 lg:h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
+                <span className="text-[9px] lg:text-[10px] text-zinc-400 font-bold tracking-widest uppercase">SYSTEM SCANNING...</span>
+              </div>
+            ) : error && !data.majors ? (
+              <div className="p-6 md:p-10 mt-10 text-center text-[9px] lg:text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[1.5rem] lg:rounded-[2rem]">{error}</div>
+            ) : (
+              <div className="flex flex-col xl:flex-row gap-6 lg:gap-10 mt-6 lg:mt-10 w-full items-start">
+                <div className="w-full xl:w-2/3 flex flex-col space-y-6 lg:space-y-10">
+                  {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
+                    <SpatialArbitragePanel arbData={data.crypto_arb?.spatial?.[activePair]} />
+                  ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
+                    <TriangularArbitragePanel arbData={data.crypto_arb?.triangular?.[activePair]} />
+                  ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
+                    <FundingRatesPanel data={data.crypto_arb?.funding?.[activePair]} />
+                  ) : (
+                    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleWidgetDragStart} onDragEnd={handleWidgetDragEnd}>
+                      <SortableContext items={mainLayout} strategy={verticalListSortingStrategy}>
+                        <div className="flex flex-col space-y-6 lg:space-y-10 w-full">
+                          {mainLayout.map((widgetId) => (
+                              widgetMap[widgetId] ? (
+                                <DraggableWidget key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DraggableWidget>
+                              ) : null
+                          ))}
+                        </div>
+                      </SortableContext>
+                      <DragOverlay dropAnimation={dropAnimationConfig}>
+                        {activeWidgetDragId && widgetMap[activeWidgetDragId] ? (
+                          <div className="opacity-80 scale-105 shadow-2xl pointer-events-none">{widgetMap[activeWidgetDragId]}</div>
+                        ) : null}
+                      </DragOverlay>
+                    </DndContext>
+                  )}
+                </div>
+                <NewsPanel marketMode={marketMode} rightPanelMode={rightPanelMode} setRightPanelMode={setRightPanelMode} />
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </>
   );
