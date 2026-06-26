@@ -11,7 +11,7 @@ import {
   verticalListSortingStrategy, useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import Sidebar from './Sidebar';
 import NewsPanel from './NewsPanel';
@@ -100,7 +100,7 @@ const ExecuteButton = ({ baseClass, defaultText, colorTheme, disabled = false }:
 const InfoTooltip = ({ info }: { info: string }) => (
   <span className="relative group/tt inline-flex items-center cursor-help ml-2">
     <span className="flex items-center justify-center w-3.5 h-3.5 text-[9px] border border-zinc-600 text-zinc-400 rounded-full hover:bg-zinc-700 hover:text-white transition-colors">i</span>
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover/tt:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 md:w-64 p-3 bg-zinc-900 border border-white/10 text-white/90 text-xs rounded-xl shadow-2xl opacity-0 group-hover/tt:opacity-100 transition-all pointer-events-none z-50 font-normal normal-case tracking-normal text-left">
       {info}
       <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900" />
     </div>
@@ -129,18 +129,18 @@ const MarketMonitor = ({ lastRefresh, mode, activeView }: { lastRefresh: Date | 
   else if (mode.includes('FUNDING')) { pulseColor = 'bg-orange-400'; gradientStart = 'from-orange-600'; gradientEnd = 'to-orange-400'; }
 
   return (
-    <div className="mb-6 p-8 bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0 z-10">
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 relative z-10">
-        <div className="flex flex-col gap-2 w-full md:w-auto">
-          <div className="text-5xl font-semibold tracking-tight text-white">
+    <div className="mb-6 p-6 lg:p-8 bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[1.5rem] lg:rounded-[2rem] shadow-2xl relative overflow-hidden transition-all duration-300 flex-shrink-0 z-10">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 lg:gap-8 relative z-10">
+        <div className="flex flex-col gap-2 w-full lg:w-auto">
+          <div className="text-4xl lg:text-5xl font-semibold tracking-tight text-white">
             {activeView === 'terminal' ? (
               <>
                 {displayTime.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
-                <span className="text-2xl text-white/50 ml-1">:{displayTime.getSeconds().toString().padStart(2, '0')}</span>
+                <span className="text-xl lg:text-2xl text-white/50 ml-1">:{displayTime.getSeconds().toString().padStart(2, '0')}</span>
               </>
             ) : "AI BACKTEST LAB"}
           </div>
-          <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-3 mt-2">
+          <div className="text-[9px] lg:text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex flex-wrap items-center gap-2 lg:gap-3 mt-2">
             <span className="flex items-center gap-2">
               <span className={`w-1.5 h-1.5 rounded-full ${activeView === 'terminal' ? (isCrypto ? 'animate-pulse ' + pulseColor : 'bg-emerald-400') : 'bg-zinc-500'}`}></span>
               {activeView === 'terminal' ? `SYSTEM SYNC (${mode})` : 'STRATEGY SIMULATOR ENVIRONMENT'}
@@ -152,11 +152,11 @@ const MarketMonitor = ({ lastRefresh, mode, activeView }: { lastRefresh: Date | 
         </div>
 
         {activeView === 'terminal' && (
-          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap md:flex-nowrap gap-2 lg:gap-3 w-full lg:w-auto">
             {sessions.map((s) => (
-              <div key={s.name} className={`px-5 py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${s.isActive ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` : 'bg-black/40 border-white/5 opacity-60'}`}>
-                <span className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>{s.name}</span>
-                <span className="text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
+              <div key={s.name} className={`flex-1 min-w-[45%] lg:min-w-0 px-3 lg:px-5 py-2 lg:py-3 border rounded-xl flex flex-col items-center justify-center transition-all duration-500 ${s.isActive ? `${isCrypto ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.1)]'}` : 'bg-black/40 border-white/5 opacity-60'}`}>
+                <span className={`text-[8px] lg:text-[10px] font-bold uppercase tracking-widest mb-1 text-center ${s.isActive ? (isCrypto ? 'text-blue-400' : 'text-emerald-400') : 'text-zinc-500'}`}>{s.name}</span>
+                <span className="text-[9px] lg:text-[10px] text-zinc-500 font-medium">{s.open} - {s.close}</span>
               </div>
             ))}
           </div>
@@ -164,11 +164,11 @@ const MarketMonitor = ({ lastRefresh, mode, activeView }: { lastRefresh: Date | 
       </div>
 
       {activeView === 'terminal' && (
-        <div className="mt-8 relative z-10">
-          <div className="flex justify-between text-[10px] text-zinc-500 font-bold mb-3 uppercase tracking-widest">
+        <div className="mt-6 lg:mt-8 relative z-10">
+          <div className="flex justify-between text-[8px] lg:text-[10px] text-zinc-500 font-bold mb-2 lg:mb-3 uppercase tracking-widest">
             <span>AI ENGINE M15 CYCLE</span><span>{15 - (minutes % 15)}m {(60 - seconds) % 60}s REMAINING</span>
           </div>
-          <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
+          <div className="w-full h-1.5 lg:h-2 bg-black/60 rounded-full overflow-hidden border border-white/5">
             <div className={`h-full rounded-full transition-all duration-1000 ease-linear bg-gradient-to-r ${gradientStart} ${gradientEnd}`} style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
@@ -196,23 +196,23 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
   const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : direction === 'SELL' ? 'focus:ring-red-500/50' : 'focus:ring-white/20';
 
   return (
-    <div className="p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner mt-6">
-      <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
+    <div className="p-4 lg:p-6 bg-black/30 rounded-2xl border border-white/5 shadow-inner mt-6 w-full">
+      <div className="text-[9px] lg:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
         POSITION SIZING
         <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
       </div>
-      <div className="flex gap-6 items-end">
-        <div className="flex flex-col gap-2 w-1/3">
-          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">BALANCE ($)</label>
-          <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
+      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-end">
+        <div className="flex flex-col gap-2 w-full md:w-1/3">
+          <label className="text-[8px] lg:text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">BALANCE ($)</label>
+          <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all w-full`} />
         </div>
-        <div className="flex flex-col gap-2 w-1/3">
-          <label className="text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">RISK (%)</label>
-          <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all`} />
+        <div className="flex flex-col gap-2 w-full md:w-1/3">
+          <label className="text-[8px] lg:text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">RISK (%)</label>
+          <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/5 rounded-lg px-3 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm text-white font-mono focus:outline-none focus:ring-1 ${focusRingColor} transition-all w-full`} />
         </div>
-        <div className={`w-1/3 flex flex-col items-center justify-center py-2 px-4 rounded-lg border shadow-inner transition-all duration-300 ${direction === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : direction === 'SELL' ? 'bg-red-500/10 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-zinc-900 border-white/5'}`}>
-          <span className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : direction === 'SELL' ? 'text-red-500/70' : 'text-zinc-500'}`}>VOLUME</span>
-          <span className="text-xl font-bold text-white font-mono">{lotSize} <span className="text-xs text-zinc-500 font-normal font-sans tracking-normal">Lots</span></span>
+        <div className={`w-full md:w-1/3 flex flex-col items-center justify-center py-2 px-2 lg:px-4 rounded-lg border shadow-inner transition-all duration-300 ${direction === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : direction === 'SELL' ? 'bg-red-500/10 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-zinc-900 border-white/5'}`}>
+          <span className={`text-[8px] lg:text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : direction === 'SELL' ? 'text-red-500/70' : 'text-zinc-500'}`}>VOLUME</span>
+          <span className="text-base lg:text-xl font-bold text-white font-mono">{lotSize} <span className="text-[10px] lg:text-xs text-zinc-500 font-normal font-sans tracking-normal">Lots</span></span>
         </div>
       </div>
     </div>
@@ -225,7 +225,7 @@ const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNo
 
   return (
     <div ref={setNodeRef} style={style} className="w-full relative group/widget">
-      <div {...attributes} {...listeners} className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 flex items-center justify-center shadow-xl hover:text-white hover:border-white/20">
+      <div {...attributes} {...listeners} className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0a0a0a] border border-white/10 text-zinc-500 px-3 py-1 rounded-full cursor-grab active:cursor-grabbing opacity-0 group-hover/widget:opacity-100 transition-opacity z-50 flex items-center justify-center shadow-xl hover:text-white hover:border-white/20 hidden lg:flex">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
       </div>
       {children}
@@ -370,34 +370,34 @@ export default function Home() {
   const renderAiAnalysisWidget = () => {
     if (!activeParams) return null;
     return (
-      <div className={`bg-zinc-950/50 backdrop-blur-xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/10'} rounded-[2rem] overflow-hidden p-8 transition-all duration-700 relative z-10 ${getGlowColor()}`}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/5 pb-8">
+      <div className={`bg-zinc-950/50 backdrop-blur-xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/10'} rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden p-6 lg:p-8 transition-all duration-700 relative z-10 ${getGlowColor()}`}>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 lg:gap-8 mb-8 border-b border-white/5 pb-8">
           <div className="w-full">
-            <div className="flex items-center gap-4 mb-4">
-              <h2 className="text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
+            <div className="flex flex-wrap items-center gap-3 lg:gap-4 mb-4">
+              <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
               {isTradeActive && (
-                <span className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse ${
+                <span className={`px-3 lg:px-4 py-1.5 text-[9px] md:text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse ${
                   inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
                 }`}>{inferredDirection} PENDING</span>
               )}
               {activeParams?.KeyDriver && (
-                <span className="px-3 py-1 bg-white/5 text-white/80 text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">{activeParams.KeyDriver}</span>
+                <span className="px-2 lg:px-3 py-1 bg-white/5 text-white/80 text-[8px] lg:text-[10px] uppercase tracking-widest rounded-lg border border-white/10 font-bold flex items-center shadow-inner">{activeParams.KeyDriver}</span>
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
-              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">TP</span><span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span></span>
-              {activeParams.RRR && <span className="px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[11px] shadow-inner"><span className="text-zinc-400 mr-2 uppercase tracking-wider font-bold">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
-              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">BE</span><span className="text-white font-bold">{activeParams.BE}</span></span>
-              <span className="px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[11px] shadow-inner"><span className="text-zinc-500 mr-2 uppercase tracking-wider">SPREAD</span><span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span></span>
-              {activeParams.LivePrice && <span className="px-3 py-1.5 bg-blue-900/30 rounded-lg border border-blue-500/30 font-mono text-[11px] shadow-inner ml-auto"><span className="text-blue-400 mr-2 uppercase tracking-wider">LIVE</span><span className="text-white font-bold">{activeParams.LivePrice}</span></span>}
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">TP</span><span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span></span>
+              {activeParams.RRR && <span className="px-2 lg:px-3 py-1.5 bg-zinc-800/50 rounded-lg border border-zinc-700/50 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-400 mr-1 lg:mr-2 uppercase tracking-wider font-bold">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">BE</span><span className="text-white font-bold">{activeParams.BE}</span></span>
+              <span className="px-2 lg:px-3 py-1.5 bg-black/40 rounded-lg border border-white/5 font-mono text-[9px] lg:text-[11px] shadow-inner"><span className="text-zinc-500 mr-1 lg:mr-2 uppercase tracking-wider">SPREAD</span><span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span></span>
+              {activeParams.LivePrice && <span className="px-2 lg:px-3 py-1.5 bg-blue-900/30 rounded-lg border border-blue-500/30 font-mono text-[9px] lg:text-[11px] shadow-inner ml-auto mt-2 lg:mt-0"><span className="text-blue-400 mr-1 lg:mr-2 uppercase tracking-wider">LIVE</span><span className="text-white font-bold">{activeParams.LivePrice}</span></span>}
             </div>
             <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />
           </div>
 
-          <div className="flex flex-col items-center gap-6 flex-shrink-0">
-            <div className="flex flex-col items-center justify-center relative w-56 h-28 mt-2">
+          <div className="flex flex-col items-center gap-6 flex-shrink-0 w-full lg:w-auto mt-6 lg:mt-0">
+            <div className="flex flex-col items-center justify-center relative w-48 lg:w-56 h-24 lg:h-28 mt-2">
               <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
                 <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
                 <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
@@ -407,46 +407,46 @@ export default function Home() {
                   <circle cx="100" cy="100" r="8" fill="#050505" stroke={needleColor} strokeWidth="3" />
                 </g>
               </svg>
-              <div className={`absolute bottom-[-10px] text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'}`}>
+              <div className={`absolute bottom-[-10px] text-2xl lg:text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'}`}>
                 {(activeProb * 100).toFixed(1)}%
               </div>
             </div>
             {isTradeActive ? (
-              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]') : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}>
+              <button className={`w-full px-6 py-4 text-[10px] lg:text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]') : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}>
                 EXECUTE {inferredDirection}
               </button>
             ) : (
-              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">LOW CONVICTION</button>
+              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[10px] lg:text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">LOW CONVICTION</button>
             )}
           </div>
         </div>
 
         {activeParams?.aiAnalysis && (
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
             <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
-              <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-4 flex items-center justify-between"><span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session}</span><span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span></div>
-              <p className="text-sm text-white/90 leading-loose font-medium">{activeParams.aiAnalysis.evaluation}</p>
+              <div className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-3 lg:mb-4 flex items-center justify-between"><span className="flex items-center">PREVIOUS: {activeParams.aiAnalysis.prev_session}</span><span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span></div>
+              <p className="text-xs lg:text-sm text-white/90 leading-loose font-medium">{activeParams.aiAnalysis.evaluation}</p>
             </div>
             <div className={`border rounded-2xl p-6 relative overflow-hidden transition-all duration-1000 shadow-inner ${inferredDirection === 'SELL' ? 'bg-red-950/20 border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-950/20 border-blue-500/20' : 'bg-emerald-950/20 border-emerald-500/20') : 'bg-black/40 border-white/5'}`}>
-              <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center justify-between ${inferredDirection === 'SELL' ? 'text-red-400/80' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'}`}>
+              <div className={`text-[9px] lg:text-[10px] font-bold uppercase tracking-widest mb-3 lg:mb-4 flex items-center justify-between ${inferredDirection === 'SELL' ? 'text-red-400/80' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400/80' : 'text-emerald-400/80') : 'text-zinc-500'}`}>
                 <span>PREDICTION: {activeParams.aiAnalysis.current_session}</span>
                 <span className="relative flex h-2 w-2">
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inferredDirection === 'SELL' ? 'bg-red-400' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-400' : 'bg-emerald-400') : 'bg-zinc-600'}`}></span>
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${inferredDirection === 'SELL' ? 'bg-red-500' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500' : 'bg-emerald-500') : 'bg-zinc-500'}`}></span>
                 </span>
               </div>
-              <p className={`text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>{activeParams.aiAnalysis.prediction}</p>
+              <p className={`text-xs lg:text-sm leading-loose font-medium relative z-10 ${inferredDirection !== 'NEUTRAL' ? 'text-white' : 'text-white/80'}`}>{activeParams.aiAnalysis.prediction}</p>
             </div>
           </div>
         )}
 
         {activeParams?.history && (
-          <div className="border-t border-white/5 pt-8 mt-2">
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2"><svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>AI BACKTEST & SIGNAL HISTORY (LAST 5)</div>
-            <div className="flex flex-wrap gap-3">
+          <div className="border-t border-white/5 pt-6 lg:pt-8 mt-2">
+            <div className="text-[9px] lg:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 lg:mb-6 flex items-center gap-2"><svg className="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>AI BACKTEST & SIGNAL HISTORY (LAST 5)</div>
+            <div className="flex flex-wrap gap-2 lg:gap-3">
               {activeParams.history.map((trade, idx) => (
-                <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
-                  <span className="text-[10px] text-zinc-500 font-mono bg-black/40 px-2 py-1 rounded">{trade.date}</span><span className="text-[10px] font-bold text-white/80">{trade.type}</span><span className={`text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
+                <div key={idx} className={`flex items-center gap-2 lg:gap-3 px-3 py-2 lg:px-4 lg:py-3 rounded-xl border shadow-inner transition-colors hover:bg-white/5 ${trade.result === 'WIN' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-red-500/5 border-red-500/10'}`}>
+                  <span className="text-[9px] lg:text-[10px] text-zinc-500 font-mono bg-black/40 px-1.5 py-1 lg:px-2 rounded">{trade.date}</span><span className="text-[9px] lg:text-[10px] font-bold text-white/80">{trade.type}</span><span className={`text-[9px] lg:text-[10px] font-bold ${trade.result === 'WIN' ? 'text-emerald-400' : 'text-red-400'}`}>{trade.pips > 0 ? '+' : ''}{trade.pips} PIPS</span>
                 </div>
               ))}
             </div>
@@ -460,7 +460,7 @@ export default function Home() {
     'chart': <ChartArea symbol={activePair} mode={marketMode} />,
     'ai_panel': renderAiAnalysisWidget(),
     'liquidations': marketMode === 'CRYPTO' && cryptoMode === 'standard' ? (
-      <div className="w-full bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-2xl relative z-10">
+      <div className="w-full bg-zinc-950/50 backdrop-blur-xl border border-white/10 rounded-[1.5rem] lg:rounded-[2rem] p-6 shadow-2xl relative z-10">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold flex items-center gap-2">
             <svg className="w-4 h-4 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
@@ -480,36 +480,38 @@ export default function Home() {
     ) : null
   };
 
-  // ÚVODNÍ OBRAZOVKA
+  // ── ÚVODNÍ OBRAZOVKA (RESPONSIVE CYBERPUNK) ──
   if (!marketMode && activeView !== 'laboratory') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen w-full relative overflow-hidden font-sans bg-[#050505]">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full relative overflow-hidden font-sans bg-[#050505] p-6 lg:p-0">
+        
+        {/* Animované pozadí */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
-        <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
-        <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[120px] opacity-20 z-0 pointer-events-none" />
-        <motion.div animate={{ y: [0, -30, 0], scale: [1, 1.1, 1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-600 rounded-full blur-[120px] opacity-10 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" />
+        <motion.div animate={{ y: [0, -30, 0], scale: [1, 1.1, 1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[30%] left-[40%] w-[40vw] lg:w-[30vw] h-[40vw] lg:h-[30vw] max-w-[500px] max-h-[500px] bg-blue-600 rounded-full blur-[80px] lg:blur-[120px] opacity-10 z-0 pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col items-center text-center px-4 w-full max-w-5xl">
+        <div className="relative z-10 flex flex-col items-center text-center w-full max-w-5xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] md:text-xs mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">WELCOME TO ALGORY</span>
-            <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-6">Algory<span className="text-zinc-600">.</span></h1>
-            <p className="text-zinc-400 text-sm md:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] lg:text-xs mb-4 lg:mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">WELCOME TO ALGORY</span>
+            <h1 className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-4 lg:mb-6">Algory<span className="text-zinc-600">.</span></h1>
+            <p className="text-zinc-400 text-xs md:text-sm lg:text-lg font-light tracking-wide max-w-2xl leading-relaxed">Advanced quantitative analysis & real-time execution engine.</p>
           </motion.div>
 
-          <div className="w-full max-w-4xl flex flex-col gap-6 mt-16 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="w-full max-w-4xl flex flex-col gap-4 lg:gap-6 mt-10 lg:mt-16 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
               <motion.div 
                 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
                 whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
                 onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
-                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-emerald-500/50 rounded-[2rem] p-8 transition-all duration-300 overflow-hidden shadow-2xl"
+                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-emerald-500/50 rounded-[1.5rem] lg:rounded-[2rem] p-6 lg:p-8 transition-all duration-300 overflow-hidden shadow-2xl"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
-                  <span className="text-xl">💱</span>
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 lg:mb-6 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
+                  <span className="text-lg lg:text-xl">💱</span>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-emerald-400 transition-colors">Global Forex</h2>
-                <p className="text-zinc-400 text-sm leading-relaxed font-sans text-left">
+                <h2 className="text-xl lg:text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-emerald-400 transition-colors text-left">Global Forex</h2>
+                <p className="text-zinc-400 text-xs lg:text-sm leading-relaxed font-sans text-left">
                   Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
                 </p>
               </motion.div>
@@ -518,14 +520,14 @@ export default function Home() {
                 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
                 whileHover={{ scale: 1.02, y: -5 }} whileTap={{ scale: 0.98 }}
                 onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); if(!isAuthenticated) setShowAuthGate(true); }}
-                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-blue-500/50 rounded-[2rem] p-8 transition-all duration-300 overflow-hidden shadow-2xl"
+                className="cursor-pointer group relative bg-zinc-950/40 backdrop-blur-xl border border-white/10 hover:border-blue-500/50 rounded-[1.5rem] lg:rounded-[2rem] p-6 lg:p-8 transition-all duration-300 overflow-hidden shadow-2xl"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300">
-                  <span className="text-xl">₿</span>
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 lg:mb-6 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300">
+                  <span className="text-lg lg:text-xl">₿</span>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-blue-400 transition-colors">Digital Assets</h2>
-                <p className="text-zinc-400 text-sm leading-relaxed font-sans text-left">
+                <h2 className="text-xl lg:text-2xl font-bold text-white mb-2 tracking-wide group-hover:text-blue-400 transition-colors text-left">Digital Assets</h2>
+                <p className="text-zinc-400 text-xs lg:text-sm leading-relaxed font-sans text-left">
                   Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
                 </p>
               </motion.div>
@@ -535,28 +537,28 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }}
               whileHover={{ scale: 1.01, y: -3 }} whileTap={{ scale: 0.99 }}
               onClick={() => { setMarketMode('FOREX'); setActiveView('laboratory'); if(!isAuthenticated) setShowAuthGate(true); }}
-              className="cursor-pointer group relative bg-zinc-950/60 backdrop-blur-2xl border border-indigo-500/30 hover:border-indigo-400/80 rounded-[2rem] p-8 transition-all duration-500 overflow-hidden shadow-[0_0_50px_rgba(99,102,241,0.05)] hover:shadow-[0_0_60px_rgba(99,102,241,0.2)]"
+              className="cursor-pointer group relative bg-zinc-950/60 backdrop-blur-2xl border border-indigo-500/30 hover:border-indigo-400/80 rounded-[1.5rem] lg:rounded-[2rem] p-6 lg:p-8 transition-all duration-500 overflow-hidden shadow-[0_0_50px_rgba(99,102,241,0.05)] hover:shadow-[0_0_60px_rgba(99,102,241,0.2)]"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-indigo-500/5 opacity-40 group-hover:opacity-100 transition-opacity duration-500"></div>
               <div className="absolute -top-24 -right-24 w-56 h-56 bg-indigo-500/15 rounded-full blur-[90px] group-hover:bg-indigo-400/25 transition-colors duration-500 pointer-events-none"></div>
               <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-purple-500/15 rounded-full blur-[90px] group-hover:bg-purple-400/25 transition-colors duration-500 pointer-events-none"></div>
               
-              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 lg:gap-8">
                 <div className="flex flex-col flex-1 text-left">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-                      <span className="text-white font-bold text-lg">🧪</span>
+                    <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)]">
+                      <span className="text-white font-bold text-base lg:text-lg">🧪</span>
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 tracking-wide uppercase">
+                    <h2 className="text-xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 tracking-wide uppercase">
                       AI Quant Laboratory
                     </h2>
                   </div>
-                  <p className="text-zinc-400 text-sm leading-relaxed max-w-2xl font-sans">
+                  <p className="text-zinc-400 text-xs lg:text-sm leading-relaxed max-w-2xl font-sans">
                     Enter the cloud engine. Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict Prop Firm evaluation limits.
                   </p>
                 </div>
                 
-                <div className="flex items-center gap-3 px-6 py-4 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-indigo-400 font-mono font-bold tracking-widest text-xs uppercase group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all duration-300 whitespace-nowrap">
+                <div className="flex items-center gap-2 lg:gap-3 px-4 py-3 lg:px-6 lg:py-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl lg:rounded-2xl text-indigo-400 font-mono font-bold tracking-widest text-[10px] lg:text-xs uppercase group-hover:bg-indigo-500 group-hover:text-white group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all duration-300 whitespace-nowrap mt-2 md:mt-0">
                   Initialize Engine
                   <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                 </div>
@@ -568,14 +570,15 @@ export default function Home() {
     );
   }
 
+  // ── AUTH GATE ──
   if (showAuthGate && !isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen w-full bg-[#050505] text-white relative overflow-hidden font-sans">
-        <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
-          <div className="text-center mb-4"><h2 className="text-2xl font-bold tracking-tight text-white mb-2">REQUEST ACCESS</h2><p className="text-[10px] text-zinc-400 uppercase tracking-widest">CONNECT TO ALGORY ENGINE</p></div>
-          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">TRADER NICKNAME</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
-          <div className="flex flex-col gap-2"><label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">EMAIL ADDRESS</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
-          <button type="submit" disabled={isSubmitting} className="mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "CONNECTING..." : "ENTER TERMINAL"}</button>
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full bg-[#050505] text-white relative overflow-hidden font-sans p-4">
+        <form onSubmit={handleRegister} className="relative z-10 w-full max-w-md p-6 lg:p-10 bg-white/[0.02] backdrop-blur-2xl border border-white/5 rounded-[1.5rem] lg:rounded-[2rem] shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-500">
+          <div className="text-center mb-2 lg:mb-4"><h2 className="text-xl lg:text-2xl font-bold tracking-tight text-white mb-2">REQUEST ACCESS</h2><p className="text-[9px] lg:text-[10px] text-zinc-400 uppercase tracking-widest">CONNECT TO ALGORY ENGINE</p></div>
+          <div className="flex flex-col gap-2"><label className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">TRADER NICKNAME</label><input type="text" required value={nickname} onChange={(e) => setNickname(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all" placeholder="e.g. AlgoMaster99" /></div>
+          <div className="flex flex-col gap-2"><label className="text-[9px] lg:text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-1">EMAIL ADDRESS</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={`w-full bg-black/50 border ${emailError ? 'border-red-500/50' : 'border-white/10'} rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all`} placeholder="name@domain.com" />{emailError && <span className="text-[10px] text-red-400 font-medium ml-1">{emailError}</span>}</div>
+          <button type="submit" disabled={isSubmitting} className="mt-2 lg:mt-4 w-full py-4 bg-emerald-500 text-black font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50">{isSubmitting ? "CONNECTING..." : "ENTER TERMINAL"}</button>
         </form>
       </div>
     );
@@ -592,8 +595,11 @@ export default function Home() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(63, 63, 70, 1); }
       `}} />
 
-      <div className="flex h-screen w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 min-w-[1024px] relative">
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+      {/* KLÍČOVÁ ZMĚNA: Výška h-[100dvh] a odstraněno min-w-[1024px] pro bezpečné mobilní zobrazení */}
+      <div className="flex h-[100dvh] w-full bg-[#050505] text-zinc-200 selection:bg-emerald-500/30 overflow-hidden font-sans animate-in fade-in duration-700 relative">
+        
+        {/* Původní animované pozadí (Skryté na mobilech pro lepší výkon a čitelnost) */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden hidden md:block">
           <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '8s' }} />
           <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-500 rounded-full blur-[120px] opacity-[0.08] animate-pulse" style={{ animationDuration: '12s' }} />
           <div className="absolute top-[30%] left-[40%] w-[30vw] h-[30vw] max-w-[500px] max-h-[500px] bg-blue-500 rounded-full blur-[120px] opacity-[0.06] animate-pulse" style={{ animationDuration: '10s' }} />
@@ -616,24 +622,24 @@ export default function Home() {
           />
         )}
 
-        <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar px-6 pt-12 pb-24 lg:px-12 lg:pt-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10`}>
+        {/* KLÍČOVÁ ZMĚNA: Na mobilech přidáno výrazné spodní odsazení pb-36 pro mobilní navigační lištu */}
+        <main className={`flex-1 h-full overflow-y-auto custom-scrollbar px-4 md:px-6 lg:px-12 pt-6 md:pt-12 lg:pt-20 pb-36 lg:pb-20 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10 w-full`}>
           <div className={`${activeView === 'laboratory' ? 'w-full max-w-full' : 'max-w-[1400px] mx-auto w-full'} relative z-10 transition-all duration-500`}>
             
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
 
             {activeView === 'laboratory' ? (
-              // PROPOJENÍ LOGIKY: Předání funkce onBack do komponenty laboratoře
               <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
             ) : loading && !data.majors ? (
-              <div className="p-20 mt-10 text-center flex flex-col items-center justify-center gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
-                <div className={`w-10 h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
-                <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">SYSTEM SCANNING...</span>
+              <div className="p-10 md:p-20 mt-10 text-center flex flex-col items-center justify-center gap-4 lg:gap-6 border border-white/10 rounded-[1.5rem] lg:rounded-[2rem] bg-white/[0.02]">
+                <div className={`w-8 h-8 lg:w-10 lg:h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
+                <span className="text-[9px] lg:text-[10px] text-zinc-400 font-bold tracking-widest uppercase">SYSTEM SCANNING...</span>
               </div>
             ) : error && !data.majors ? (
-              <div className="p-10 mt-10 text-center text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[2rem]">{error}</div>
+              <div className="p-6 md:p-10 mt-10 text-center text-[9px] lg:text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[1.5rem] lg:rounded-[2rem]">{error}</div>
             ) : (
-              <div className="flex flex-col xl:flex-row gap-10 mt-10 w-full items-start">
-                <div className="w-full xl:w-2/3 flex flex-col space-y-10">
+              <div className="flex flex-col xl:flex-row gap-6 lg:gap-10 mt-6 lg:mt-10 w-full items-start">
+                <div className="w-full xl:w-2/3 flex flex-col space-y-6 lg:space-y-10">
                   {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
                     <SpatialArbitragePanel arbData={data.crypto_arb?.spatial?.[activePair]} />
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
@@ -643,7 +649,7 @@ export default function Home() {
                   ) : (
                     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleWidgetDragStart} onDragEnd={handleWidgetDragEnd}>
                       <SortableContext items={mainLayout} strategy={verticalListSortingStrategy}>
-                        <div className="flex flex-col space-y-10 w-full">
+                        <div className="flex flex-col space-y-6 lg:space-y-10 w-full">
                           {mainLayout.map((widgetId) => (
                               widgetMap[widgetId] ? (
                                 <DraggableWidget key={widgetId} id={widgetId}>{widgetMap[widgetId]}</DraggableWidget>

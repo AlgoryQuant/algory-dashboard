@@ -230,9 +230,9 @@ export default function Sidebar({
   };
 
   const renderFavorites = () => {
-    const allPairsMap = { ...data.majors, ...data.minors, ...data.metals, ...data.crypto };
+    const allPairsMap = { ...data?.majors, ...data?.minors, ...data?.metals, ...data?.crypto };
     const relevantFavs = favorites.filter(ticker => {
-      const isCryptoTicker = Object.keys(data.crypto || {}).includes(ticker);
+      const isCryptoTicker = Object.keys(data?.crypto || {}).includes(ticker);
       if (marketMode === 'CRYPTO') return isCryptoTicker;
       if (marketMode === 'FOREX') return !isCryptoTicker;
       return true;
@@ -248,143 +248,199 @@ export default function Sidebar({
     return relevantFavs.map(ticker => <SortableSidebarItem key={ticker} ticker={ticker} prob={allPairsMap[ticker] || 0} isActive={activePair === ticker} isFavorite={true} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />);
   };
 
+  // Seznam pro mobilní scroller
+  const mobilePairsList = marketMode === 'CRYPTO' 
+    ? (data?.crypto ? Object.keys(data.crypto) : ["BTCUSD", "ETHUSD", "SOLUSD"]) 
+    : (data?.majors ? Object.keys(data.majors) : ["EURUSD", "GBPUSD", "XAUUSD"]);
+
   return (
-    <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden md:flex overflow-hidden shadow-2xl">
-      <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
-        <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => setMarketMode(null)}>
-          Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
-        </h2>
+    <>
+      {/* ─── DESKTOP SIDEBAR (Skryté na menších obrazovkách) ─── */}
+      <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden lg:flex overflow-hidden shadow-2xl">
+        <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
+          <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => setMarketMode(null)}>
+            Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
+          </h2>
+          
+          {/* === VIEW SWITCHER (TERMINAL vs LABORATORY) === */}
+          <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
+            <button 
+              onClick={() => setActiveView('terminal')} 
+              className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'terminal' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              TERMINAL
+            </button>
+            <button 
+              onClick={() => setActiveView('laboratory')} 
+              className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${activeView === 'laboratory' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+              LABORATORY
+            </button>
+            <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'laboratory' ? 'translate-x-[100%] ml-2' : 'translate-x-0 left-1'}`}></div>
+          </div>
+
+          {/* Filters only visible in Terminal view */}
+          {activeView === 'terminal' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
+              <div className="flex bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
+                <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
+                <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
+              </div>
+
+              {marketMode === 'CRYPTO' && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
+                  <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
+                  <button onClick={() => { setCryptoMode('spatial_arb'); const firstId = Object.keys(spatialArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                    SPATIAL
+                  </button>
+                  <button onClick={() => { setCryptoMode('triangular_arb'); const firstId = Object.keys(triangularArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                    TRIANGLE
+                  </button>
+                  <button onClick={() => { setCryptoMode('funding_rates'); const firstId = Object.keys(fundingRateData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                    FUNDING
+                  </button>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </div>
+
+        <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${activeView === 'laboratory' ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
+          {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
+            <div className="pb-10">
+              <div className="mb-6">
+                <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3.5 h-3.5 text-blue-500 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                    <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]">SPATIAL ARBITRAGE</span>
+                  </div>
+                </div>
+                <div className="space-y-2 px-3 z-10 relative">
+                  {Object.keys(spatialArbData).length > 0 ? Object.values(spatialArbData).map((arb) => (
+                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
+                  )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MARKETS...</div>}
+                </div>
+              </div>
+            </div>
+          ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
+            <div className="pb-10">
+              <div className="mb-6">
+                <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3.5 h-3.5 text-purple-500 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(168,85,247,0.3)]">TRIANGULAR LOOPS</span>
+                  </div>
+                </div>
+                <div className="space-y-2 px-3 z-10 relative">
+                  {Object.keys(triangularArbData).length > 0 ? Object.values(triangularArbData).map((arb) => (
+                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
+                  )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MATRICES...</div>}
+                </div>
+              </div>
+            </div>
+          ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
+            <div className="pb-10">
+              <div className="mb-6">
+                <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-3.5 h-3.5 text-orange-500 drop-shadow-[0_0_5px_rgba(249,115,22,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402-2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">CROSS-EXCHANGE RATES</span>
+                  </div>
+                </div>
+                <div className="space-y-2 px-3 z-10 relative">
+                  {Object.keys(fundingRateData).length > 0 ? Object.values(fundingRateData).map((arb) => (
+                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
+                  )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SYNCING RATES...</div>}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full z-10 relative`}>
+                  <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90 drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]' : 'text-emerald-500/90 drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]'}`}>
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> FAVORITES
+                  </div>
+                  <div className="px-3 w-full space-y-1.5 min-h-[60px]">
+                    <SortableContext items={favorites} strategy={verticalListSortingStrategy}>{renderFavorites()}</SortableContext>
+                  </div>
+                </div>
+                <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
+                  {activeDragId ? <SidebarItemNode ticker={activeDragId} prob={getProbForTicker(activeDragId)} isActive={activePair === activeDragId} isFavorite={true} onClick={() => {}} onToggleFavorite={() => {}} isOverlay /> : null}
+                </DragOverlay>
+              </DndContext>
+
+              <div className="flex-1 z-10 relative">
+                {marketMode === 'FOREX' ? (
+                  <>{renderSidebarGroup('Major Liquidity', data?.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data?.minors)}{renderSidebarGroup('Precious Metals', data?.metals)}</>
+                ) : (
+                  <>{renderSidebarGroup('Crypto Assets', data?.crypto)}</>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="px-6 mt-8 mb-6 z-10 relative">
+            <button
+              onClick={handleSeedFirebase}
+              disabled={activeView === 'laboratory'}
+              className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+              SYNC ALL PAIRS TO FIREBASE
+            </button>
+          </div>
+        </nav>
+      </aside>
+
+      {/* ─── MOBILE BOTTOM NAVIGATION (Ukotveno na mobilech dole, z-index 100) ─── */}
+      <div className="lg:hidden fixed inset-x-0 bottom-0 bg-zinc-950/95 backdrop-blur-2xl border-t border-white/10 z-[100] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.8)] font-sans pb-safe">
         
-        {/* === VIEW SWITCHER (TERMINAL vs LABORATORY) === */}
-        <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
+        {activeView === 'terminal' && marketMode && (
+          <div className="flex overflow-x-auto hide-scrollbar px-4 py-3 gap-2 border-b border-white/5 w-full">
+            {mobilePairsList.map(pair => (
+              <button
+                key={pair}
+                onClick={() => setActivePair(pair)}
+                className={`px-4 py-1.5 rounded-full text-[11px] font-mono font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                  activePair === pair
+                    ? (marketMode === 'CRYPTO' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30')
+                    : 'bg-white/5 text-zinc-400 border border-transparent'
+                }`}
+              >
+                {pair}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        <div className="flex justify-around items-center px-2 py-2">
           <button 
-            onClick={() => setActiveView('terminal')} 
-            className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'terminal' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            onClick={() => { setMarketMode('FOREX'); setActiveView('terminal'); }} 
+            className={`flex flex-col items-center justify-center gap-1 w-1/3 py-2 transition-colors ${marketMode === 'FOREX' && activeView !== 'laboratory' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
           >
-            TERMINAL
+            <span className="text-xl">💱</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Forex</span>
           </button>
+          
+          <button 
+            onClick={() => { setMarketMode('CRYPTO'); setActiveView('terminal'); setCryptoMode('standard'); }} 
+            className={`flex flex-col items-center justify-center gap-1 w-1/3 py-2 transition-colors ${marketMode === 'CRYPTO' && activeView !== 'laboratory' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
+          >
+            <span className="text-xl">₿</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Crypto</span>
+          </button>
+          
           <button 
             onClick={() => setActiveView('laboratory')} 
-            className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${activeView === 'laboratory' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`flex flex-col items-center justify-center gap-1 w-1/3 py-2 transition-colors ${activeView === 'laboratory' ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-zinc-500'}`}
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-            LABORATORY
+            <span className="text-xl">🧪</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Lab</span>
           </button>
-          <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'laboratory' ? 'translate-x-[100%] ml-2' : 'translate-x-0 left-1'}`}></div>
         </div>
-
-        {/* Filters only visible in Terminal view */}
-        {activeView === 'terminal' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-            <div className="flex bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
-              <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
-              <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
-            </div>
-
-            {marketMode === 'CRYPTO' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-                <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
-                <button onClick={() => { setCryptoMode('spatial_arb'); const firstId = Object.keys(spatialArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
-                  SPATIAL
-                </button>
-                <button onClick={() => { setCryptoMode('triangular_arb'); const firstId = Object.keys(triangularArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
-                  TRIANGLE
-                </button>
-                <button onClick={() => { setCryptoMode('funding_rates'); const firstId = Object.keys(fundingRateData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
-                  FUNDING
-                </button>
-              </motion.div>
-            )}
-          </motion.div>
-        )}
       </div>
-
-      <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${activeView === 'laboratory' ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
-        {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-          <div className="pb-10">
-            <div className="mb-6">
-              <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-blue-500 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                  <span className="text-[10px] font-bold text-blue-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]">SPATIAL ARBITRAGE</span>
-                </div>
-              </div>
-              <div className="space-y-2 px-3 z-10 relative">
-                {Object.keys(spatialArbData).length > 0 ? Object.values(spatialArbData).map((arb) => (
-                   <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
-                )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MARKETS...</div>}
-              </div>
-            </div>
-          </div>
-        ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-          <div className="pb-10">
-            <div className="mb-6">
-              <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-purple-500 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                  <span className="text-[10px] font-bold text-purple-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(168,85,247,0.3)]">TRIANGULAR LOOPS</span>
-                </div>
-              </div>
-              <div className="space-y-2 px-3 z-10 relative">
-                {Object.keys(triangularArbData).length > 0 ? Object.values(triangularArbData).map((arb) => (
-                   <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
-                )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MATRICES...</div>}
-              </div>
-            </div>
-          </div>
-        ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-          <div className="pb-10">
-            <div className="mb-6">
-              <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5 text-orange-500 drop-shadow-[0_0_5px_rgba(249,115,22,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">CROSS-EXCHANGE RATES</span>
-                </div>
-              </div>
-              <div className="space-y-2 px-3 z-10 relative">
-                {Object.keys(fundingRateData).length > 0 ? Object.values(fundingRateData).map((arb) => (
-                   <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
-                )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SYNCING RATES...</div>}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <DndContext sensors={sensors} collisionDetection={customCollisionDetection} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <div className={`mb-6 mt-2 pb-4 pt-2 rounded-2xl transition-colors duration-300 w-full z-10 relative`}>
-                <div className={`text-[10px] font-bold uppercase tracking-widest px-6 mb-3 flex items-center gap-2 ${marketMode === 'CRYPTO' ? 'text-blue-500/90 drop-shadow-[0_0_5px_rgba(59,130,246,0.3)]' : 'text-emerald-500/90 drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]'}`}>
-                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> FAVORITES
-                </div>
-                <div className="px-3 w-full space-y-1.5 min-h-[60px]">
-                  <SortableContext items={favorites} strategy={verticalListSortingStrategy}>{renderFavorites()}</SortableContext>
-                </div>
-              </div>
-              <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-                {activeDragId ? <SidebarItemNode ticker={activeDragId} prob={getProbForTicker(activeDragId)} isActive={activePair === activeDragId} isFavorite={true} onClick={() => {}} onToggleFavorite={() => {}} isOverlay /> : null}
-              </DragOverlay>
-            </DndContext>
-
-            <div className="flex-1 z-10 relative">
-              {marketMode === 'FOREX' ? (
-                <>{renderSidebarGroup('Major Liquidity', data.majors, "Trading the most liquid fiat currency pairs globally, driven by macroeconomic data and central bank policies.")}{renderSidebarGroup('Cross Pairs', data.minors)}{renderSidebarGroup('Precious Metals', data.metals)}</>
-              ) : (
-                <>{renderSidebarGroup('Crypto Assets', data.crypto)}</>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="px-6 mt-8 mb-6 z-10 relative">
-          <button
-            onClick={handleSeedFirebase}
-            disabled={activeView === 'laboratory'}
-            className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            SYNC ALL PAIRS TO FIREBASE
-          </button>
-        </div>
-      </nav>
-    </aside>
+    </>
   );
 }
