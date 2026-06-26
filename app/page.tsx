@@ -21,6 +21,7 @@ import type { SpatialArbData, TriangularArbData, FundingRateData } from './Arbit
 import BacktestLab from './BacktestLab';
 import MarketMonitor from './MarketMonitor';
 import OrderBook from './OrderBook';
+import LiveTape from './LiveTape';
 
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
 interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
@@ -242,15 +243,14 @@ export default function Home() {
   const displayTicker = activePair === "XAUUSD" ? "GOLD (XAUUSD)" : activePair;
 
   const clampedProb = Math.max(0, Math.min(1, activeProb));
-  const gaugeRotation = (clampedProb * 180) - 90; 
+  const buyPercentage = (clampedProb * 100).toFixed(1);
+  const sellPercentage = ((1 - clampedProb) * 100).toFixed(1);
 
   let inferredDirection = "NEUTRAL";
   let isTradeActive = false;
 
   if (clampedProb >= 0.52) { inferredDirection = "BUY"; isTradeActive = true; } 
   else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
-
-  const needleColor = inferredDirection === 'BUY' ? '#34d399' : inferredDirection === 'SELL' ? '#f87171' : '#a1a1aa';
 
   const getPageBackground = () => {
     if (activeView === 'laboratory') return 'from-indigo-950/20 via-zinc-950/20 to-[#050505]/40';
@@ -272,16 +272,16 @@ export default function Home() {
     return (
       <div className={`bg-black/40 backdrop-blur-xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/10'} rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden transition-all duration-700 relative z-10 ${getGlowColor()}`}>
         
-        {/* INSTITUTIONAL 3-COLUMN LAYOUT */}
+        {/* INSTITUTIONAL 4-COLUMN LAYOUT */}
         <div className="flex flex-col xl:flex-row border-b border-white/5">
           
           {/* COLUMN 1: Info a Position Sizing */}
-          <div className="p-6 lg:p-8 flex flex-col flex-1 border-b xl:border-b-0 xl:border-r border-white/5">
+          <div className="p-4 lg:p-6 flex flex-col flex-1 border-b xl:border-b-0 xl:border-r border-white/5 justify-center">
             <div className="flex flex-wrap items-center gap-3 lg:gap-4 mb-4">
-              <h2 className="text-2xl md:text-4xl font-bold text-white tracking-tight">{displayTicker}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{displayTicker}</h2>
               {isTradeActive && (
                 <span className={`px-3 lg:px-4 py-1.5 text-[9px] md:text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse ${
-                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30') : 'bg-red-500/10 text-red-400 border-red-500/30'
+                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
                 }`}>{inferredDirection} PENDING</span>
               )}
               {activeParams?.KeyDriver && (
@@ -289,7 +289,7 @@ export default function Home() {
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 mt-4">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="px-3 lg:px-4 py-2 bg-black/60 rounded-xl border border-white/5 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-500 uppercase tracking-wider mb-1">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
               <span className="px-3 lg:px-4 py-2 bg-black/60 rounded-xl border border-white/5 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-500 uppercase tracking-wider mb-1">TP</span><span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span></span>
               {activeParams.RRR && <span className="px-3 lg:px-4 py-2 bg-zinc-900/60 rounded-xl border border-zinc-700/50 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-400 uppercase tracking-wider font-bold mb-1">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
@@ -300,36 +300,57 @@ export default function Home() {
           </div>
 
           {/* COLUMN 2: Order Book (DOM) */}
-          <div className="p-6 lg:p-8 w-full xl:w-[320px] flex-shrink-0 bg-black/20 border-b xl:border-b-0 xl:border-r border-white/5 flex flex-col justify-center">
+          <div className="p-4 lg:p-6 w-full xl:w-[280px] flex-shrink-0 bg-black/20 border-b xl:border-b-0 xl:border-r border-white/5 flex flex-col">
             <div className="text-[9px] lg:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
               DEPTH OF MARKET
             </div>
-            <OrderBook symbol={activePair} livePrice={activeParams.LivePrice ? Number(activeParams.LivePrice) : 1.0850} />
+            <div className="flex-1 min-h-[300px]">
+              <OrderBook symbol={activePair} livePrice={activeParams.LivePrice ? Number(activeParams.LivePrice) : 1.0850} />
+            </div>
           </div>
 
-          {/* COLUMN 3: Gauge a Exekuce */}
-          <div className="p-6 lg:p-8 flex flex-col items-center justify-center gap-6 flex-shrink-0 w-full xl:w-72 bg-black/40">
-            <div className="flex flex-col items-center justify-center relative w-48 lg:w-56 h-24 lg:h-28 mt-2">
-              <svg viewBox="0 0 200 120" className="w-full h-full drop-shadow-2xl overflow-visible">
-                <defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feComposite in="SourceGraphic" in2="blur" operator="over" /></filter></defs>
-                <path d="M 30 100 A 70 70 0 0 1 100 30" fill="none" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                <path d="M 100 30 A 70 70 0 0 1 170 100" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeOpacity="0.8" />
-                <g style={{ transform: `rotate(${gaugeRotation}deg)`, transformOrigin: '100px 100px' }} className="transition-transform duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]">
-                  <polygon points="96,100 104,100 100,25" fill={needleColor} filter="url(#glow)" opacity="0.9" />
-                  <circle cx="100" cy="100" r="8" fill="#050505" stroke={needleColor} strokeWidth="3" />
-                </g>
-              </svg>
-              <div className={`absolute bottom-[-10px] text-2xl lg:text-3xl font-black tracking-tighter ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'text-blue-400' : 'text-emerald-400') : inferredDirection === 'SELL' ? 'text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'text-zinc-500'}`}>
-                {(activeProb * 100).toFixed(1)}%
+          {/* COLUMN 3: Live Tape */}
+          <div className="p-4 lg:p-6 w-full xl:w-[280px] flex-shrink-0 bg-black/20 border-b xl:border-b-0 xl:border-r border-white/5 flex flex-col">
+            <div className="text-[9px] lg:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              LIVE TAPE
+            </div>
+            <div className="flex-1 min-h-[300px]">
+              <LiveTape symbol={activePair} livePrice={activeParams.LivePrice ? Number(activeParams.LivePrice) : 1.0850} />
+            </div>
+          </div>
+
+          {/* COLUMN 4: Imbalance & Exekuce */}
+          <div className="p-6 lg:p-8 flex flex-col items-center justify-center gap-8 flex-shrink-0 w-full xl:w-[240px] bg-black/40">
+            <div className="w-full flex flex-col gap-3 mt-2">
+              <div className="text-center text-[10px] text-white/90 font-mono font-bold uppercase tracking-widest">
+                <span className={inferredDirection === 'BUY' ? 'text-emerald-400' : inferredDirection === 'SELL' ? 'text-red-400' : 'text-zinc-400'}>
+                  {inferredDirection === 'BUY' ? `${buyPercentage}% BUYER DOMINANCE` : inferredDirection === 'SELL' ? `${sellPercentage}% SELLER DOMINANCE` : 'NEUTRAL MARKET'}
+                </span>
+              </div>
+              <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden flex shadow-inner">
+                 <div className="h-full bg-red-500 transition-all duration-1000" style={{ width: `${sellPercentage}%` }}></div>
+                 <div className="h-full bg-emerald-500 transition-all duration-1000" style={{ width: `${buyPercentage}%` }}></div>
+              </div>
+              <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+                <span>Sellers</span>
+                <span>Buyers</span>
               </div>
             </div>
+
             {isTradeActive ? (
-              <button className={`w-full px-6 py-4 text-[10px] lg:text-[11px] font-bold uppercase tracking-widest rounded-xl border shadow-xl transition-all hover:-translate-y-1 ${inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500 hover:bg-blue-400 text-white border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]') : 'bg-red-500 hover:bg-red-400 text-white border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)]'}`}>
+              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] bg-black/50 border hover:-translate-y-1 ${
+                inferredDirection === 'BUY' 
+                  ? 'text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:border-emerald-400' 
+                  : 'text-red-400 border-red-500/50 hover:bg-red-500/10 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:border-red-400'
+              }`}>
                 EXECUTE {inferredDirection}
               </button>
             ) : (
-              <button disabled className="w-full px-6 py-4 bg-zinc-900/50 text-zinc-600 text-[10px] lg:text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">LOW CONVICTION</button>
+              <button disabled className="w-full px-6 py-4 bg-zinc-950/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
+                LOW CONVICTION
+              </button>
             )}
           </div>
         </div>
@@ -398,8 +419,6 @@ export default function Home() {
   if (!marketMode && activeView !== 'laboratory') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full relative overflow-hidden font-sans bg-[#050505] p-6 lg:p-0">
-        
-        {/* Animované pozadí */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
         <motion.div animate={{ y: [0, -40, 0], x: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" />
         <motion.div animate={{ y: [0, 50, 0], x: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[-10%] right-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" />
@@ -413,54 +432,25 @@ export default function Home() {
 
           <div className="w-full max-w-4xl flex flex-col gap-4 lg:gap-6 mt-10 lg:mt-16 relative z-10 px-4 lg:px-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* KARTA FOREX */}
-              <div 
-                onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }}
-                className="group cursor-pointer p-6 lg:p-8 bg-transparent border border-white/5 hover:border-white/15 hover:bg-white/[0.02] rounded-xl transition-all duration-200 flex flex-col"
-              >
+              <div onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className="group cursor-pointer p-6 lg:p-8 bg-transparent border border-white/5 hover:border-white/15 hover:bg-white/[0.02] rounded-xl transition-all duration-200 flex flex-col">
                 <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Market Data</div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors">Global Forex</h2>
-                </div>
+                <div className="flex items-center gap-3 mb-2"><h2 className="text-xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors">Global Forex</h2></div>
                 <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.</p>
               </div>
-
-              {/* KARTA CRYPTO */}
-              <div 
-                onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }}
-                className="group cursor-pointer p-6 lg:p-8 bg-transparent border border-white/5 hover:border-white/15 hover:bg-white/[0.02] rounded-xl transition-all duration-200 flex flex-col"
-              >
+              <div onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className="group cursor-pointer p-6 lg:p-8 bg-transparent border border-white/5 hover:border-white/15 hover:bg-white/[0.02] rounded-xl transition-all duration-200 flex flex-col">
                 <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Digital Assets</div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors">Crypto Matrices</h2>
-                </div>
+                <div className="flex items-center gap-3 mb-2"><h2 className="text-xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors">Crypto Matrices</h2></div>
                 <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.</p>
               </div>
             </div>
-
-            {/* KARTA LAB */}
-            <div 
-              onClick={() => { setMarketMode('FOREX'); setActiveView('laboratory'); }}
-              className="group cursor-pointer p-6 lg:p-8 bg-transparent border border-white/5 hover:border-white/15 hover:bg-white/[0.02] rounded-xl transition-all duration-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
-            >
+            <div onClick={() => { setMarketMode('FOREX'); setActiveView('laboratory'); }} className="group cursor-pointer p-6 lg:p-8 bg-transparent border border-white/5 hover:border-white/15 hover:bg-white/[0.02] rounded-xl transition-all duration-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="flex flex-col">
-                <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                  Development Environment
-                </div>
-                <h2 className="text-2xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors mb-2">
-                  AI Quant Laboratory
-                </h2>
-                <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-2xl">
-                  Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict evaluation limits.
-                </p>
+                <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>Development Environment</div>
+                <h2 className="text-2xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors mb-2">AI Quant Laboratory</h2>
+                <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-2xl">Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict evaluation limits.</p>
               </div>
-              
               <div className="flex items-center gap-2 text-xs lg:text-sm font-medium text-zinc-400 group-hover:text-white transition-colors">
-                Initialize Engine 
-                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                Initialize Engine <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
               </div>
             </div>
           </div>
@@ -515,7 +505,7 @@ export default function Home() {
           
           <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
 
-          <div className={`${activeView === 'laboratory' ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1500px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
+          <div className={`${activeView === 'laboratory' ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1700px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
             
             {activeView === 'laboratory' ? (
               <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
@@ -528,7 +518,7 @@ export default function Home() {
               <div className="p-6 md:p-10 mt-10 text-center text-[9px] md:text-[10px] uppercase font-bold text-red-400 border border-red-900/40 bg-red-950/20 rounded-[1.5rem] md:rounded-[2rem]">{error}</div>
             ) : (
               <div className="flex flex-col xl:flex-row gap-6 md:gap-10 w-full items-start">
-                <div className="w-full xl:w-[70%] flex flex-col space-y-6 md:space-y-10">
+                <div className="w-full xl:w-[75%] flex flex-col space-y-6 md:space-y-10">
                   {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
                     <SpatialArbitragePanel arbData={data.crypto_arb?.spatial?.[activePair]} />
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (

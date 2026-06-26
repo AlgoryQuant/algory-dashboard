@@ -1,7 +1,8 @@
 "use client";
 
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { ResponsiveContainer, LineChart, Line } from 'recharts';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
   KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
@@ -54,12 +55,26 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
   const displayTicker = ticker === "XAUUSD" ? "GOLD" : ticker;
   let probColor = "text-zinc-500";
   let pairDir = "NEUTRAL";
+  let chartColor = "#71717a";
+
+  const safeProb = prob !== undefined ? prob : 0.5;
 
   if (prob !== undefined) {
-      if (prob >= 0.52) pairDir = "BUY";
-      else if (prob <= 0.48 && prob > 0) pairDir = "SELL";
+      if (safeProb >= 0.52) { pairDir = "BUY"; chartColor = "#34d399"; } // emerald-400
+      else if (safeProb <= 0.48 && safeProb > 0) { pairDir = "SELL"; chartColor = "#f87171"; } // red-400
       probColor = pairDir === "BUY" ? (isActive ? "text-emerald-400" : "text-emerald-500/80") : (isActive ? "text-red-400" : "text-red-500/80");
   }
+
+  // --- SPARKLINE DATA GENERATOR ---
+  // Vytváří pseudo-historii pro mikro-graf podle aktuální probability
+  const sparklineData = useMemo(() => {
+    let current = safeProb * 100;
+    const directionMult = pairDir === "BUY" ? 1 : pairDir === "SELL" ? -1 : 0;
+    return Array.from({ length: 15 }).map(() => {
+      current += (Math.random() - 0.5) * 2 + (directionMult * 0.4);
+      return { value: current };
+    });
+  }, [safeProb, pairDir]);
 
   let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
   if (isOverlay) containerClasses += `bg-zinc-900/90 border-white/20 shadow-2xl ring-1 ring-white/10 scale-105 rotate-2 z-50 backdrop-blur-md`;
@@ -76,8 +91,20 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
         ) : <div className="w-[14px]"></div>}
         <span className={`font-semibold tracking-wide text-xs ${isActive || isOverlay ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`}>{displayTicker}</span>
       </div>
+
+      {/* --- SPARKLINE COMPONENT --- */}
+      <div className="flex-1 flex justify-center px-2 pointer-events-none">
+        <div className="w-12 md:w-16 h-6 opacity-60 group-hover:opacity-100 transition-opacity">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={sparklineData}>
+              <Line type="monotone" dataKey="value" stroke={chartColor} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div className="flex items-center gap-3">
-        <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${((prob ?? 0) * 100).toFixed(0)}%`}</span>
+        <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${(safeProb * 100).toFixed(0)}%`}</span>
         <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' : 'text-zinc-600 hover:text-white'}`}>
           <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         </button>
@@ -246,21 +273,19 @@ export default function Sidebar({
     return relevantFavs.map(ticker => <SortableSidebarItem key={ticker} ticker={ticker} prob={allPairsMap[ticker] || 0} isActive={activePair === ticker} isFavorite={true} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />);
   };
 
-  // Seznam pro mobilní scroller
   const mobilePairsList = marketMode === 'CRYPTO' 
     ? (data?.crypto ? Object.keys(data.crypto) : ["BTCUSD", "ETHUSD", "SOLUSD"]) 
     : (data?.majors ? Object.keys(data.majors) : ["EURUSD", "GBPUSD", "XAUUSD"]);
 
   return (
     <>
-      {/* ─── DESKTOP SIDEBAR (Skryté na menších obrazovkách) ─── */}
+      {/* ─── DESKTOP SIDEBAR ─── */}
       <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden lg:flex overflow-hidden shadow-2xl">
         <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
           <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => setMarketMode(null)}>
             Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
           </h2>
           
-          {/* === VIEW SWITCHER (TERMINAL vs LABORATORY) === */}
           <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
             <button 
               onClick={() => setActiveView('terminal')} 
@@ -278,7 +303,6 @@ export default function Sidebar({
             <div className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'laboratory' ? 'translate-x-[100%] ml-2' : 'translate-x-0 left-1'}`}></div>
           </div>
 
-          {/* Filters only visible in Terminal view */}
           {activeView === 'terminal' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
               <div className="flex bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
