@@ -17,7 +17,7 @@ export default function LiveTape({ symbol, livePrice }: { symbol: string, livePr
   useEffect(() => {
     const base = livePrice || 1.0850;
     
-    // Generování startovních dat, aby páska nebyla zpočátku prázdná
+    // Generování startovních dat - striktní limit 15 řádků
     const initial = Array.from({length: 15}).map((_, i) => ({
       id: `init-${i}`,
       time: new Date(Date.now() - i * 1000).toLocaleTimeString('en-US', { hour12: false }),
@@ -27,7 +27,7 @@ export default function LiveTape({ symbol, livePrice }: { symbol: string, livePr
     }));
     setTrades(initial as Trade[]);
 
-    // Průběžné přidávání nových obchodů
+    // Průběžné přidávání nových obchodů s uvolňováním paměti pro staré uzly
     const interval = setInterval(() => {
       const newTrade: Trade = {
         id: `trade-${Date.now()}`,
@@ -36,7 +36,8 @@ export default function LiveTape({ symbol, livePrice }: { symbol: string, livePr
         size: Math.floor(Math.random() * 100) + 1,
         type: Math.random() > 0.5 ? 'buy' : 'sell'
       };
-      setTrades(prev => [newTrade, ...prev].slice(0, 50)); // Udržujeme max 50 řádků v paměti
+      // Striktní ořez pole na 15 elementů
+      setTrades(prev => [newTrade, ...prev].slice(0, 15)); 
     }, 600 + Math.random() * 800);
 
     return () => clearInterval(interval);
