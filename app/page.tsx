@@ -94,26 +94,30 @@ const PositionCalculator = ({ slPips, direction }: { slPips: number, direction: 
     }
   }, [balance, riskPercent, slPips]);
 
-  const focusRingColor = direction === 'BUY' ? 'focus:ring-emerald-500/50' : direction === 'SELL' ? 'focus:ring-red-500/50' : 'focus:ring-white/20';
+  const focusRingColor = direction === 'BUY' ? 'focus:border-emerald-500/50' : direction === 'SELL' ? 'focus:border-red-500/50' : 'focus:border-white/30';
+  const volBorder = direction === 'BUY' ? 'border-emerald-500/40 text-emerald-400' : direction === 'SELL' ? 'border-red-500/40 text-red-400' : 'border-white/10 text-zinc-400';
 
   return (
-    <div className="p-4 lg:p-6 bg-black/40 rounded-2xl border border-white/5 shadow-inner mt-6 w-full">
-      <div className="text-[9px] lg:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-4 flex items-center">
+    <div className="p-5 lg:p-6 bg-[#050505] rounded-2xl border border-white/5 w-full mt-auto mb-4 shadow-inner">
+      <div className="text-[9px] lg:text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-5 flex items-center">
         POSITION SIZING
         <InfoTooltip info="Calculates precise trade volume based on your account balance, risk percentage, and the AI-generated Stop Loss distance." />
       </div>
-      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-end">
-        <div className="flex flex-col gap-2 w-full md:w-1/3">
-          <label className="text-[8px] lg:text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">BALANCE ($)</label>
-          <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/10 rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-xs lg:text-sm text-white font-mono focus:outline-none focus:border-white/30 transition-all w-full`} />
+      <div className="flex gap-4 items-stretch">
+        <div className="flex flex-col gap-4 w-1/2 justify-center">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[8px] text-zinc-500 uppercase font-semibold tracking-widest ml-1">BALANCE ($)</label>
+            <input type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} className={`bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none ${focusRingColor} transition-all w-full`} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[8px] text-zinc-500 uppercase font-semibold tracking-widest ml-1">RISK (%)</label>
+            <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none ${focusRingColor} transition-all w-full`} />
+          </div>
         </div>
-        <div className="flex flex-col gap-2 w-full md:w-1/3">
-          <label className="text-[8px] lg:text-[10px] text-zinc-500 uppercase font-semibold tracking-widest">RISK (%)</label>
-          <input type="number" step="0.1" value={riskPercent} onChange={(e) => setRiskPercent(Number(e.target.value))} className={`bg-zinc-900/80 border border-white/10 rounded-xl px-3 lg:px-4 py-2 lg:py-3 text-xs lg:text-sm text-white font-mono focus:outline-none focus:border-white/30 transition-all w-full`} />
-        </div>
-        <div className={`w-full md:w-1/3 flex flex-col items-center justify-center py-2 lg:py-3 px-2 lg:px-4 rounded-xl border shadow-inner transition-all duration-300 ${direction === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]' : direction === 'SELL' ? 'bg-red-500/10 border-red-500/40 shadow-[0_0_15px_rgba(239,68,68,0.15)]' : 'bg-zinc-900 border-white/5'}`}>
-          <span className={`text-[8px] lg:text-[10px] uppercase font-bold tracking-widest mb-1 ${direction === 'BUY' ? 'text-emerald-500/70' : direction === 'SELL' ? 'text-red-500/70' : 'text-zinc-500'}`}>VOLUME</span>
-          <span className="text-base lg:text-xl font-black text-white font-mono">{lotSize} <span className="text-[10px] lg:text-xs text-zinc-500 font-medium font-sans tracking-normal">Lots</span></span>
+        <div className={`w-1/2 flex flex-col items-center justify-center p-4 rounded-xl border bg-[#0a0a0a] transition-all duration-300 ${volBorder}`}>
+          <span className="text-[8px] uppercase font-bold tracking-widest mb-1 opacity-70">VOLUME</span>
+          <span className="text-2xl font-black font-mono leading-none tracking-tight">{lotSize}</span>
+          <span className="text-[9px] font-medium font-sans tracking-widest opacity-50 mt-1">Lots</span>
         </div>
       </div>
     </div>
@@ -276,26 +280,52 @@ export default function Home() {
         <div className="flex flex-col xl:flex-row border-b border-white/5">
           
           {/* COLUMN 1: Info a Position Sizing */}
-          <div className="p-4 lg:p-6 flex flex-col flex-1 border-b xl:border-b-0 xl:border-r border-white/5 justify-center">
-            <div className="flex flex-wrap items-center gap-3 lg:gap-4 mb-4">
-              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{displayTicker}</h2>
+          <div className="p-5 lg:p-8 flex flex-col flex-1 border-b xl:border-b-0 xl:border-r border-white/5 justify-start">
+            <div className="flex items-center gap-4 mb-5">
+              <h2 className="text-4xl font-black text-white tracking-tighter">{displayTicker}</h2>
               {isTradeActive && (
-                <span className={`px-3 lg:px-4 py-1.5 text-[9px] md:text-[11px] font-bold uppercase tracking-widest rounded-lg border shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse ${
-                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30 shadow-blue-500/10' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10') : 'bg-red-500/10 text-red-400 border-red-500/30 shadow-red-500/10'
+                <span className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full border shadow-[0_0_15px_rgba(0,0,0,0.5)] ${
+                  inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'bg-blue-500/10 text-blue-400 border-blue-500/50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/50') : 'bg-red-500/10 text-red-400 border-red-500/50'
                 }`}>{inferredDirection} PENDING</span>
-              )}
-              {activeParams?.KeyDriver && (
-                <span className="px-2 lg:px-3 py-1 bg-white/5 text-white/80 text-[8px] lg:text-[10px] uppercase tracking-widest rounded-xl border border-white/10 font-bold shadow-inner">{activeParams.KeyDriver}</span>
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="px-3 lg:px-4 py-2 bg-black/60 rounded-xl border border-white/5 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-500 uppercase tracking-wider mb-1">SL</span><span className="text-white font-bold">{activeParams.SL}</span></span>
-              <span className="px-3 lg:px-4 py-2 bg-black/60 rounded-xl border border-white/5 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-500 uppercase tracking-wider mb-1">TP</span><span className="text-white font-bold">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span></span>
-              {activeParams.RRR && <span className="px-3 lg:px-4 py-2 bg-zinc-900/60 rounded-xl border border-zinc-700/50 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-400 uppercase tracking-wider font-bold mb-1">RRR</span><span className="text-white font-bold">1:{activeParams.RRR}</span></span>}
-              <span className="px-3 lg:px-4 py-2 bg-black/60 rounded-xl border border-white/5 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-500 uppercase tracking-wider mb-1">BE</span><span className="text-white font-bold">{activeParams.BE}</span></span>
-              <span className="px-3 lg:px-4 py-2 bg-black/60 rounded-xl border border-white/5 font-mono text-[10px] lg:text-xs shadow-inner flex flex-col"><span className="text-zinc-500 uppercase tracking-wider mb-1">SPREAD</span><span className="text-white font-bold">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span></span>
+            {activeParams?.KeyDriver && (
+              <div className="mb-6">
+                <span className="px-4 py-1.5 bg-black text-zinc-300 text-[9px] uppercase tracking-widest rounded-full border border-white/10 font-bold inline-flex shadow-inner">
+                  {activeParams.KeyDriver}
+                </span>
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-3 mt-1 mb-8">
+              <div className="bg-[#050505] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center min-w-[70px] shadow-inner">
+                <span className="text-zinc-500 uppercase text-[9px] font-semibold tracking-wider mb-1">SL</span>
+                <span className="text-white font-bold text-sm">{activeParams.SL}</span>
+              </div>
+              <div className="bg-[#050505] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center min-w-[70px] shadow-inner">
+                <span className="text-zinc-500 uppercase text-[9px] font-semibold tracking-wider mb-1">TP</span>
+                <span className="text-white font-bold text-sm">{activeParams.TP === 9999 ? 'OPEN' : activeParams.TP}</span>
+              </div>
+              {activeParams.RRR && (
+                <div className="bg-[#050505] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center min-w-[70px] shadow-inner">
+                  <span className="text-zinc-500 uppercase text-[9px] font-semibold tracking-wider mb-1">RRR</span>
+                  <span className="text-white font-bold text-sm">1:{activeParams.RRR}</span>
+                </div>
+              )}
+              <div className="bg-[#050505] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center min-w-[70px] shadow-inner">
+                <span className="text-zinc-500 uppercase text-[9px] font-semibold tracking-wider mb-1">BE</span>
+                <span className="text-white font-bold text-sm">{activeParams.BE}</span>
+              </div>
+              
+              <div className="w-full flex"></div>
+              
+              <div className="bg-[#050505] border border-white/5 rounded-xl p-3 flex flex-col items-center justify-center min-w-[70px] shadow-inner">
+                <span className="text-zinc-500 uppercase text-[9px] font-semibold tracking-wider mb-1">SPREAD</span>
+                <span className="text-white font-bold text-sm">{activeParams.LiveSpread !== "N/A" ? activeParams.LiveSpread : activeParams.MaxSpread}</span>
+              </div>
             </div>
+            
             <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />
           </div>
 
