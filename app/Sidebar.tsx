@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
   KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
@@ -19,10 +19,8 @@ export interface TriangularArbData { id: string; pairName: string; path: string[
 export interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
 
 export interface SidebarProps {
-  // === NOVÉ PROPS PRO VIEW SWITCHING ===
   activeView: 'terminal' | 'laboratory';
   setActiveView: (view: 'terminal' | 'laboratory') => void;
-  // ===================================
   marketMode: 'FOREX' | 'CRYPTO' | null;
   setMarketMode: (mode: 'FOREX' | 'CRYPTO' | null) => void;
   cryptoMode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates';
@@ -184,7 +182,7 @@ export default function Sidebar({
   };
 
   const getProbForTicker = (ticker: string) => {
-    return data.majors?.[ticker] ?? data.minors?.[ticker] ?? data.metals?.[ticker] ?? data.crypto?.[ticker] ?? 0;
+    return data?.majors?.[ticker] ?? data?.minors?.[ticker] ?? data?.metals?.[ticker] ?? data?.crypto?.[ticker] ?? 0;
   };
 
   const getSidebarIcon = (title: string) => {
@@ -344,7 +342,7 @@ export default function Sidebar({
               <div className="mb-6">
                 <div className="w-full flex items-center justify-between px-6 py-2 mb-3">
                   <div className="flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-orange-500 drop-shadow-[0_0_5px_rgba(249,115,22,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402-2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg className="w-3.5 h-3.5 text-orange-500 drop-shadow-[0_0_5px_rgba(249,115,22,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08-.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-widest flex items-center drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">CROSS-EXCHANGE RATES</span>
                   </div>
                 </div>
@@ -380,17 +378,6 @@ export default function Sidebar({
               </div>
             </div>
           )}
-
-          <div className="px-6 mt-8 mb-6 z-10 relative">
-            <button
-              onClick={handleSeedFirebase}
-              disabled={activeView === 'laboratory'}
-              className="w-full py-3 bg-zinc-900/50 backdrop-blur-md border border-white/10 text-zinc-500 hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-[9px] font-bold tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-              SYNC ALL PAIRS TO FIREBASE
-            </button>
-          </div>
         </nav>
       </aside>
 
