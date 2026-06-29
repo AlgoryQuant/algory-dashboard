@@ -201,8 +201,8 @@ export default function Home() {
     } catch (err) {} finally { setIsSubmitting(false); }
   };
 
+  // CRITICAL FIX: Odstraněna závislost na isAuthenticated pro fetch dat.
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     const loadData = () => {
       fetch(`https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json?t=${new Date().getTime()}`)
         .then(res => res.json())
@@ -210,12 +210,13 @@ export default function Home() {
         .catch(() => setError("Failed to sync data stream."))
         .finally(() => setLoading(false));
     };
-    if (isAuthenticated || showAuthGate) {
-       loadData();
-       interval = setInterval(loadData, 3000);
-    }
+    
+    // Spouštíme stahování okamžitě po mountnutí
+    loadData();
+    const interval = setInterval(loadData, 3000);
+    
     return () => clearInterval(interval);
-  }, [isAuthenticated, showAuthGate]);
+  }, []); // Prázdné pole závislostí zaručí běh napříč doménami
 
   const handleSeedFirebase = async () => {
     try {
