@@ -13,6 +13,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// Fáze 1: Audio Integrace
+import { SoundEngine } from './sound';
+
 type ArbStatus = 'ACTIVE' | 'DEGRADING' | 'CLOSED';
 interface ChartPoint { time: string; spread: number; }
 export interface SpatialArbData { id: string; asset: string; buyExchange: string; sellExchange: string; askPrice: number; bidPrice: number; spreadPercent: number; estimatedFeePercent: number; status: ArbStatus; chartData: ChartPoint[]; }
@@ -49,9 +52,22 @@ const customCollisionDetection = (args: any) => {
   return closestCorners(args);
 };
 
-interface SidebarItemProps { ticker: string; prob?: number; isActive: boolean; isFavorite: boolean; onClick: () => void; onToggleFavorite: (ticker: string) => void; isOverlay?: boolean; dragListeners?: any; dragAttributes?: any; setNodeRef?: (node: HTMLElement | null) => void; style?: React.CSSProperties; }
+interface SidebarItemProps { 
+  ticker: string; 
+  prob?: number; 
+  syncError?: boolean;
+  isActive: boolean; 
+  isFavorite: boolean; 
+  onClick: () => void; 
+  onToggleFavorite: (ticker: string) => void; 
+  isOverlay?: boolean; 
+  dragListeners?: any; 
+  dragAttributes?: any; 
+  setNodeRef?: (node: HTMLElement | null) => void; 
+  style?: React.CSSProperties; 
+}
 
-const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggleFavorite, isOverlay, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
+const SidebarItemNode = ({ ticker, prob, syncError, isActive, isFavorite, onClick, onToggleFavorite, isOverlay, dragListeners, dragAttributes, setNodeRef, style }: SidebarItemProps) => {
   const displayTicker = ticker === "XAUUSD" ? "GOLD" : ticker;
   let probColor = "text-zinc-500";
   let pairDir = "NEUTRAL";
@@ -59,26 +75,36 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
 
   const safeProb = prob !== undefined ? prob : 0.5;
 
-  if (prob !== undefined) {
+  if (syncError) {
+      pairDir = "OFFLINE";
+      chartColor = "#52525b"; // Šedá pro offline graf
+      probColor = "text-red-500/80";
+  } else if (prob !== undefined) {
       if (safeProb >= 0.52) { pairDir = "BUY"; chartColor = "#34d399"; } // emerald-400
       else if (safeProb <= 0.48 && safeProb > 0) { pairDir = "SELL"; chartColor = "#f87171"; } // red-400
       probColor = pairDir === "BUY" ? (isActive ? "text-emerald-400" : "text-emerald-500/80") : (isActive ? "text-red-400" : "text-red-500/80");
   }
 
   // --- SPARKLINE DATA GENERATOR ---
-  // Vytváří pseudo-historii pro mikro-graf podle aktuální probability
   const sparklineData = useMemo(() => {
+    if (syncError) {
+      // V případě chyby vykreslí flatline
+      return Array.from({ length: 15 }).map(() => ({ value: 50 }));
+    }
     let current = safeProb * 100;
     const directionMult = pairDir === "BUY" ? 1 : pairDir === "SELL" ? -1 : 0;
     return Array.from({ length: 15 }).map(() => {
       current += (Math.random() - 0.5) * 2 + (directionMult * 0.4);
       return { value: current };
     });
-  }, [safeProb, pairDir]);
+  }, [safeProb, pairDir, syncError]);
 
   let containerClasses = `w-full text-left px-3 py-3 rounded-xl transition-all duration-300 flex justify-between items-center group border cursor-pointer `;
   if (isOverlay) containerClasses += `bg-zinc-900/90 border-white/20 shadow-2xl ring-1 ring-white/10 scale-105 rotate-2 z-50 backdrop-blur-md`;
-  else if (isActive) containerClasses += pairDir === 'SELL' ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] ' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.15)] ';
+  else if (isActive) {
+      if (syncError) containerClasses += 'bg-red-500/5 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] ';
+      else containerClasses += pairDir === 'SELL' ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] ' : 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_rgba(52,211,153,0.15)] ';
+  }
   else containerClasses += 'border-transparent hover:bg-white/5 hover:border-white/10';
 
   return (
@@ -104,7 +130,16 @@ const SidebarItemNode = ({ ticker, prob, isActive, isFavorite, onClick, onToggle
       </div>
 
       <div className="flex items-center gap-3">
-        <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${(safeProb * 100).toFixed(0)}%`}</span>
+        {syncError ? (
+          <svg className="w-4 h-4 text-red-500/80 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <line x1="2" y1="2" x2="22" y2="22" />
+            <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+            <path d="M2 8.82a15 15 0 0 1 4.17-2.65" />
+            <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.82" />
+          </svg>
+        ) : (
+          <span className={`text-[10px] font-bold tracking-widest ${probColor}`}>{`${(safeProb * 100).toFixed(0)}%`}</span>
+        )}
         <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(ticker); }} className={`transition-all duration-300 hover:scale-110 ${isFavorite ? 'text-zinc-300 hover:text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' : 'text-zinc-600 hover:text-white'}`}>
           <svg className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
         </button>
@@ -204,8 +239,14 @@ export default function Sidebar({
     }
   };
 
-  const toggleFavorite = (ticker: string) => { 
-      setFavorites(prev => prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]); 
+  const handlePairSelect = (ticker: string) => {
+    SoundEngine.playClick();
+    setActivePair(ticker);
+  };
+
+  const handleToggleFavorite = (ticker: string) => {
+    SoundEngine.playClick();
+    setFavorites(prev => prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]); 
   };
 
   const getProbForTicker = (ticker: string) => {
@@ -229,7 +270,7 @@ export default function Sidebar({
     return (
       <div className="mb-6 z-10 relative">
         <div className="w-full flex items-center justify-between px-6 py-2 mb-3 group">
-          <button onClick={() => setOpenGroups(prev => ({ ...prev, [title]: !prev[title] }))} className="flex items-center gap-2 cursor-pointer outline-none">
+          <button onClick={() => { SoundEngine.playClick(); setOpenGroups(prev => ({ ...prev, [title]: !prev[title] })); }} className="flex items-center gap-2 cursor-pointer outline-none">
             {getSidebarIcon(title)}
             <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 uppercase tracking-widest transition-colors flex items-center">
               {title}
@@ -246,9 +287,21 @@ export default function Sidebar({
           <svg className={`w-3.5 h-3.5 text-zinc-600 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </div>
         <div className={`space-y-1.5 px-3 overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[1500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          {availablePairs.map(([ticker, prob]) => (
-            <SidebarItemNode key={ticker} ticker={ticker} prob={prob} isActive={activePair === ticker} isFavorite={false} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />
-          ))}
+          {availablePairs.map(([ticker, prob]) => {
+            const syncErr = data?.parameters?.[ticker]?.sync_error || false;
+            return (
+              <SidebarItemNode 
+                key={ticker} 
+                ticker={ticker} 
+                prob={prob} 
+                syncError={syncErr}
+                isActive={activePair === ticker} 
+                isFavorite={false} 
+                onClick={() => handlePairSelect(ticker)} 
+                onToggleFavorite={handleToggleFavorite} 
+              />
+            );
+          })}
         </div>
       </div>
     );
@@ -270,7 +323,21 @@ export default function Sidebar({
       </div>
     );
 
-    return relevantFavs.map(ticker => <SortableSidebarItem key={ticker} ticker={ticker} prob={allPairsMap[ticker] || 0} isActive={activePair === ticker} isFavorite={true} onClick={() => setActivePair(ticker)} onToggleFavorite={toggleFavorite} />);
+    return relevantFavs.map(ticker => {
+      const syncErr = data?.parameters?.[ticker]?.sync_error || false;
+      return (
+        <SortableSidebarItem 
+          key={ticker} 
+          ticker={ticker} 
+          prob={allPairsMap[ticker] || 0} 
+          syncError={syncErr}
+          isActive={activePair === ticker} 
+          isFavorite={true} 
+          onClick={() => handlePairSelect(ticker)} 
+          onToggleFavorite={handleToggleFavorite} 
+        />
+      );
+    });
   };
 
   const mobilePairsList = marketMode === 'CRYPTO' 
@@ -282,19 +349,19 @@ export default function Sidebar({
       {/* ─── DESKTOP SIDEBAR ─── */}
       <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden lg:flex overflow-hidden shadow-2xl">
         <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
-          <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => setMarketMode(null)}>
+          <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => { SoundEngine.playClick(); setMarketMode(null); }}>
             Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
           </h2>
           
           <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
             <button 
-              onClick={() => setActiveView('terminal')} 
+              onClick={() => { SoundEngine.playClick(); setActiveView('terminal'); }} 
               className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'terminal' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               TERMINAL
             </button>
             <button 
-              onClick={() => setActiveView('laboratory')} 
+              onClick={() => { SoundEngine.playClick(); setActiveView('laboratory'); }} 
               className={`flex-1 z-10 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${activeView === 'laboratory' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
@@ -306,20 +373,20 @@ export default function Sidebar({
           {activeView === 'terminal' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
               <div className="flex bg-black/60 rounded-xl p-1 border border-white/10 shadow-inner">
-                <button onClick={() => { setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
-                <button onClick={() => { setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
+                <button onClick={() => { SoundEngine.playClick(); setMarketMode('FOREX'); setActivePair("EURUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'FOREX' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>FOREX</button>
+                <button onClick={() => { SoundEngine.playClick(); setMarketMode('CRYPTO'); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 text-[10px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all ${marketMode === 'CRYPTO' ? 'bg-white/10 text-white shadow-sm border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>CRYPTO</button>
               </div>
 
               {marketMode === 'CRYPTO' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-wrap gap-1 bg-zinc-900/50 rounded-xl p-1 mt-3 border border-white/5 shadow-inner">
-                  <button onClick={() => { setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
-                  <button onClick={() => { setCryptoMode('spatial_arb'); const firstId = Object.keys(spatialArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                  <button onClick={() => { SoundEngine.playClick(); setCryptoMode('standard'); setActivePair("BTCUSD"); }} className={`flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all ${cryptoMode === 'standard' ? 'bg-zinc-800 text-white shadow border border-white/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>STANDARD</button>
+                  <button onClick={() => { SoundEngine.playClick(); setCryptoMode('spatial_arb'); const firstId = Object.keys(spatialArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'spatial_arb' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)] border border-blue-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
                     SPATIAL
                   </button>
-                  <button onClick={() => { setCryptoMode('triangular_arb'); const firstId = Object.keys(triangularArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                  <button onClick={() => { SoundEngine.playClick(); setCryptoMode('triangular_arb'); const firstId = Object.keys(triangularArbData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'triangular_arb' ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)] border border-purple-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
                     TRIANGLE
                   </button>
-                  <button onClick={() => { setCryptoMode('funding_rates'); const firstId = Object.keys(fundingRateData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                  <button onClick={() => { SoundEngine.playClick(); setCryptoMode('funding_rates'); const firstId = Object.keys(fundingRateData)[0]; if (firstId) setActivePair(firstId); }} className={`relative group/tt flex-1 min-w-[45%] text-[9px] font-bold tracking-widest uppercase py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${cryptoMode === 'funding_rates' ? 'bg-orange-500/20 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.3)] border border-orange-500/30' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
                     FUNDING
                   </button>
                 </motion.div>
@@ -340,7 +407,7 @@ export default function Sidebar({
                 </div>
                 <div className="space-y-2 px-3 z-10 relative">
                   {Object.keys(spatialArbData).length > 0 ? Object.values(spatialArbData).map((arb) => (
-                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="spatial" />
+                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => handlePairSelect(arb.id)} type="spatial" />
                   )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MARKETS...</div>}
                 </div>
               </div>
@@ -356,7 +423,7 @@ export default function Sidebar({
                 </div>
                 <div className="space-y-2 px-3 z-10 relative">
                   {Object.keys(triangularArbData).length > 0 ? Object.values(triangularArbData).map((arb) => (
-                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="triangular" />
+                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => handlePairSelect(arb.id)} type="triangular" />
                   )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SCANNING MATRICES...</div>}
                 </div>
               </div>
@@ -372,7 +439,7 @@ export default function Sidebar({
                 </div>
                 <div className="space-y-2 px-3 z-10 relative">
                   {Object.keys(fundingRateData).length > 0 ? Object.values(fundingRateData).map((arb) => (
-                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => setActivePair(arb.id)} type="funding" />
+                     <ArbSidebarItemNode key={arb.id} data={arb} isActive={activePair === arb.id} onClick={() => handlePairSelect(arb.id)} type="funding" />
                   )) : <div className="text-[10px] text-zinc-500 text-center font-bold tracking-widest uppercase p-4">SYNCING RATES...</div>}
                 </div>
               </div>
@@ -389,7 +456,7 @@ export default function Sidebar({
                   </div>
                 </div>
                 <DragOverlay dropAnimation={{ duration: 250, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-                  {activeDragId ? <SidebarItemNode ticker={activeDragId} prob={getProbForTicker(activeDragId)} isActive={activePair === activeDragId} isFavorite={true} onClick={() => {}} onToggleFavorite={() => {}} isOverlay /> : null}
+                  {activeDragId ? <SidebarItemNode ticker={activeDragId} prob={getProbForTicker(activeDragId)} syncError={data?.parameters?.[activeDragId]?.sync_error || false} isActive={activePair === activeDragId} isFavorite={true} onClick={() => {}} onToggleFavorite={() => {}} isOverlay /> : null}
                 </DragOverlay>
               </DndContext>
 
@@ -413,7 +480,7 @@ export default function Sidebar({
             {mobilePairsList.map(pair => (
               <button
                 key={pair}
-                onClick={() => setActivePair(pair)}
+                onClick={() => handlePairSelect(pair)}
                 className={`px-4 py-1.5 rounded-full text-[11px] font-mono font-bold whitespace-nowrap transition-all flex-shrink-0 ${
                   activePair === pair
                     ? (marketMode === 'CRYPTO' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30')
@@ -428,7 +495,7 @@ export default function Sidebar({
         
         <div className="flex justify-around items-center px-2 py-2">
           <button 
-            onClick={() => { setMarketMode('FOREX'); setActiveView('terminal'); }} 
+            onClick={() => { SoundEngine.playClick(); setMarketMode('FOREX'); setActiveView('terminal'); }} 
             className={`flex flex-col items-center justify-center gap-1 w-1/3 py-2 transition-colors ${marketMode === 'FOREX' && activeView !== 'laboratory' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
           >
             <span className="text-xl">💱</span>
@@ -436,7 +503,7 @@ export default function Sidebar({
           </button>
           
           <button 
-            onClick={() => { setMarketMode('CRYPTO'); setActiveView('terminal'); setCryptoMode('standard'); }} 
+            onClick={() => { SoundEngine.playClick(); setMarketMode('CRYPTO'); setActiveView('terminal'); setCryptoMode('standard'); }} 
             className={`flex flex-col items-center justify-center gap-1 w-1/3 py-2 transition-colors ${marketMode === 'CRYPTO' && activeView !== 'laboratory' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
           >
             <span className="text-xl">₿</span>
@@ -444,7 +511,7 @@ export default function Sidebar({
           </button>
           
           <button 
-            onClick={() => setActiveView('laboratory')} 
+            onClick={() => { SoundEngine.playClick(); setActiveView('laboratory'); }} 
             className={`flex flex-col items-center justify-center gap-1 w-1/3 py-2 transition-colors ${activeView === 'laboratory' ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-zinc-500'}`}
           >
             <span className="text-xl">🧪</span>
