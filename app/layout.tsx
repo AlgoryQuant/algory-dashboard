@@ -29,25 +29,27 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-        variables: {
-          colorPrimary: "#ffffff",
-          colorBackground: "#000000",
-          borderRadius: "0.5rem",
-        },
-        elements: {
-          card: "bg-black border border-white/10 shadow-2xl",
-          navbar: "hidden",
-          formButtonPrimary: "bg-white text-black hover:bg-zinc-200 font-bold tracking-widest uppercase text-xs transition-colors",
-          formFieldInput: "bg-white/5 border border-white/10 focus:border-white/30 transition-all text-white",
-          socialButtonsBlockButton: "bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all",
-          userButtonPopoverCard: "bg-black border border-white/10 shadow-2xl rounded-xl",
-          userButtonPopoverActionButton: "hover:bg-white/5 transition-colors",
-          userButtonPopoverActionButtonText: "text-zinc-300 font-medium",
-          userButtonPopoverFooter: "hidden"
-        }
-      }}
+      appearance={
+        {
+          baseTheme: dark,
+          variables: {
+            colorPrimary: "#ffffff",
+            colorBackground: "#000000",
+            borderRadius: "0.5rem",
+          },
+          elements: {
+            card: "bg-black border border-white/10 shadow-2xl",
+            navbar: "hidden",
+            formButtonPrimary: "bg-white text-black hover:bg-zinc-200 font-bold tracking-widest uppercase text-xs transition-colors",
+            formFieldInput: "bg-white/5 border border-white/10 focus:border-white/30 transition-all text-white",
+            socialButtonsBlockButton: "bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all",
+            userButtonPopoverCard: "bg-black border border-white/10 shadow-2xl rounded-xl",
+            userButtonPopoverActionButton: "hover:bg-white/5 transition-colors",
+            userButtonPopoverActionButtonText: "text-zinc-300 font-medium",
+            userButtonPopoverFooter: "hidden"
+          }
+        } as any
+      }
     >
       <html
         lang="en"
