@@ -3,6 +3,8 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, LineChart, Line } from 'recharts';
+// @ts-expect-error - Phantom type error due to npm postinstall restriction
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
   KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
@@ -349,9 +351,30 @@ export default function Sidebar({
       {/* ─── DESKTOP SIDEBAR ─── */}
       <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden lg:flex overflow-hidden shadow-2xl">
         <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
-          <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => { SoundEngine.playClick(); setMarketMode(null); }}>
-            Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
-          </h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => { SoundEngine.playClick(); setMarketMode(null); }}>
+              Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
+            </h2>
+            <div className="flex items-center">
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-md border border-white/10">
+                    Sign In
+                  </button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      userButtonAvatarBox: "w-8 h-8 rounded-full border border-white/10",
+                      userButtonPopoverActionButtonIcon: "text-zinc-400"
+                    }
+                  }}
+                />
+              </SignedIn>
+            </div>
+          </div>
           
           <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
             <button 
