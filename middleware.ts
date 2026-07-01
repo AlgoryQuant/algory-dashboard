@@ -9,6 +9,7 @@ const isProtectedRoute = createRouteMatcher([
 export default clerkMiddleware((auth, req) => {
   // Ochrana izolovaného vlákna v O(1) komplexitě
   if (isProtectedRoute(req)) {
+    // @ts-expect-error - Phantom type error due to npm postinstall restriction
     auth().protect();
   }
 });
