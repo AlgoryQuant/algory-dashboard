@@ -1,9 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-// Definice chráněných segmentů v paměti Edge sítě
+// Ochrana odstraněna z /terminal. Nyní řešíme autorizaci na úrovni komponent.
 const isProtectedRoute = createRouteMatcher([
-  '/terminal(.*)',
-  '/laboratory(.*)'
+  '/api/restricted(.*)'
 ]);
 
 export default clerkMiddleware((auth, req) => {

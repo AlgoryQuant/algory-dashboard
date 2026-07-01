@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SignInButton, SignUpButton } from '@clerk/nextjs';
+import Link from 'next/link';
 
 export default function PublicLanding() {
   return (
@@ -51,14 +52,14 @@ export default function PublicLanding() {
             Advanced quantitative analysis & real-time execution engine.
           </p>
           
-          <SignUpButton mode="modal" forceRedirectUrl="/terminal">
+          <Link href="/terminal">
             <button className="flex items-center gap-3 px-8 py-3.5 lg:px-10 lg:py-4 bg-white/5 border border-white/10 rounded-full text-xs lg:text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all group shadow-2xl">
               Initialize Engine
               <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </button>
-          </SignUpButton>
+          </Link>
         </motion.div>
 
         {/* STATIC INFORMATIONAL CARDS */}
