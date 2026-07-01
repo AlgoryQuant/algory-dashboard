@@ -3,8 +3,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, LineChart, Line } from 'recharts';
-// @ts-expect-error - Phantom type error due to npm postinstall restriction
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { SignInButton, UserButton, useAuth } from '@clerk/nextjs';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
   KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
@@ -225,6 +224,8 @@ export default function Sidebar({
   openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
 }: SidebarProps) {
 
+  const { isLoaded, userId } = useAuth();
+  
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -356,14 +357,14 @@ export default function Sidebar({
               Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
             </h2>
             <div className="flex items-center">
-              <SignedOut>
+              {isLoaded && !userId && (
                 <SignInButton mode="modal">
                   <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-md border border-white/10">
                     Sign In
                   </button>
                 </SignInButton>
-              </SignedOut>
-              <SignedIn>
+              )}
+              {isLoaded && userId && (
                 <UserButton 
                   appearance={{
                     elements: {
@@ -372,7 +373,7 @@ export default function Sidebar({
                     }
                   }}
                 />
-              </SignedIn>
+              )}
             </div>
           </div>
           
