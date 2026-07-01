@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-// @ts-expect-error - Phantom type error due to npm postinstall restriction on @clerk/shared
-import { ClerkProvider, SignedIn, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, UserButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { dark } from "@clerk/themes";
 
 const geistSans = Geist({
@@ -20,15 +20,16 @@ export const metadata: Metadata = {
   description: "Advanced quantitative analysis & real-time execution engine.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { userId } = await auth();
+
   return (
     <ClerkProvider
       appearance={{
-        // @ts-expect-error - Phantom type error due to npm postinstall restriction on @clerk/themes
         baseTheme: dark,
         variables: {
           colorPrimary: "#ffffff",
@@ -54,7 +55,7 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col bg-[#050505] text-white">
           {/* GLOBAL TOP-BAR OVERLAY (Visible only when authenticated) */}
-          <SignedIn>
+          {userId && (
             <div className="fixed top-6 right-6 lg:top-8 lg:right-8 z-[100] flex items-center gap-4">
               <div className="hidden lg:flex items-center gap-3 px-3 py-1.5 rounded-full border border-white/5 bg-black/50 backdrop-blur-md">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -71,7 +72,7 @@ export default function RootLayout({
                 />
               </div>
             </div>
-          </SignedIn>
+          )}
           
           {children}
         </body>
