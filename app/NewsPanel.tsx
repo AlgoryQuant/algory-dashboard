@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface NewsItem { title: string; publisher: string; link: string; time: string; sentiment: 'positive' | 'negative' | 'neutral'; }
 interface WhaleAlert { id: string; text: string; type: 'bullish' | 'bearish' | 'neutral'; time: string; amountUsd: string; }
+
+// Nový interface odpovídající struktuře dat z Python enginu přes Firebase
+interface RawWhaleAlert { symbol: string; price: number; qty: number; side: string; timestamp: number; }
 
 const FOREX_NEWS_MOCK: NewsItem[] = [
   { title: "Fed Chair Powell hints at maintaining higher rates for longer.", publisher: "Bloomberg", link: "https://www.bloomberg.com/markets", time: "14:30", sentiment: "negative" },
@@ -21,50 +24,39 @@ const CRYPTO_NEWS_MOCK: NewsItem[] = [
 
 const WHALE_ALERTS_MOCK: WhaleAlert[] = [
   { id: "W1", text: "10,500 BTC transferred from Unknown Wallet to Binance", type: "bearish", time: "Just now", amountUsd: "$680.5M" },
-  { id: "W2", text: "250,000 ETH transferred from Coinbase to Unknown Wallet", type: "bullish", time: "12 mins ago", amountUsd: "$862.1M" },
-  { id: "W3", text: "50,000,000 XRP transferred from Ripple Escrow to Unknown Wallet", type: "neutral", time: "45 mins ago", amountUsd: "$29.5M" },
-  { id: "W4", text: "4,200 BTC transferred from Kraken to Unknown Wallet", type: "bullish", time: "1 hour ago", amountUsd: "$272.3M" }
+  { id: "W2", text: "250,000 ETH transferred from Coinbase to Unknown Wallet", type: "bullish", time: "12 mins ago", amountUsd: "$862.1M" }
 ];
 
 interface NewsPanelProps {
   marketMode: 'FOREX' | 'CRYPTO' | null;
   rightPanelMode: 'news' | 'whales';
   setRightPanelMode: (mode: 'news' | 'whales') => void;
+  latestWhale?: RawWhaleAlert;
 }
 
-const LiveWhalesPanel = () => {
+const LiveWhalesPanel = ({ latestWhale }: { latestWhale?: RawWhaleAlert }) => {
   const [whales, setWhales] = useState<WhaleAlert[]>(WHALE_ALERTS_MOCK);
+  const lastWhaleTimestamp = useRef<number | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const assets = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'USDT', 'USDC', 'ADA'];
-      const types: ('bullish' | 'bearish' | 'neutral')[] = ['bullish', 'bearish', 'neutral'];
-      const actions = ['transferred from Unknown Wallet to', 'transferred from', 'minted at', 'burned at'];
-      const exchanges = ['Binance', 'Coinbase', 'Kraken', 'Unknown Wallet', 'Ripple Escrow'];
+    // Kvantitativní filtr k zamezení duplicitních DOM renderů (kontrola unikátního timestampu WSS streamu)
+    if (latestWhale && latestWhale.timestamp !== lastWhaleTimestamp.current) {
+      lastWhaleTimestamp.current = latestWhale.timestamp;
       
-      const asset = assets[Math.floor(Math.random() * assets.length)];
-      const type = types[Math.floor(Math.random() * types.length)];
-      const action = actions[Math.floor(Math.random() * actions.length)];
-      const exchange = exchanges[Math.floor(Math.random() * exchanges.length)];
+      const totalUsdValue = latestWhale.qty * latestWhale.price;
+      const formattedUsd = totalUsdValue.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
       
-      let amount = 0;
-      if (asset === 'BTC') amount = Math.floor(Math.random() * 5000) + 100;
-      else if (asset === 'ETH') amount = Math.floor(Math.random() * 50000) + 1000;
-      else amount = Math.floor(Math.random() * 50000000) + 1000000;
-
       const newAlert: WhaleAlert = {
-        id: `W-${Date.now()}`,
-        text: `${amount.toLocaleString()} ${asset} ${action} ${exchange}`,
-        type,
-        time: 'Just now',
-        amountUsd: `$${(Math.random() * 900 + 10).toFixed(1)}M`
+        id: `W-${latestWhale.timestamp}`,
+        text: `${latestWhale.side === 'BUY' ? 'MARKET BUY' : 'MARKET SELL'} ${latestWhale.qty.toFixed(4)} ${latestWhale.symbol.replace('USDT', '')} @ $${latestWhale.price.toLocaleString('en-US', {minimumFractionDigits: 2})}`,
+        type: latestWhale.side === 'BUY' ? 'bullish' : 'bearish',
+        time: new Date(latestWhale.timestamp).toLocaleTimeString([], { hour12: false }),
+        amountUsd: formattedUsd
       };
 
-      setWhales(prev => [newAlert, ...prev.slice(0, 4)]);
-    }, 8000);
-
-    return () => clearInterval(interval);
-  }, []);
+      setWhales(prev => [newAlert, ...prev].slice(0, 50)); // Memory boundary guard: Uchovává maximálně 50 posledních alertů
+    }
+  }, [latestWhale]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,7 +86,7 @@ const LiveWhalesPanel = () => {
   );
 };
 
-export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMode }: NewsPanelProps) {
+export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMode, latestWhale }: NewsPanelProps) {
   const displayedNews = marketMode === 'FOREX' ? FOREX_NEWS_MOCK : CRYPTO_NEWS_MOCK;
 
   return (
@@ -117,7 +109,6 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
           {rightPanelMode === 'news' ? (
             displayedNews && displayedNews.length > 0 ? (
               displayedNews.map((item, idx) => (
-                // ZMĚNA 2: Odkaz s _blank, rel a moderním hover efektem
                 <motion.a 
                   layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={idx} 
                   href={item.link} 
@@ -152,7 +143,7 @@ export default function NewsPanel({ marketMode, rightPanelMode, setRightPanelMod
               </div>
             )
           ) : (
-            <LiveWhalesPanel />
+            <LiveWhalesPanel latestWhale={latestWhale} />
           )}
         </div>
       </motion.div>
