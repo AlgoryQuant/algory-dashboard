@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SignInButton, UserButton, useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
   KeyboardSensor, PointerSensor, useSensor, useSensors, DragStartEvent, DragEndEvent
@@ -225,6 +226,7 @@ export default function Sidebar({
 }: SidebarProps) {
 
   const { isLoaded, userId } = useAuth();
+  const router = useRouter();
   
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -353,7 +355,7 @@ export default function Sidebar({
       <aside className="w-80 flex-shrink-0 border-r border-white/10 bg-zinc-950/50 backdrop-blur-xl flex flex-col h-full z-20 hidden lg:flex overflow-hidden shadow-2xl">
         <div className="p-8 pb-4 border-b border-white/5 mb-4 flex-shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => { SoundEngine.playClick(); setMarketMode(null); }}>
+            <h2 className="text-3xl font-semibold tracking-tighter text-white cursor-pointer hover:opacity-80 transition-opacity drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" onClick={() => { SoundEngine.playClick(); router.push('/dashboard'); }}>
               Algory<span className={marketMode === 'CRYPTO' ? 'text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]'}>.</span>
             </h2>
             <div className="flex items-center">
