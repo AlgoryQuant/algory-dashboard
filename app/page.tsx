@@ -1,6 +1,6 @@
 "use client";
 // HOTFIX DEPLOY TRIGGER
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   DndContext, DragOverlay, closestCorners, DragStartEvent, DragEndEvent,
   defaultDropAnimationSideEffects, KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -13,6 +13,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { SoundEngine } from './sound';
 import Sidebar from './Sidebar';
 import NewsPanel from './NewsPanel';
 import ChartArea from './ChartArea';
@@ -25,6 +26,7 @@ import LiveTape from './LiveTape';
 
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
 interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
+interface WhaleAlert { symbol: string; price: number; qty: number; side: string; timestamp: number; }
 interface DashboardData {
   majors?: Record<string, number>;
   minors?: Record<string, number>;
@@ -34,6 +36,11 @@ interface DashboardData {
     spatial?: Record<string, SpatialArbData>;
     triangular?: Record<string, TriangularArbData>;
     funding?: Record<string, FundingRateData>;
+  };
+  orderflow?: {
+    BTCUSD?: {
+      latest_whale?: WhaleAlert;
+    }
   };
   parameters?: Record<string, { SL: number; TP: number; Partial: number; BE: number; MaxSpread: number; LiveSpread: number | string; KeyDriver: string; Direction?: string; RRR?: number; LivePrice?: number; aiAnalysis?: AIAnalysis; history?: TradeHistory[]; }>;
 }
@@ -168,6 +175,8 @@ export default function Home() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const lastWhaleRef = useRef<number | null>(null);
+
   useEffect(() => {
     setIsMounted(true);
     const savedUser = localStorage.getItem('algory_user');
@@ -201,7 +210,6 @@ export default function Home() {
     } catch (err) {} finally { setIsSubmitting(false); }
   };
 
-  // CRITICAL FIX: Odstraněna závislost na isAuthenticated pro fetch dat.
   useEffect(() => {
     const loadData = () => {
       fetch(`https://algory-87b19-default-rtdb.europe-west1.firebasedatabase.app/results.json?t=${new Date().getTime()}`)
@@ -211,12 +219,22 @@ export default function Home() {
         .finally(() => setLoading(false));
     };
     
-    // Spouštíme stahování okamžitě po mountnutí
     loadData();
     const interval = setInterval(loadData, 3000);
     
     return () => clearInterval(interval);
-  }, []); // Prázdné pole závislostí zaručí běh napříč doménami
+  }, []); 
+
+  // --- AUDIO UX: WHALE ALERT LISTENER ---
+  useEffect(() => {
+    const currentWhaleTimestamp = data?.orderflow?.BTCUSD?.latest_whale?.timestamp;
+    if (currentWhaleTimestamp) {
+      if (lastWhaleRef.current !== null && currentWhaleTimestamp > lastWhaleRef.current) {
+        SoundEngine.playAlert();
+      }
+      lastWhaleRef.current = currentWhaleTimestamp;
+    }
+  }, [data?.orderflow?.BTCUSD?.latest_whale?.timestamp]);
 
   const handleSeedFirebase = async () => {
     try {
@@ -352,7 +370,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* COLUMN 4: Imbalance & Exekuce */}
+          {/* COLUMN 4: Imbalance */}
           <div className="p-6 lg:p-8 flex flex-col items-center justify-center gap-8 flex-shrink-0 w-full xl:w-[240px] bg-black/40">
             <div className="w-full flex flex-col gap-3 mt-2">
               <div className="text-center text-[10px] text-white/90 font-mono font-bold uppercase tracking-widest">
@@ -369,20 +387,6 @@ export default function Home() {
                 <span>Buyers</span>
               </div>
             </div>
-
-            {isTradeActive ? (
-              <button className={`w-full px-6 py-4 text-[11px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(0,0,0,0.5)] bg-black/50 border hover:-translate-y-1 ${
-                inferredDirection === 'BUY' 
-                  ? 'text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:border-emerald-400' 
-                  : 'text-red-400 border-red-500/50 hover:bg-red-500/10 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:border-red-400'
-              }`}>
-                EXECUTE {inferredDirection}
-              </button>
-            ) : (
-              <button disabled className="w-full px-6 py-4 bg-zinc-950/50 text-zinc-600 text-[11px] font-bold uppercase tracking-widest rounded-xl border border-white/5 cursor-not-allowed">
-                LOW CONVICTION
-              </button>
-            )}
           </div>
         </div>
 
