@@ -1,130 +1,190 @@
 "use client";
-import React from 'react';
-import { motion } from 'framer-motion';
-import { SignInButton, SignUpButton } from '@clerk/nextjs';
-import Link from 'next/link';
 
-export default function PublicLanding() {
+import React from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { SignInButton, useAuth } from '@clerk/nextjs';
+
+export default function LandingPage() {
+  const { isLoaded, userId } = useAuth();
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full relative overflow-hidden font-sans bg-[#050505] p-6 lg:p-0">
+    <div className="min-h-[100dvh] w-full bg-[#000000] text-zinc-200 selection:bg-zinc-800 font-sans overflow-x-hidden scroll-smooth">
       
-      {/* EXPLICIT AUTHENTICATION HEADER */}
-      <header className="absolute top-0 left-0 w-full p-6 lg:px-12 lg:py-8 flex justify-between items-center z-50">
+      {/* GLOBAL HEADER */}
+      <header className="fixed top-0 left-0 w-full p-6 lg:px-12 lg:py-6 flex justify-between items-center z-[100] bg-[#000000]/50 backdrop-blur-md border-b border-white/5">
         <div className="text-xl font-black tracking-tighter text-white">Algory<span className="text-zinc-600">.</span></div>
-        <div className="flex items-center gap-4 lg:gap-6">
-          <SignInButton mode="modal" forceRedirectUrl="/terminal">
-            <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-              Sign In
-            </button>
-          </SignInButton>
-          <SignUpButton mode="modal" forceRedirectUrl="/terminal">
-            <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest bg-white text-black px-4 py-2 lg:px-5 lg:py-2.5 rounded-lg hover:bg-zinc-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-              Sign Up
-            </button>
-          </SignUpButton>
+        <div className="flex items-center gap-4">
+          {isLoaded && !userId && (
+            <SignInButton mode="modal" forceRedirectUrl="/terminal">
+              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                Sign In
+              </button>
+            </SignInButton>
+          )}
+          {isLoaded && userId && (
+            <Link href="/terminal">
+              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
+                Active Session
+              </button>
+            </Link>
+          )}
         </div>
       </header>
 
-      {/* BACKGROUND GRADIENTS */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
-      <motion.div 
-        animate={{ y: [0, -40, 0], x: [0, 20, 0] }} 
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} 
-        className="absolute top-[-10%] left-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" 
-      />
-      <motion.div 
-        animate={{ y: [0, 50, 0], x: [0, -30, 0] }} 
-        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} 
-        className="absolute bottom-[-10%] right-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" 
-      />
-      
-      <div className="relative z-10 flex flex-col items-center text-center w-full max-w-5xl mt-20 lg:mt-16">
+      {/* HERO SECTION */}
+      <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center pt-20 px-6 z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/40 via-[#000000] to-[#000000] z-0 pointer-events-none" />
         
-        {/* HERO SECTION */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] lg:text-xs mb-4 lg:mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-            WELCOME TO ALGORY
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full"
+        >
+          <span className="px-3 py-1 mb-8 rounded-full border border-white/10 bg-white/5 text-[10px] uppercase tracking-widest text-zinc-400 font-medium backdrop-blur-sm">
+            Quantitative Execution Engine
           </span>
-          <h1 className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-4 lg:mb-6">
-            Algory<span className="text-zinc-600">.</span>
+          
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-600 mb-6 leading-[1.1]">
+            Institutional Grade.<br />Retail Access.
           </h1>
-          <p className="text-zinc-400 text-xs md:text-sm lg:text-lg font-light tracking-wide max-w-2xl leading-relaxed">
-            Advanced quantitative analysis & real-time execution engine.
+          
+          <p className="text-sm md:text-base lg:text-lg text-zinc-400 font-light tracking-wide max-w-2xl leading-relaxed mb-12">
+            Advanced real-time market topology, multi-exchange spatial arbitrage matrices, and Python-driven backtesting environment. Execute with absolute precision.
           </p>
-        </motion.div>
-
-        {/* INTERACTIVE NAVIGATION CARDS */}
-        <div className="w-full max-w-4xl flex flex-col gap-4 lg:gap-6 mt-10 lg:mt-12 relative z-10 px-4 lg:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
+            {isLoaded && !userId && (
+              <SignInButton mode="modal" forceRedirectUrl="/terminal">
+                <button className="w-full sm:w-auto px-8 py-4 bg-white text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+                  Get Started
+                </button>
+              </SignInButton>
+            )}
+            {isLoaded && userId && (
+              <Link href="/terminal" className="w-full sm:w-auto">
+                <button className="w-full px-8 py-4 bg-white text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+                  Enter Terminal
+                </button>
+              </Link>
+            )}
             
-            {/* MODULE 1: FOREX */}
-            <Link href="/terminal" className="block group outline-none">
-              <div className="p-6 lg:p-8 bg-black/40 border border-white/5 group-hover:border-white/20 group-hover:bg-white/[0.02] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.02)] rounded-xl flex flex-col text-left h-full backdrop-blur-sm transition-all duration-300">
-                <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6 flex justify-between items-center w-full">
-                  Market Data
-                  <svg className="w-4 h-4 text-zinc-600 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors">Global Forex</h2>
-                </div>
-                <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs group-hover:text-zinc-400 transition-colors">
-                  Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
-                </p>
-              </div>
-            </Link>
-
-            {/* MODULE 2: CRYPTO */}
-            <Link href="/terminal" className="block group outline-none">
-              <div className="p-6 lg:p-8 bg-black/40 border border-white/5 group-hover:border-white/20 group-hover:bg-white/[0.02] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.02)] rounded-xl flex flex-col text-left h-full backdrop-blur-sm transition-all duration-300">
-                <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6 flex justify-between items-center w-full">
-                  Digital Assets
-                  <svg className="w-4 h-4 text-zinc-600 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors">Crypto Matrices</h2>
-                </div>
-                <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs group-hover:text-zinc-400 transition-colors">
-                  Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
-                </p>
-              </div>
-            </Link>
-
+            <a href="#features" className="w-full sm:w-auto px-8 py-4 bg-transparent border border-white/10 rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all text-center">
+              View Features
+            </a>
           </div>
+        </motion.div>
+      </section>
 
-          {/* MODULE 3: LABORATORY */}
-          <Link href="/terminal" className="block group outline-none">
-            <div className="p-6 lg:p-8 bg-black/40 border border-white/5 group-hover:border-white/20 group-hover:bg-white/[0.02] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.02)] rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-left backdrop-blur-sm transition-all duration-300">
-              <div className="flex flex-col flex-1">
-                <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/50 group-hover:bg-indigo-500 group-hover:animate-pulse transition-colors"></span>
-                    Development Environment
-                  </div>
-                  <svg className="w-4 h-4 text-zinc-600 group-hover:text-white transform group-hover:translate-x-1 transition-all md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-medium tracking-tight text-zinc-100 group-hover:text-white transition-colors mb-2">
-                  AI Quant Laboratory
-                </h2>
-                <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-2xl group-hover:text-zinc-400 transition-colors">
-                  Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict evaluation limits.
-                </p>
+      {/* BENTO GRID SHOWCASE */}
+      <section id="features" className="w-full max-w-6xl mx-auto px-6 py-24 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold tracking-tight text-white mb-4">Architected for Alpha.</h2>
+          <p className="text-zinc-500 text-sm tracking-wide">Explore the core infrastructure powering the terminal.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
+          
+          {/* BENTO BOX 1: OrderBook / Live Tape */}
+          <div className="md:col-span-2 md:row-span-2 bg-[#050505] border border-white/10 rounded-3xl p-8 flex flex-col relative overflow-hidden group hover:border-white/20 transition-colors">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-white tracking-tight">Depth of Market & Tape</h3>
+                <p className="text-xs text-zinc-500 mt-1 max-w-sm">Microsecond precision orderflow mapping and liquidity stream visualization.</p>
               </div>
-              <div className="hidden md:flex items-center justify-center p-4 rounded-full bg-white/5 border border-white/10 group-hover:bg-white/10 group-hover:border-white/20 transition-all">
-                <svg className="w-5 h-5 text-zinc-400 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+              <div className="flex-1 w-full bg-[#0a0a0a] border border-white/5 rounded-xl p-4 overflow-hidden font-mono text-[9px] sm:text-[10px] text-zinc-400 select-none shadow-inner">
+                <div className="flex justify-between border-b border-white/5 pb-2 mb-2 text-zinc-600 font-bold">
+                  <span>PRICE</span><span>AMOUNT</span><span>TOTAL</span>
+                </div>
+                {[
+                  { p: "58659.9728", a: "54.15", t: "314.81", color: "text-red-400" },
+                  { p: "58659.9723", a: "42.90", t: "260.66", color: "text-red-400" },
+                  { p: "58659.9718", a: "52.35", t: "217.77", color: "text-red-400" },
+                  { p: "58659.9713", a: "54.48", t: "165.41", color: "text-red-400" },
+                  { p: "58659.9698", a: "50.03", t: "50.03", color: "text-emerald-400", mt: true },
+                  { p: "58659.9693", a: "18.22", t: "68.25", color: "text-emerald-400" },
+                  { p: "58659.9688", a: "41.10", t: "109.35", color: "text-emerald-400" },
+                ].map((row, i) => (
+                  <div key={i} className={`flex justify-between py-1 hover:bg-white/5 transition-colors ${row.mt ? 'mt-3 pt-3 border-t border-white/5' : ''}`}>
+                    <span className={`font-bold ${row.color}`}>{row.p}</span>
+                    <span>{row.a}</span>
+                    <span>{row.t}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          </Link>
+          </div>
+
+          {/* BENTO BOX 2: Imbalance Bar */}
+          <div className="md:col-span-1 md:row-span-2 bg-[#050505] border border-white/10 rounded-3xl p-8 flex flex-col relative overflow-hidden group hover:border-white/20 transition-colors">
+            <div className="absolute inset-0 bg-gradient-to-bl from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-white tracking-tight">Imbalance Matrices</h3>
+                <p className="text-xs text-zinc-500 mt-1">Real-time buyer/seller dominance indexing.</p>
+              </div>
+              <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
+                <div className="text-center font-mono font-bold text-emerald-400 text-xs tracking-widest">
+                  62.2% BUYER DOMINANCE
+                </div>
+                <div className="w-full h-3 bg-zinc-900 rounded-full overflow-hidden flex shadow-inner">
+                  <div className="h-full bg-red-500 w-[37.8%]"></div>
+                  <div className="h-full bg-emerald-500 w-[62.2%] shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                </div>
+                <div className="w-full space-y-3 mt-4">
+                  <div className="flex justify-between items-center text-[10px] uppercase font-bold text-zinc-500">
+                    <span>Active Trend</span>
+                    <span className="text-emerald-400">BULLISH</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] uppercase font-bold text-zinc-500">
+                    <span>Vol. Delta</span>
+                    <span className="text-white">+24.4K</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* BENTO BOX 3: Python Lab */}
+          <div className="md:col-span-3 md:row-span-1 bg-[#050505] border border-white/10 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:border-white/20 transition-colors">
+            <div className="absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative z-10 w-full md:w-1/3">
+              <h3 className="text-lg font-bold text-white tracking-tight">AI Quant Laboratory</h3>
+              <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
+                Develop, backtest, and deploy algorithmic models directly in the browser. Powered by historical tick data integration and strict evaluation metrics.
+              </p>
+            </div>
+            <div className="relative z-10 w-full md:w-2/3 bg-[#0a0a0a] border border-white/5 rounded-xl p-4 h-full overflow-hidden shadow-inner">
+              <div className="flex items-center gap-1.5 mb-3 border-b border-white/5 pb-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
+                <span className="ml-2 text-[9px] font-mono text-zinc-600">strategy_engine.py</span>
+              </div>
+              <pre className="font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-hidden">
+                <span className="text-purple-400">def</span> <span className="text-blue-400">calculate_arbitrage_spread</span>(data, pair):<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;ask = data[<span className="text-emerald-400">'binance'</span>][pair][<span className="text-emerald-400">'ask'</span>]<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;bid = data[<span className="text-emerald-400">'kraken'</span>][pair][<span className="text-emerald-400">'bid'</span>]<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;spread = ((bid - ask) / ask) * <span className="text-orange-400">100</span><br/>
+                <br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">if</span> spread &gt; <span className="text-orange-400">0.15</span>:<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">return</span> <span className="text-blue-400">ExecuteOrder</span>(side=<span className="text-emerald-400">'BUY'</span>, volume=<span className="text-orange-400">1.5</span>)<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">return</span> <span className="text-orange-400">None</span>
+              </pre>
+            </div>
+          </div>
 
         </div>
-      </div>
+      </section>
+      
+      {/* FOOTER */}
+      <footer className="w-full border-t border-white/5 py-8 mt-12 text-center relative z-10 bg-[#000000]">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+          © 2026 ALGORY SYSTEMS. <br className="sm:hidden"/>ALL RIGHTS RESERVED.
+        </div>
+      </footer>
     </div>
   );
 }
