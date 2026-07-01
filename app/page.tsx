@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { SignInButton, useAuth } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 
 export default function LandingPage() {
   const { isLoaded, userId } = useAuth();
@@ -16,11 +16,11 @@ export default function LandingPage() {
         <div className="text-xl font-black tracking-tighter text-white">Algory<span className="text-zinc-600">.</span></div>
         <div className="flex items-center gap-4">
           {isLoaded && !userId && (
-            <SignInButton mode="modal" forceRedirectUrl="/terminal">
+            <Link href="/sign-in">
               <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                 Sign In
               </button>
-            </SignInButton>
+            </Link>
           )}
           {isLoaded && userId && (
             <Link href="/terminal">
@@ -56,11 +56,11 @@ export default function LandingPage() {
           
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
             {isLoaded && !userId && (
-              <SignInButton mode="modal" forceRedirectUrl="/terminal">
+              <Link href="/sign-up" className="w-full sm:w-auto">
                 <button className="w-full sm:w-auto px-8 py-4 bg-white text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]">
                   Get Started
                 </button>
-              </SignInButton>
+              </Link>
             )}
             {isLoaded && userId && (
               <Link href="/terminal" className="w-full sm:w-auto">
