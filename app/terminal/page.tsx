@@ -1,6 +1,7 @@
 "use client";
-// HOTFIX DEPLOY TRIGGER
+
 import React, { useState, useEffect, useRef } from 'react';
+import { SignInButton, useUser, useAuth } from '@clerk/nextjs';
 import { 
   DndContext, DragOverlay, closestCorners, DragStartEvent, DragEndEvent,
   defaultDropAnimationSideEffects, KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -23,6 +24,7 @@ import BacktestLab from '../BacktestLab';
 import MarketMonitor from '../MarketMonitor';
 import OrderBook from '../OrderBook';
 import LiveTape from '../LiveTape';
+import T212Portfolio from '../T212Portfolio';
 
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
 interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
@@ -50,6 +52,19 @@ const LIQUIDATIONS_MOCK = { longsRekt: 154200000, shortsRekt: 45800000 };
 const dropAnimationConfig: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
 };
+
+const AuthGuard = ({ title, description }: { title: string, description: string }) => (
+  <div className="w-full flex flex-col items-center justify-center p-10 lg:p-20 border border-white/10 rounded-[2rem] bg-black/40 backdrop-blur-md shadow-2xl relative z-10 text-center min-h-[400px]">
+    <svg className="w-12 h-12 text-zinc-500 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+    <h3 className="text-xl lg:text-2xl font-bold text-white tracking-tight mb-3">{title}</h3>
+    <p className="text-zinc-400 text-xs lg:text-sm max-w-md mb-8 leading-relaxed">{description}</p>
+    <SignInButton mode="modal" forceRedirectUrl="/terminal">
+      <button className="px-8 py-3.5 bg-white text-black text-[10px] lg:text-xs font-bold uppercase tracking-widest rounded-full hover:bg-zinc-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+        Sign In to Access
+      </button>
+    </SignInButton>
+  </div>
+);
 
 const AnimatedNumber = ({ value }: { value: number }) => {
   const safeValue = value || 0;
@@ -146,12 +161,17 @@ const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNo
 };
 
 export default function TerminalCore() {
+  const { user, isLoaded: isUserLoaded } = useUser();
+  const { userId } = useAuth();
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const isParentAccount = userEmail === 'parents@example.com';
+
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  const [activeView, setActiveView] = useState<'terminal' | 'laboratory'>('terminal');
+  const [activeView, setActiveView] = useState<'terminal' | 'laboratory' | 'portfolio'>('terminal');
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>('CRYPTO');
   const [cryptoMode, setCryptoMode] = useState<'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates'>('standard');
   const [rightPanelMode, setRightPanelMode] = useState<'news' | 'whales'>('whales');
@@ -167,6 +187,13 @@ export default function TerminalCore() {
   const [activeWidgetDragId, setActiveWidgetDragId] = useState<string | null>(null);
 
   const lastWhaleRef = useRef<number | null>(null);
+
+  // RBAC STATE FORCER: Zabezpečení izolace rodičovského účtu
+  useEffect(() => {
+    if (isUserLoaded && isParentAccount) {
+      setActiveView('portfolio');
+    }
+  }, [isUserLoaded, isParentAccount]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -249,6 +276,7 @@ export default function TerminalCore() {
   else if (clampedProb <= 0.48 && clampedProb > 0) { inferredDirection = "SELL"; isTradeActive = true; }
 
   const getPageBackground = () => {
+    if (activeView === 'portfolio') return 'from-[#050505] via-[#050505] to-[#050505]';
     if (activeView === 'laboratory') return 'from-indigo-950/20 via-zinc-950/20 to-[#050505]/40';
     if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/10 via-zinc-950/20 to-[#050505]/40';
     if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/10 via-[#0a0a0a]/40 to-[#050505]/40' : 'from-emerald-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
@@ -267,11 +295,7 @@ export default function TerminalCore() {
     if (!activeParams) return null;
     return (
       <div className={`bg-black/40 backdrop-blur-xl border ${inferredDirection === 'SELL' ? 'border-red-500/20' : inferredDirection === 'BUY' ? (marketMode === 'CRYPTO' ? 'border-blue-500/20' : 'border-emerald-500/20') : 'border-white/10'} rounded-[1.5rem] lg:rounded-[2rem] overflow-hidden transition-all duration-700 relative z-10 ${getGlowColor()}`}>
-        
-        {/* INSTITUTIONAL 4-COLUMN LAYOUT */}
         <div className="flex flex-col xl:flex-row border-b border-white/5">
-          
-          {/* COLUMN 1: Info a Position Sizing */}
           <div className="p-5 lg:p-8 flex flex-col flex-1 border-b xl:border-b-0 xl:border-r border-white/5 justify-start">
             <div className="flex items-center gap-4 mb-5">
               <h2 className="text-4xl font-black text-white tracking-tighter">{displayTicker}</h2>
@@ -321,7 +345,6 @@ export default function TerminalCore() {
             <PositionCalculator slPips={activeParams.SL} direction={inferredDirection} />
           </div>
 
-          {/* COLUMN 2: Order Book (DOM) */}
           <div className="p-4 lg:p-6 w-full xl:w-[280px] flex-shrink-0 bg-black/20 border-b xl:border-b-0 xl:border-r border-white/5 flex flex-col">
             <div className="text-[9px] lg:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
@@ -332,7 +355,6 @@ export default function TerminalCore() {
             </div>
           </div>
 
-          {/* COLUMN 3: Live Tape */}
           <div className="p-4 lg:p-6 w-full xl:w-[280px] flex-shrink-0 bg-black/20 border-b xl:border-b-0 xl:border-r border-white/5 flex flex-col">
             <div className="text-[9px] lg:text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
               <svg className="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -343,7 +365,6 @@ export default function TerminalCore() {
             </div>
           </div>
 
-          {/* COLUMN 4: Imbalance */}
           <div className="p-6 lg:p-8 flex flex-col items-center justify-center gap-8 flex-shrink-0 w-full xl:w-[240px] bg-black/40">
             <div className="w-full flex flex-col gap-3 mt-2">
               <div className="text-center text-[10px] text-white/90 font-mono font-bold uppercase tracking-widest">
@@ -363,7 +384,6 @@ export default function TerminalCore() {
           </div>
         </div>
 
-        {/* SPODNÍ ČÁST PANELU: AI Insight a Historie */}
         {activeParams?.aiAnalysis && (
           <div className="p-6 lg:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 border-b border-white/5">
             <div className="bg-black/40 border border-white/5 rounded-2xl p-6 transition-all hover:bg-black/60 shadow-inner">
@@ -434,31 +454,41 @@ export default function TerminalCore() {
 
       <div className="flex h-[100dvh] w-full bg-[#0a0a0a] text-zinc-200 overflow-hidden font-sans animate-in fade-in duration-700 relative">
         
-        {activeView !== 'laboratory' && (
-          <Sidebar 
-            activeView={activeView} setActiveView={setActiveView}
-            marketMode={marketMode} setMarketMode={setMarketMode}
-            cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
-            activePair={activePair} setActivePair={setActivePair}
-            data={data} 
-            spatialArbData={data.crypto_arb?.spatial || {}}
-            triangularArbData={data.crypto_arb?.triangular || {}}
-            fundingRateData={data.crypto_arb?.funding || {}}
-            openGroups={openGroups} setOpenGroups={setOpenGroups}
-            favorites={favorites} setFavorites={setFavorites}
-            activeDragId={null} setActiveDragId={() => {}}
-            handleSeedFirebase={handleSeedFirebase}
-          />
-        )}
+        <Sidebar 
+          activeView={activeView} setActiveView={setActiveView}
+          marketMode={marketMode} setMarketMode={setMarketMode}
+          cryptoMode={cryptoMode} setCryptoMode={setCryptoMode}
+          activePair={activePair} setActivePair={setActivePair}
+          data={data} 
+          spatialArbData={data.crypto_arb?.spatial || {}}
+          triangularArbData={data.crypto_arb?.triangular || {}}
+          fundingRateData={data.crypto_arb?.funding || {}}
+          openGroups={openGroups} setOpenGroups={setOpenGroups}
+          favorites={favorites} setFavorites={setFavorites}
+          activeDragId={null} setActiveDragId={() => {}}
+          handleSeedFirebase={handleSeedFirebase}
+        />
 
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar pt-0 pb-36 lg:pb-24 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10 w-full`}>
           
-          <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
+          {/* Market Monitor je skryt pro portfoliové zobrazení */}
+          {activeView !== 'portfolio' && (
+            <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
+          )}
 
           <div className={`${activeView === 'laboratory' ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1700px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
             
-            {activeView === 'laboratory' ? (
-              <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
+            {activeView === 'portfolio' ? (
+              <T212Portfolio />
+            ) : activeView === 'laboratory' ? (
+              userId ? (
+                <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
+              ) : (
+                <AuthGuard 
+                  title="AI Quant Laboratory Restricted" 
+                  description="Development environment and strategy backtesting require an active authenticated session. Please sign in to deploy Python models." 
+                />
+              )
             ) : loading && !data.majors ? (
               <div className="p-10 md:p-20 mt-10 text-center flex flex-col items-center justify-center gap-4 md:gap-6 border border-white/10 rounded-[2rem] bg-white/[0.02]">
                 <div className={`w-8 h-8 md:w-10 md:h-10 border-4 border-t-transparent rounded-full animate-spin ${marketMode === 'CRYPTO' ? 'border-blue-500/30 border-t-blue-500' : 'border-emerald-500/30 border-t-emerald-500'}`}></div>
@@ -470,11 +500,32 @@ export default function TerminalCore() {
               <div className="flex flex-col xl:flex-row gap-6 md:gap-10 w-full items-start">
                 <div className="w-full xl:w-[75%] flex flex-col space-y-6 md:space-y-10">
                   {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
-                    <SpatialArbitragePanel arbData={data.crypto_arb?.spatial?.[activePair]} />
+                    userId ? (
+                      <SpatialArbitragePanel arbData={data.crypto_arb?.spatial?.[activePair]} />
+                    ) : (
+                      <AuthGuard 
+                        title="Spatial Arbitrage Matrix" 
+                        description="Institutional cross-exchange arbitrage tracking is restricted to verified accounts. Please sign in to access liquidity routes." 
+                      />
+                    )
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'triangular_arb' ? (
-                    <TriangularArbitragePanel arbData={data.crypto_arb?.triangular?.[activePair]} />
+                    userId ? (
+                      <TriangularArbitragePanel arbData={data.crypto_arb?.triangular?.[activePair]} />
+                    ) : (
+                      <AuthGuard 
+                        title="Triangular Arbitrage Engine" 
+                        description="Real-time triangular arbitrage metrics and multi-hop path execution require an active session." 
+                      />
+                    )
                   ) : marketMode === 'CRYPTO' && cryptoMode === 'funding_rates' ? (
-                    <FundingRatesPanel data={data.crypto_arb?.funding?.[activePair]} />
+                    userId ? (
+                      <FundingRatesPanel data={data.crypto_arb?.funding?.[activePair]} />
+                    ) : (
+                      <AuthGuard 
+                        title="Perpetual Funding Rates" 
+                        description="Derivative flow pools and historical funding rate analysis are restricted features." 
+                      />
+                    )
                   ) : (
                     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleWidgetDragStart} onDragEnd={handleWidgetDragEnd}>
                       <SortableContext items={mainLayout} strategy={verticalListSortingStrategy}>
@@ -495,10 +546,6 @@ export default function TerminalCore() {
                   )}
                 </div>
                 
-                {/* 
-                  DATA INJECTION: 
-                  Předávání živého WebSocket objektu velryb z Firebase payloadu do modulu pravého panelu.
-                */}
                 <NewsPanel 
                   marketMode={marketMode} 
                   rightPanelMode={rightPanelMode} 
