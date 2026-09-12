@@ -25,6 +25,7 @@ import MarketMonitor from '../MarketMonitor';
 import OrderBook from '../OrderBook';
 import LiveTape from '../LiveTape';
 import T212Portfolio from '../T212Portfolio';
+import MasterPlanQ4 from '../MasterPlanQ4'; // Nový import Q4 Plan
 
 interface TradeHistory { date: string; type: string; result: 'WIN' | 'LOSS'; pips: number; }
 interface AIAnalysis { evaluation: string; prediction: string; current_session: string; prev_session: string; }
@@ -165,14 +166,15 @@ export default function TerminalCore() {
   const { userId } = useAuth();
   
   const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isParentAccount = userEmail === 'ybhzduzetoidyebjvn@onldm.net';
+  const isParentAccount = userEmail === 'rodice@seznam.cz';
 
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  const [activeView, setActiveView] = useState<'terminal' | 'laboratory' | 'portfolio'>('terminal');
+  // Přidán stav q4plan
+  const [activeView, setActiveView] = useState<'terminal' | 'laboratory' | 'portfolio' | 'q4plan'>('terminal');
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>('CRYPTO');
   const [cryptoMode, setCryptoMode] = useState<'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates'>('standard');
   const [rightPanelMode, setRightPanelMode] = useState<'news' | 'whales'>('whales');
@@ -278,6 +280,7 @@ export default function TerminalCore() {
 
   const getPageBackground = () => {
     if (activeView === 'portfolio') return 'from-[#050505] via-[#050505] to-[#050505]';
+    if (activeView === 'q4plan') return 'from-blue-950/20 via-[#050505] to-[#050505]';
     if (activeView === 'laboratory') return 'from-indigo-950/20 via-zinc-950/20 to-[#050505]/40';
     if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/10 via-zinc-950/20 to-[#050505]/40';
     if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/10 via-[#0a0a0a]/40 to-[#050505]/40' : 'from-emerald-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
@@ -473,14 +476,23 @@ export default function TerminalCore() {
         <main className={`flex-1 min-w-0 h-full overflow-y-auto custom-scrollbar pt-0 pb-36 lg:pb-24 scroll-smooth transition-colors duration-1000 ease-in-out bg-gradient-to-br animate-bg-gradient ${getPageBackground()} relative z-10 w-full`}>
           
           {/* Market Monitor je skryt pro portfoliové zobrazení */}
-          {activeView !== 'portfolio' && (
+          {activeView !== 'portfolio' && activeView !== 'q4plan' && (
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
           )}
 
-          <div className={`${activeView === 'laboratory' ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1700px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
+          <div className={`${(activeView === 'laboratory' || activeView === 'q4plan') ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1700px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
             
             {activeView === 'portfolio' ? (
               <T212Portfolio />
+            ) : activeView === 'q4plan' ? (
+              userId ? (
+                <MasterPlanQ4 />
+              ) : (
+                <AuthGuard 
+                  title="Q4 Master Plan Restricted" 
+                  description="Strategic capital allocation data is restricted to verified accounts. Please sign in to view the tactical roadmap." 
+                />
+              )
             ) : activeView === 'laboratory' ? (
               userId ? (
                 <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
