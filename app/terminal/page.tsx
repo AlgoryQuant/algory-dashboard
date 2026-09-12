@@ -165,7 +165,7 @@ export default function TerminalCore() {
   const { userId } = useAuth();
   
   const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isParentAccount = userEmail === 'rodice@seznam.cz';
+  const isParentAccount = userEmail === 'ybhzduzetoidyebjvn@onldm.net';
 
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
