@@ -25,8 +25,8 @@ export interface TriangularArbData { id: string; pairName: string; path: string[
 export interface FundingRateData { id: string; asset: string; binanceRate: number; bybitRate: number; okxRate: number; optimalLong: string; optimalShort: string; netYield: number; status: ArbStatus; chartData: ChartPoint[]; }
 
 export interface SidebarProps {
-  activeView: 'terminal' | 'laboratory' | 'portfolio';
-  setActiveView: (view: 'terminal' | 'laboratory' | 'portfolio') => void;
+  activeView: 'terminal' | 'laboratory' | 'portfolio' | 'q4plan';
+  setActiveView: (view: 'terminal' | 'laboratory' | 'portfolio' | 'q4plan') => void;
   marketMode: 'FOREX' | 'CRYPTO' | null;
   setMarketMode: (mode: 'FOREX' | 'CRYPTO' | null) => void;
   cryptoMode: 'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates';
@@ -229,7 +229,7 @@ export default function Sidebar({
 
   // ROLE-BASED ACCESS CONTROL (RBAC)
   const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isParentAccount = userEmail === 'ybhzduzetoidyebjvn@onldm.net';
+  const isParentAccount = userEmail === 'rodice@seznam.cz';
   
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -398,6 +398,13 @@ export default function Sidebar({
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                   LAB
                 </button>
+                <button 
+                  onClick={() => { SoundEngine.playClick(); setActiveView('q4plan'); }} 
+                  className={`flex-1 z-10 text-[9px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-1 ${activeView === 'q4plan' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                  Q4 PLAN
+                </button>
               </>
             )}
             <button 
@@ -407,9 +414,9 @@ export default function Sidebar({
               PORTFOLIO
             </button>
 
-            {/* Posuvné pozadí tlačítek (Slider logic) */}
+            {/* Posuvné pozadí tlačítek (Slider logic pro 4 tlačítka) */}
             {!isParentAccount ? (
-              <div className={`absolute top-1 bottom-1 w-[calc(33.33%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'terminal' ? 'translate-x-0 left-1' : activeView === 'laboratory' ? 'translate-x-[100%] ml-1' : 'translate-x-[200%] ml-1'}`}></div>
+              <div className={`absolute top-1 bottom-1 w-[calc(25%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'terminal' ? 'translate-x-0 left-1' : activeView === 'laboratory' ? 'translate-x-[100%] ml-1' : activeView === 'q4plan' ? 'translate-x-[200%] ml-1' : 'translate-x-[300%] ml-1'}`}></div>
             ) : (
               <div className={`absolute top-1 bottom-1 w-[calc(100%-8px)] left-1 bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 translate-x-0`}></div>
             )}
@@ -449,7 +456,7 @@ export default function Sidebar({
             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-center">Institutional<br/>Read-Only Access</span>
           </div>
         ) : (
-          <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${(activeView === 'laboratory' || activeView === 'portfolio') ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
+          <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${(activeView === 'laboratory' || activeView === 'portfolio' || activeView === 'q4plan') ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
             {marketMode === 'CRYPTO' && cryptoMode === 'spatial_arb' ? (
               <div className="pb-10">
                 <div className="mb-6">
@@ -553,36 +560,44 @@ export default function Sidebar({
             <>
               <button 
                 onClick={() => { SoundEngine.playClick(); setMarketMode('FOREX'); setActiveView('terminal'); }} 
-                className={`flex flex-col items-center justify-center gap-1 w-1/4 py-2 transition-colors ${marketMode === 'FOREX' && activeView === 'terminal' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
+                className={`flex flex-col items-center justify-center gap-1 w-1/5 py-2 transition-colors ${marketMode === 'FOREX' && activeView === 'terminal' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
               >
                 <span className="text-xl">💱</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Forex</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Forex</span>
               </button>
               
               <button 
                 onClick={() => { SoundEngine.playClick(); setMarketMode('CRYPTO'); setActiveView('terminal'); setCryptoMode('standard'); }} 
-                className={`flex flex-col items-center justify-center gap-1 w-1/4 py-2 transition-colors ${marketMode === 'CRYPTO' && activeView === 'terminal' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
+                className={`flex flex-col items-center justify-center gap-1 w-1/5 py-2 transition-colors ${marketMode === 'CRYPTO' && activeView === 'terminal' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
               >
                 <span className="text-xl">₿</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Crypto</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Crypto</span>
               </button>
               
               <button 
                 onClick={() => { SoundEngine.playClick(); setActiveView('laboratory'); }} 
-                className={`flex flex-col items-center justify-center gap-1 w-1/4 py-2 transition-colors ${activeView === 'laboratory' ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-zinc-500'}`}
+                className={`flex flex-col items-center justify-center gap-1 w-1/5 py-2 transition-colors ${activeView === 'laboratory' ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'text-zinc-500'}`}
               >
                 <span className="text-xl">🧪</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Lab</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Lab</span>
+              </button>
+
+              <button 
+                onClick={() => { SoundEngine.playClick(); setActiveView('q4plan'); }} 
+                className={`flex flex-col items-center justify-center gap-1 w-1/5 py-2 transition-colors ${activeView === 'q4plan' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
+              >
+                <span className="text-xl">🎯</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Q4 Plan</span>
               </button>
             </>
           )}
 
           <button 
             onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }} 
-            className={`flex flex-col items-center justify-center gap-1 ${isParentAccount ? 'w-full' : 'w-1/4'} py-2 transition-colors ${activeView === 'portfolio' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
+            className={`flex flex-col items-center justify-center gap-1 ${isParentAccount ? 'w-full' : 'w-1/5'} py-2 transition-colors ${activeView === 'portfolio' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
           >
             <span className="text-xl">📈</span>
-            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Portfolio</span>
+            <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Portfolio</span>
           </button>
         </div>
       </div>
