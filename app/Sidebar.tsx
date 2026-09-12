@@ -229,7 +229,7 @@ export default function Sidebar({
 
   // ROLE-BASED ACCESS CONTROL (RBAC)
   const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isParentAccount = userEmail === 'rodice@seznam.cz';
+  const isParentAccount = userEmail === 'ybhzduzetoidyebjvn@onldm.net';
   
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
