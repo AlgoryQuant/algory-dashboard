@@ -163,8 +163,9 @@ const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNo
 export default function TerminalCore() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const { userId } = useAuth();
+  
   const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isParentAccount = userEmail === 'parents@example.com';
+  const isParentAccount = userEmail === 'rodice@seznam.cz';
 
   const [data, setData] = useState<DashboardData>({});
   const [loading, setLoading] = useState<boolean>(true);
