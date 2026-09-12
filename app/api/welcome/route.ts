@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
-// @ts-ignore: VS Code module resolution bypass for yahoo-finance2
-import yahooFinance from 'yahoo-finance2';
 
 // INITIALIZATION
 const resend = new Resend(process.env.RESEND_API_KEY || 'chybejici_klic');
@@ -15,9 +13,27 @@ export const revalidate = 60;
 export async function GET() {
   try {
     const symbols = ['NEE', 'TGT', 'PFE', 'SYM', 'NVO', 'CZK=X'];
-    const quotes = await yahooFinance.quote(symbols);
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(',')}`;
     
-    const data = quotes.reduce((acc: Record<string, any>, quote: any) => {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Exchange HTTP Error: ${response.status}`);
+    }
+
+    const json = await response.json();
+    const results = json?.quoteResponse?.result;
+
+    if (!results || !Array.isArray(results)) {
+      throw new Error("Invalid payload structure from exchange.");
+    }
+    
+    const data = results.reduce((acc: Record<string, any>, quote: any) => {
       if (quote && quote.symbol) {
         acc[quote.symbol] = {
           price: quote.regularMarketPrice || 0,
