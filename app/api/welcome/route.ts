@@ -1,8 +1,47 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+// @ts-ignore: VS Code module resolution bypass for yahoo-finance2
+import yahooFinance from 'yahoo-finance2';
 
+// INITIALIZATION
 const resend = new Resend(process.env.RESEND_API_KEY || 'chybejici_klic');
 
+// CACHE CONTROL
+export const revalidate = 60;
+
+// ==========================================
+// [GET] MARKET DATA TELEMETRY PIPELINE
+// ==========================================
+export async function GET() {
+  try {
+    const symbols = ['NEE', 'TGT', 'PFE', 'SYM', 'NVO', 'CZK=X'];
+    const quotes = await yahooFinance.quote(symbols);
+    
+    const data = quotes.reduce((acc: Record<string, any>, quote: any) => {
+      if (quote && quote.symbol) {
+        acc[quote.symbol] = {
+          price: quote.regularMarketPrice || 0,
+          prevClose: quote.regularMarketPreviousClose || 0,
+          changePercent: quote.regularMarketChangePercent || 0
+        };
+      }
+      return acc;
+    }, {} as Record<string, any>);
+
+    if (!data['CZK=X']) {
+      throw new Error("Currency conversion matrix failed.");
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('[API ERROR] Market Data Sync Failed:', error);
+    return NextResponse.json({ error: 'Failed to fetch live market parameters.' }, { status: 500 });
+  }
+}
+
+// ==========================================
+// [POST] SYSTEM ACCESS PROVISIONING (RESEND)
+// ==========================================
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -38,7 +77,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (err: unknown) {
-    // Toto Vercel miluje: bezpečné zpracování chyby bez slovíčka 'any'
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

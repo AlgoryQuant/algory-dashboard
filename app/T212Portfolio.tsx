@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   LineChart, Line, PieChart, Pie, Cell, 
@@ -8,28 +8,14 @@ import {
 } from 'recharts';
 
 // --- STATIC MOCK DATA (O(1) Memory Footprint) ---
-const TOTAL_VALUE = 40505.43;
-const LAST_24H_VALUE = 152.20;
-const RATE_OF_RETURN = 0.38;
-
-const MOCK_CHART_DATA = [
-  { time: '09:00', value: 40000 },
-  { time: '10:00', value: 40150 },
-  { time: '11:00', value: 40100 },
-  { time: '12:00', value: 40300 },
-  { time: '13:00', value: 40250 },
-  { time: '14:00', value: 40400 },
-  { time: '15:00', value: 40350 },
-  { time: '16:00', value: 40505.43 },
-];
-
-const MOCK_HOLDINGS_DATA = [
-  { id: 'NEE', name: 'NextEra Energy', actualWeight: 25.06, targetWeight: 25, value: 10150.21, dailyChange: 45.2, color: '#3b82f6', logo: '⚡' },
-  { id: 'TGT', name: 'Target Corp', actualWeight: 24.89, targetWeight: 25, value: 10081.80, dailyChange: 62.1, color: '#ef4444', logo: '🎯' },
-  { id: 'PFE', name: 'Pfizer', actualWeight: 20.15, targetWeight: 20, value: 8161.84, dailyChange: 12.5, color: '#10b981', logo: '💊' },
-  { id: 'SYM', name: 'Symbotic', actualWeight: 14.95, targetWeight: 15, value: 6055.56, dailyChange: 15.3, color: '#f59e0b', logo: '🤖' },
-  { id: 'NVO', name: 'Novo Nordisk', actualWeight: 14.95, targetWeight: 15, value: 6056.02, dailyChange: 17.1, color: '#8b5cf6', logo: '🧬' },
-];
+const INITIAL_CAPITAL = 2500;
+const FIXED_ALLOCATIONS: Record<string, { weight: number; invested: number; color: string; logo: string; name: string; insight: string }> = {
+  'NEE': { weight: 25, invested: 625, color: '#3b82f6', logo: '⚡', name: 'NextEra Energy', insight: 'Stabilní defenziva a zelená energie. Profit z nižších sazeb Fedu, jistota a dividenda.' },
+  'TGT': { weight: 25, invested: 625, color: '#ef4444', logo: '🎯', name: 'Target Corp', insight: 'Král vánoční sezóny. Útěk spotřebitelů k levnějšímu zboží. Zotavení z propadů.' },
+  'PFE': { weight: 20, invested: 500, color: '#10b981', logo: '💊', name: 'Pfizer', insight: 'Defenzivní štít imunní vůči krizím. Fundamentálně levná akcie.' },
+  'SYM': { weight: 15, invested: 375, color: '#f59e0b', logo: '🤖', name: 'Symbotic', insight: 'Růstový motor. Robotizace skladů klíčová pro Q4 nákupní horečku.' },
+  'NVO': { weight: 15, invested: 375, color: '#8b5cf6', logo: '🧬', name: 'Novo Nordisk', insight: 'Extrémní poptávka po lécích na hubnutí (Wegovy). Monopolní síla.' }
+};
 
 const MOCK_HISTORY = [
   { id: 1, title: 'AutoInvest executed', type: 'buy', amount: '+2 500.00 Kč', date: 'Dnes, 09:30' },
@@ -40,16 +26,219 @@ const MOCK_HISTORY = [
 const TIMEFRAMES = ['1D', '1W', '1M', '3M', '1Y', 'MAX'];
 
 // --- ANIMATION VARIANTS ---
-const tabVariants: Variants = {
-  enter: { opacity: 0, y: 10 },
-  center: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
-  exit: { opacity: 0, y: -10, transition: { duration: 0.2, ease: "easeIn" } }
+const pageVariants: Variants = {
+  enter: { opacity: 0, x: 20 },
+  center: { opacity: 1, x: 0, transition: { duration: 0.4, ease: "easeOut" } },
+  exit: { opacity: 0, x: -20, transition: { duration: 0.2, ease: "easeIn" } }
 };
+
+interface MarketData {
+  [ticker: string]: {
+    price: number;
+    prevClose: number;
+    changePercent: number;
+  }
+}
 
 export default function T212Portfolio() {
   const [activeTab, setActiveTab] = useState<'overview' | 'holdings'>('overview');
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [activeTimeframe, setActiveTimeframe] = useState('1D');
+  
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // DATA FETCHING ENGINE
+  useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/welcome');
+        if (!res.ok) throw new Error("API stream rejected.");
+        const data = await res.json();
+        if (isMounted) {
+          setMarketData(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) setError("Connection to exchange lost.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 60000); // 60s synchronizace
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // QUANTITATIVE CALCULATION MATRIX
+  const portfolioMetrics = useMemo(() => {
+    if (!marketData || !marketData['CZK=X']) return null;
+
+    let currentNavCZK = 0;
+    let prevNavCZK = 0;
+    const usdCzkRate = marketData['CZK=X'].price;
+
+    const assets = Object.keys(FIXED_ALLOCATIONS).map(ticker => {
+      const config = FIXED_ALLOCATIONS[ticker];
+      const mkt = marketData[ticker];
+      
+      if (!mkt) return null;
+
+      // Simulace: Nakoupeno za včerejší close cenu (zjednodušený model pro vizualizaci dneška)
+      const sharesOwned = (config.invested / usdCzkRate) / mkt.prevClose;
+      
+      const currentValueUSD = sharesOwned * mkt.price;
+      const currentValueCZK = currentValueUSD * usdCzkRate;
+      
+      const prevValueUSD = sharesOwned * mkt.prevClose;
+      const prevValueCZK = prevValueUSD * usdCzkRate; // zjednodušení: kurz stejný
+      
+      const dailyChangeCZK = currentValueCZK - prevValueCZK;
+
+      currentNavCZK += currentValueCZK;
+      prevNavCZK += prevValueCZK;
+
+      return {
+        id: ticker,
+        ...config,
+        currentValueCZK,
+        dailyChangeCZK,
+        dailyChangePercent: mkt.changePercent,
+        livePriceUSD: mkt.price
+      };
+    }).filter(Boolean) as any[];
+
+    const totalDailyChangeCZK = currentNavCZK - INITIAL_CAPITAL;
+    const totalDailyChangePercent = (totalDailyChangeCZK / INITIAL_CAPITAL) * 100;
+
+    // Přepočet reálných vah portfolia
+    const finalizedAssets = assets.map(a => ({
+      ...a,
+      actualWeight: (a.currentValueCZK / currentNavCZK) * 100
+    })).sort((a, b) => b.currentValueCZK - a.currentValueCZK);
+
+    return {
+      currentNavCZK,
+      totalDailyChangeCZK,
+      totalDailyChangePercent,
+      assets: finalizedAssets
+    };
+  }, [marketData]);
+
+  // GENERACE MOCK GRAFU Z ŽIVÉ CENY PRO VIZUÁLNÍ EFEKT
+  const generateSparkline = (baseValue: number, change: number) => {
+    const points = [];
+    let current = baseValue - change;
+    for(let i=0; i<8; i++) {
+      points.push({ time: i, value: current });
+      current += (change / 7) + (Math.random() * (change*0.2) - (change*0.1));
+    }
+    points[7].value = baseValue; // Poslední bod musí přesně sedět
+    return points;
+  };
+
+  const chartData = useMemo(() => {
+    if (!portfolioMetrics) return [];
+    return generateSparkline(portfolioMetrics.currentNavCZK, portfolioMetrics.totalDailyChangeCZK);
+  }, [portfolioMetrics]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px] w-full bg-[#000000]">
+        <div className="w-8 h-8 border-4 border-t-emerald-500 border-white/10 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error || !portfolioMetrics) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px] w-full bg-[#000000]">
+        <span className="text-[10px] uppercase font-bold text-red-500 tracking-widest bg-red-500/10 px-4 py-2 rounded-lg border border-red-500/20">
+          {error || "Telemetry Data Unavailable"}
+        </span>
+      </div>
+    );
+  }
+
+  // --- SUB-VIEW: ASSET DETAIL DRILL-DOWN ---
+  if (selectedAsset) {
+    const assetData = portfolioMetrics.assets.find(a => a.id === selectedAsset);
+    if (!assetData) return null;
+    
+    const assetSparkline = generateSparkline(assetData.livePriceUSD, assetData.livePriceUSD * (assetData.dailyChangePercent / 100));
+
+    return (
+      <motion.div key="detail" variants={pageVariants} initial="enter" animate="center" exit="exit" className="w-full max-w-4xl mx-auto flex flex-col font-sans bg-[#000000] text-zinc-200 min-h-screen px-6 py-6 pb-24">
+        
+        {/* BACK NAVIGATION */}
+        <button onClick={() => setSelectedAsset(null)} className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors w-fit mb-8 group">
+          <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          <span className="text-[10px] font-bold uppercase tracking-widest">Zpět na Portfolio</span>
+        </button>
+
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xl shadow-inner">
+            {assetData.logo}
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">{assetData.name}</h1>
+            <span className="text-xs text-zinc-500 font-mono tracking-widest">{assetData.id}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col mb-8">
+          <span className="text-4xl font-black text-white font-mono tracking-tighter">
+            ${assetData.livePriceUSD.toFixed(2)}
+          </span>
+          <div className={`flex items-center gap-2 mt-2 font-mono font-bold text-sm tracking-wide ${assetData.dailyChangePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <svg className={`w-4 h-4 ${assetData.dailyChangePercent < 0 ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+            <span>{assetData.dailyChangePercent >= 0 ? '+' : ''}{assetData.dailyChangePercent.toFixed(2)}%</span>
+          </div>
+        </div>
+
+        <div className="w-full h-[250px] mb-8">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={assetSparkline}>
+              <YAxis domain={['dataMin', 'dataMax']} hide />
+              <Line 
+                type="monotone" 
+                dataKey="value" 
+                stroke={assetData.color} 
+                strokeWidth={3} 
+                dot={false}
+                activeDot={{ r: 6, fill: assetData.color, stroke: "#000000", strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="bg-[#050505] border border-white/10 rounded-2xl p-6 shadow-inner">
+          <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Taktický Insight</h3>
+          <p className="text-sm text-zinc-300 leading-relaxed font-medium">
+            {assetData.insight}
+          </p>
+          <div className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Naše Pozice</span>
+              <span className="text-white font-mono text-sm font-bold">{assetData.currentValueCZK.toLocaleString('cs-CZ', { maximumFractionDigits: 0 })} Kč</span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Cílová Alokace</span>
+              <span className="text-white font-mono text-sm font-bold">{assetData.weight}%</span>
+            </div>
+          </div>
+        </div>
+
+      </motion.div>
+    );
+  }
+
+  // --- MAIN TABS VIEW ---
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col font-sans bg-[#000000] text-zinc-200 min-h-screen">
       
@@ -82,18 +271,18 @@ export default function T212Portfolio() {
         <AnimatePresence mode="wait">
           
           {activeTab === 'overview' && (
-            <motion.div key="overview" variants={tabVariants} initial="enter" animate="center" exit="exit" className="flex flex-col gap-8">
+            <motion.div key="overview" variants={pageVariants} initial="enter" animate="center" exit="exit" className="flex flex-col gap-8">
               
               {/* MAIN METRICS */}
               <div className="flex flex-col items-center justify-center text-center mt-4">
                 <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter tabular-nums font-mono">
-                  {TOTAL_VALUE.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-2xl text-zinc-500">Kč</span>
+                  {portfolioMetrics.currentNavCZK.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-2xl text-zinc-500">Kč</span>
                 </h2>
-                <div className="flex items-center gap-2 mt-3 text-emerald-400 font-bold font-mono text-sm tracking-wide">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                  <span>+{LAST_24H_VALUE.toLocaleString('cs-CZ', { minimumFractionDigits: 2 })} Kč</span>
+                <div className={`flex items-center gap-2 mt-3 font-bold font-mono text-sm tracking-wide ${portfolioMetrics.totalDailyChangeCZK >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <svg className={`w-4 h-4 ${portfolioMetrics.totalDailyChangeCZK < 0 ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                  <span>{portfolioMetrics.totalDailyChangeCZK >= 0 ? '+' : ''}{portfolioMetrics.totalDailyChangeCZK.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kč</span>
                   <span className="text-zinc-600 px-1">•</span>
-                  <span>+{RATE_OF_RETURN}%</span>
+                  <span>{portfolioMetrics.totalDailyChangePercent >= 0 ? '+' : ''}{portfolioMetrics.totalDailyChangePercent.toFixed(2)}%</span>
                 </div>
               </div>
 
@@ -101,16 +290,16 @@ export default function T212Portfolio() {
               <div className="w-full flex flex-col gap-4">
                 <div className="h-[250px] w-full relative">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={MOCK_CHART_DATA}>
+                    <LineChart data={chartData}>
                       <YAxis domain={['dataMin', 'dataMax']} hide />
                       <Line 
                         type="monotone" 
                         dataKey="value" 
-                        stroke="#3b82f6" 
+                        stroke={portfolioMetrics.totalDailyChangeCZK >= 0 ? "#10b981" : "#ef4444"} 
                         strokeWidth={3} 
                         dot={false}
-                        activeDot={{ r: 6, fill: "#3b82f6", stroke: "#000000", strokeWidth: 2 }}
-                        style={{ filter: "drop-shadow(0px 10px 10px rgba(59,130,246,0.3))" }}
+                        activeDot={{ r: 6, fill: portfolioMetrics.totalDailyChangeCZK >= 0 ? "#10b981" : "#ef4444", stroke: "#000000", strokeWidth: 2 }}
+                        style={{ filter: `drop-shadow(0px 10px 10px ${portfolioMetrics.totalDailyChangeCZK >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'})` }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -122,7 +311,7 @@ export default function T212Portfolio() {
                     <button 
                       key={tf}
                       onClick={() => setActiveTimeframe(tf)}
-                      className={`text-[10px] font-bold py-1.5 px-3 rounded-full transition-colors ${activeTimeframe === tf ? 'bg-blue-500/20 text-blue-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+                      className={`text-[10px] font-bold py-1.5 px-3 rounded-full transition-colors ${activeTimeframe === tf ? 'bg-zinc-800 text-white border border-white/10' : 'text-zinc-500 hover:text-zinc-300'}`}
                     >
                       {tf}
                     </button>
@@ -145,11 +334,11 @@ export default function T212Portfolio() {
 
                 <div className="bg-[#050505] border border-white/5 rounded-2xl p-5 shadow-inner flex flex-col justify-center">
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Q4 Goal</span>
-                    <span className="text-[10px] font-mono text-zinc-400 font-bold">100.0%</span>
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Q4 Goal Progress</span>
+                    <span className="text-[10px] font-mono text-zinc-400 font-bold">{(portfolioMetrics.currentNavCZK / 40000 * 100).toFixed(1)}%</span>
                   </div>
                   <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 w-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                    <div className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" style={{ width: `${Math.min(portfolioMetrics.currentNavCZK / 40000 * 100, 100)}%` }}></div>
                   </div>
                 </div>
               </div>
@@ -181,7 +370,7 @@ export default function T212Portfolio() {
           )}
 
           {activeTab === 'holdings' && (
-            <motion.div key="holdings" variants={tabVariants} initial="enter" animate="center" exit="exit" className="flex flex-col gap-10">
+            <motion.div key="holdings" variants={pageVariants} initial="enter" animate="center" exit="exit" className="flex flex-col gap-10">
               
               {/* DONUT CHART & HOLDINGS LIST */}
               <div className="flex flex-col gap-6">
@@ -190,7 +379,7 @@ export default function T212Portfolio() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={MOCK_HOLDINGS_DATA}
+                        data={portfolioMetrics.assets}
                         cx="50%"
                         cy="50%"
                         innerRadius={90}
@@ -199,17 +388,17 @@ export default function T212Portfolio() {
                         dataKey="actualWeight"
                         stroke="none"
                       >
-                        {MOCK_HOLDINGS_DATA.map((entry, index) => (
+                        {portfolioMetrics.assets.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip 
-                        content={({ active, payload }) => {
+                        content={({ active, payload }: any) => {
                           if (active && payload && payload.length) {
                             return (
                               <div className="bg-[#0a0a0a] border border-white/10 p-3 rounded-xl shadow-2xl">
-                                <p className="text-white font-bold text-xs">{payload[0].payload.name}</p>
-                                <p className="text-zinc-400 text-[10px] font-mono mt-1">{payload[0].value}% Weight</p>
+                                <p className="text-white font-bold text-xs">{payload?.[0]?.payload?.name}</p>
+                                <p className="text-zinc-400 text-[10px] font-mono mt-1">{Number(payload?.[0]?.value || 0).toFixed(2)}% Actual</p>
                               </div>
                             );
                           }
@@ -221,28 +410,34 @@ export default function T212Portfolio() {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Total NAV</span>
-                    <span className="text-2xl font-black text-white font-mono">{TOTAL_VALUE.toLocaleString('cs-CZ')} Kč</span>
+                    <span className="text-2xl font-black text-white font-mono">{portfolioMetrics.currentNavCZK.toLocaleString('cs-CZ', { maximumFractionDigits: 0 })} Kč</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 px-2 mb-2">Assets</h3>
-                  {MOCK_HOLDINGS_DATA.map((asset) => (
-                    <div key={asset.id} className="bg-[#050505] border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                  <h3 className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 px-2 mb-2">Assets (Click to Expand)</h3>
+                  {portfolioMetrics.assets.map((asset) => (
+                    <div 
+                      key={asset.id} 
+                      onClick={() => setSelectedAsset(asset.id)}
+                      className="bg-[#050505] border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-white/20 transition-all hover:bg-white/[0.02] shadow-inner group"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg">
+                        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
                           {asset.logo}
                         </div>
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-white tracking-wide">{asset.name}</span>
                           <span className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                            <span style={{ color: asset.color }} className="font-bold">{asset.actualWeight}%</span> / {asset.targetWeight}% Target
+                            <span style={{ color: asset.color }} className="font-bold">{asset.actualWeight.toFixed(2)}%</span> / {asset.weight}% Target
                           </span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-sm font-bold text-white font-mono">{asset.value.toLocaleString('cs-CZ', { minimumFractionDigits: 2 })} Kč</span>
-                        <span className="text-[10px] font-mono font-bold text-emerald-400 mt-0.5">+{asset.dailyChange.toLocaleString('cs-CZ')} Kč</span>
+                        <span className="text-sm font-bold text-white font-mono">{asset.currentValueCZK.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className={`text-[10px] font-mono font-bold mt-0.5 ${asset.dailyChangeCZK >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {asset.dailyChangeCZK >= 0 ? '+' : ''}{asset.dailyChangeCZK.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -268,33 +463,33 @@ export default function T212Portfolio() {
                         <span className="text-sm font-bold text-white">Fáze 1: Září</span>
                         <span className="text-[9px] uppercase tracking-widest font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">Tiché budování</span>
                       </div>
-                      <p className="text-xs text-zinc-400 leading-relaxed">Alokace <span className="text-white font-mono">10 000 CZK</span>. DCA nákupy po <span className="font-mono text-white">2 500 CZK</span> týdně. Makroekonomické prostředí zůstává nejisté.</p>
+                      <p className="text-xs text-zinc-400 leading-relaxed">Aktuální fáze. DCA nákupy po <span className="font-mono text-white">2 500 CZK</span> týdně. Makroekonomické prostředí zůstává nejisté.</p>
                     </div>
                   </div>
 
-                  <div className="relative">
+                  <div className="relative opacity-50 grayscale">
                     <div className="absolute -left-[41px] top-0.5 bg-[#000000] p-1.5 rounded-full border border-white/10">
                       <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
                     </div>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-white">Fáze 2: Polovina října</span>
-                        <span className="text-[9px] uppercase tracking-widest font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Snajperský úder</span>
+                        <span className="text-[9px] uppercase tracking-widest font-bold text-zinc-500 bg-white/5 px-2 py-0.5 rounded border border-white/10">Zamčeno</span>
                       </div>
-                      <p className="text-xs text-zinc-400 leading-relaxed">Alokace <span className="text-white font-mono">20 000 CZK</span>. Nákup strachu: Aktivace enginu pouze pokud index <span className="font-mono text-white border-b border-white/20">VIX &gt; 25</span>, nebo při propadu akcií o 5-7 %.</p>
+                      <p className="text-xs text-zinc-500 leading-relaxed">Nákup strachu: Aktivace enginu pouze pokud index <span className="font-mono text-zinc-400 border-b border-white/10">VIX &gt; 25</span>.</p>
                     </div>
                   </div>
 
-                  <div className="relative">
+                  <div className="relative opacity-50 grayscale">
                     <div className="absolute -left-[41px] top-0.5 bg-[#000000] p-1.5 rounded-full border border-white/10">
                       <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                     </div>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-white">Fáze 3: Listopad / Prosinec</span>
-                        <span className="text-[9px] uppercase tracking-widest font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Relief Rally</span>
+                        <span className="text-[9px] uppercase tracking-widest font-bold text-zinc-500 bg-white/5 px-2 py-0.5 rounded border border-white/10">Zamčeno</span>
                       </div>
-                      <p className="text-xs text-zinc-400 leading-relaxed">Alokace <span className="text-white font-mono">10 000 CZK</span>. Volby skončily, trh absorbuje data. Optimalizace pozic a aktivní příprava na Take-Profit.</p>
+                      <p className="text-xs text-zinc-500 leading-relaxed">Volby skončily. Optimalizace pozic a aktivní příprava na Take-Profit.</p>
                     </div>
                   </div>
                 </div>
