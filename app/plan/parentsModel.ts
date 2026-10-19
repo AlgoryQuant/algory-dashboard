@@ -89,6 +89,13 @@ export function displayTicker(id: string): string {
   return id;
 }
 
+/** Yahoo Finance chart symbol for plan holdings. */
+export function yahooSymbol(id: string): string {
+  const key = id.toUpperCase().replace(/\.PA$/, '');
+  if (key === 'MC') return 'MC.PA';
+  return key;
+}
+
 /** Google Finance style exchange:ticker for the detail card. */
 export function financeQuote(id: string): string {
   const key = id.toUpperCase().replace(/\.PA$/, '');

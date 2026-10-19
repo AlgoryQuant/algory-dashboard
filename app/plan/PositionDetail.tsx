@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import PositionPriceChart from './PositionPriceChart';
 import { SWAP_STOCKS } from './reasons';
 
 export function PositionPrompt() {
@@ -29,6 +30,7 @@ export function PositionDetail({
   weight,
   quote,
   pnl,
+  chartSymbol,
 }: {
   ticker: string;
   name: string;
@@ -40,6 +42,8 @@ export function PositionDetail({
   /** Google Finance style, e.g. "NYSE: PFE". */
   quote?: string;
   pnl?: string;
+  /** Yahoo Finance symbol for the live price chart. */
+  chartSymbol?: string;
 }) {
   const hasPieStats = weight != null || quote != null || pnl != null;
   return (
@@ -80,6 +84,7 @@ export function PositionDetail({
           )}
         </div>
       )}
+      {chartSymbol && <PositionPriceChart symbol={chartSymbol} color={color} />}
       <p className="mt-4 text-[15px] leading-7 text-zinc-200">{body}</p>
     </section>
   );

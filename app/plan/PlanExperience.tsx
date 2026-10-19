@@ -6,10 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import ParentsPie from './ParentsPie';
-import { financeQuote, formatMoney, formatPercent, pieStatusLabel, type ParentsPieModel } from './parentsModel';
+import { financeQuote, formatMoney, formatPercent, pieStatusLabel, yahooSymbol, type ParentsPieModel } from './parentsModel';
 import { LvmhSwapNote, PositionDetail, PositionPrompt } from './PositionDetail';
 import { MASTER_REASON } from './reasons';
-import { useParentsPie } from './useParentsPie';
+import { formatRefreshCountdown, useParentsPie } from './useParentsPie';
 
 const PARENT_EMAIL = 'rodice@seznam.cz';
 const MASTER_CAPITAL = 40_000;
@@ -314,27 +314,38 @@ export default function PlanExperience() {
   return (
     <div className="min-h-[100dvh] w-full bg-black text-zinc-200 font-sans selection:bg-zinc-800">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-5 lg:px-8 py-4 flex items-center gap-4 pr-24 lg:pr-36">
+        <div className="max-w-6xl mx-auto px-5 lg:px-8 py-4 flex items-center gap-3 sm:gap-4 pr-20 lg:pr-36">
           <Link href="/dashboard" className="text-xl font-black tracking-tighter text-white shrink-0">
             Algory<span className="text-emerald-500">.</span>
           </Link>
-          <div className="flex bg-white/5 border border-white/10 rounded-full p-1 ml-auto sm:ml-6">
-            <button
-              type="button"
-              aria-pressed={focus === 'plan'}
-              onClick={() => openFocus('plan')}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'plan' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
-            >
-              Master plán
-            </button>
-            <button
-              type="button"
-              aria-pressed={focus === 'pie'}
-              onClick={() => openFocus('pie')}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'pie' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
-            >
-              Koláč rodičů
-            </button>
+          <div className="flex items-center gap-2 sm:gap-3 ml-auto min-w-0">
+            <div className="flex bg-white/5 border border-white/10 rounded-full p-1 shrink-0">
+              <button
+                type="button"
+                aria-pressed={focus === 'plan'}
+                onClick={() => openFocus('plan')}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'plan' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
+              >
+                Master plán
+              </button>
+              <button
+                type="button"
+                aria-pressed={focus === 'pie'}
+                onClick={() => openFocus('pie')}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'pie' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
+              >
+                Koláč rodičů
+              </button>
+            </div>
+            {parents.remainingMs != null && (
+              <p
+                data-refresh-countdown
+                title="Další načtení pie Parents"
+                className="text-[9px] sm:text-[10px] font-mono text-zinc-500 tracking-wide whitespace-nowrap tabular-nums shrink-0"
+              >
+                obnova za {formatRefreshCountdown(parents.remainingMs)}
+              </p>
+            )}
           </div>
         </div>
       </header>
@@ -478,6 +489,7 @@ function PlanView({
           color={SLICES[pinnedIndex].color}
           weight={`${SLICES[pinnedIndex].allocation} %`}
           quote={financeQuote(SLICES[pinnedIndex].id)}
+          chartSymbol={yahooSymbol(SLICES[pinnedIndex].id)}
           body={MASTER_REASON[SLICES[pinnedIndex].id]}
         />
       ) : (

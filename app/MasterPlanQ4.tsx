@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { LvmhSwapNote, PositionDetail, PositionPrompt } from './plan/PositionDetail';
+import { financeQuote, yahooSymbol } from './plan/parentsModel';
 import { MASTER_REASON } from './plan/reasons';
 
 // --- DATA STRUCTURES ---
@@ -221,11 +222,14 @@ export default function MasterPlanQ4() {
 
         {pinned ? (
           <PositionDetail
-            ticker={pinned.id}
+            ticker={pinned.id === 'MC' ? 'MC.PA' : pinned.id}
             name={pinned.name}
             amount={`${((40000 * pinned.allocation) / 100).toLocaleString('cs-CZ')} Kč`}
             sector={pinned.sector}
             color={pinned.color}
+            weight={`${pinned.allocation} %`}
+            quote={financeQuote(pinned.id)}
+            chartSymbol={yahooSymbol(pinned.id)}
             body={MASTER_REASON[pinned.id]}
           />
         ) : (

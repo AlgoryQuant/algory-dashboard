@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { PositionDetail, PositionPrompt } from './PositionDetail';
-import { displayTicker, financeQuote, formatMoney, formatPercent, formatSignedMoney, pieStatusLabel, type ParentsPieModel, type ParentsPosition } from './parentsModel';
+import { displayTicker, financeQuote, formatMoney, formatPercent, formatSignedMoney, pieStatusLabel, yahooSymbol, type ParentsPieModel, type ParentsPosition } from './parentsModel';
 import { PARENT_REASON } from './reasons';
 import { useParentsPie } from './useParentsPie';
 
@@ -278,6 +278,7 @@ export default function ParentsPie({
           weight={formatPercent(pinned.actual)}
           quote={financeQuote(pinned.id)}
           pnl={`${formatSignedMoney(pinned.pnl, model.currency)} (${formatPercent(pinned.pnlPct)})`}
+          chartSymbol={yahooSymbol(pinned.id)}
           body={PARENT_REASON[pinned.id] ?? 'Titul je v koláči rodičů. Částka a váha jsou z účtu Trading 212.'}
         />
       ) : (
