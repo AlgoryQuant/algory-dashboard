@@ -337,7 +337,7 @@ export default function PlanExperience() {
                 Koláč rodičů
               </button>
             </div>
-            {parents.remainingMs != null && (
+            {parents.ready && parents.remainingMs != null && (
               <p
                 data-refresh-countdown
                 title="Další načtení pie Parents"
