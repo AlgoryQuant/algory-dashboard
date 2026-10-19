@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { LvmhSwapNote, PositionDetail, PositionPrompt } from './plan/PositionDetail';
+import { MASTER_REASON } from './plan/reasons';
 
 // --- DATA STRUCTURES ---
 const ALLOCATION_DATA = [
@@ -40,12 +42,12 @@ const ALLOCATION_DATA = [
     color: '#f59e0b' // Amber
   },
   { 
-    id: 'NVO', 
-    name: 'Novo Nordisk', 
+    id: 'MC', 
+    name: 'LVMH', 
     allocation: 15, 
-    sector: 'Pharma', 
-    desc: 'Extrémní poptávka po lécích na hubnutí (Wegovy). Monopolní síla.',
-    color: '#8b5cf6' // Purple
+    sector: 'Luxury', 
+    desc: 'Luxusní hotovost. Louis Vuitton, Dior, Tiffany a Sephora.',
+    color: '#d4d4d8'
   }
 ];
 
@@ -65,6 +67,13 @@ const itemVariants: Variants = {
 
 export default function MasterPlanQ4() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
+  const pinned = pinnedIndex != null ? ALLOCATION_DATA[pinnedIndex] : null;
+
+  useEffect(() => {
+    if (pinnedIndex == null) return;
+    document.getElementById('position-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [pinnedIndex]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -143,15 +152,22 @@ export default function MasterPlanQ4() {
                   cursor="crosshair"
                   onMouseEnter={(_: any, index: number) => setActiveIndex(index)}
                   onMouseLeave={() => setActiveIndex(null)}
+                  onClick={(_: any, index: number) => setPinnedIndex(index)}
                 >
-                  {ALLOCATION_DATA.map((entry, index) => (
+                  {ALLOCATION_DATA.map((entry, index) => {
+                    const selected = pinnedIndex === index;
+                    const lit = activeIndex === null || activeIndex === index || selected;
+                    return (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={entry.color} 
-                      fillOpacity={activeIndex === null || activeIndex === index ? 1 : 0.2}
-                      stroke="none"
+                      fillOpacity={lit ? 1 : 0.2}
+                      stroke={selected ? '#ffffff' : 'none'}
+                      strokeWidth={selected ? 2 : 0}
+                      style={{ cursor: 'pointer' }}
                     />
-                  ))}
+                    );
+                  })}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
               </PieChart>
@@ -164,12 +180,17 @@ export default function MasterPlanQ4() {
 
           <div className="lg:col-span-7 flex flex-col gap-3">
             {ALLOCATION_DATA.map((item, index) => (
-              <div 
+              <button
+                type="button"
                 key={item.id}
+                aria-pressed={pinnedIndex === index}
                 onMouseEnter={() => setActiveIndex(index)}
                 onMouseLeave={() => setActiveIndex(null)}
-                className={`p-4 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row sm:items-center gap-4 cursor-crosshair ${
-                  activeIndex === index 
+                onClick={() => setPinnedIndex(index)}
+                className={`p-4 rounded-2xl border transition-all duration-300 flex flex-col sm:flex-row sm:items-center gap-4 text-left cursor-pointer ${
+                  pinnedIndex === index
+                    ? 'border-white/70 bg-white/[0.08] shadow-[0_0_0_1px_rgba(255,255,255,0.28)]'
+                    : activeIndex === index 
                     ? 'border-white/20 bg-white/[0.03] shadow-[0_0_20px_rgba(255,255,255,0.02)]' 
                     : 'border-white/5 bg-[#050505] hover:border-white/10'
                 }`}
@@ -180,7 +201,8 @@ export default function MasterPlanQ4() {
                     style={{ backgroundColor: activeIndex === null || activeIndex === index ? item.color : '#27272a' }}
                   ></div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white tracking-wide">{item.id}</span>
+                    <span className={`font-black text-white tracking-wide ${pinnedIndex === index ? 'text-2xl leading-none' : 'text-sm font-bold'}`}>{item.id}</span>
+                    {pinnedIndex === index && <span className="text-[10px] uppercase tracking-widest text-emerald-300 font-bold mt-1">Vybráno</span>}
                     <span className="text-[10px] text-zinc-500 font-mono mt-0.5">{item.allocation}%</span>
                   </div>
                 </div>
@@ -192,10 +214,25 @@ export default function MasterPlanQ4() {
                     {item.desc}
                   </p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </motion.section>
+
+        {pinned ? (
+          <PositionDetail
+            ticker={pinned.id}
+            name={pinned.name}
+            amount={`${((40000 * pinned.allocation) / 100).toLocaleString('cs-CZ')} Kč`}
+            sector={pinned.sector}
+            color={pinned.color}
+            body={MASTER_REASON[pinned.id]}
+          />
+        ) : (
+          <PositionPrompt />
+        )}
+
+        <LvmhSwapNote />
 
         {/* 3. ČASOVÁ OSA EXEKUCE */}
         <motion.section variants={itemVariants} className="flex flex-col gap-8 bg-[#050505] border border-white/10 rounded-3xl p-6 md:p-10 shadow-inner">

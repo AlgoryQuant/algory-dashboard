@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import ParentsPie from './ParentsPie';
+import { LvmhSwapNote, PositionDetail, PositionPrompt } from './PositionDetail';
+import { MASTER_REASON } from './reasons';
 
 const PARENT_EMAIL = 'rodice@seznam.cz';
 const MASTER_CAPITAL = 40_000;
@@ -26,7 +28,7 @@ const SLICES: Slice[] = [
     name: 'NextEra Energy',
     allocation: 25,
     sector: 'Utility',
-    desc: 'Stabilní defenziva a zelená energie. Nižší sazby Fedu jí svědčí, dividenda drží pozici v klidu.',
+    desc: 'Defenziva a dividenda. Největší americká elektrárenská utilita.',
     color: '#3b82f6',
     logo: '⚡',
   },
@@ -35,7 +37,7 @@ const SLICES: Slice[] = [
     name: 'Target Corp',
     allocation: 25,
     sector: 'Retail',
-    desc: 'Vánoční sezóna a přesun zákazníků k dostupnějšímu zboží. Hlavní sázka na konec roku.',
+    desc: 'Vánoční retail. Čtvrtina kapitálu na konec roku.',
     color: '#ef4444',
     logo: '🎯',
   },
@@ -44,7 +46,7 @@ const SLICES: Slice[] = [
     name: 'Pfizer',
     allocation: 20,
     sector: 'Healthcare',
-    desc: 'Defenzivní štít. Zdravotnictví drží portfoliu záda, když zbytek trhu couvá.',
+    desc: 'Zdravotnický štít s širokým portfoliem.',
     color: '#10b981',
     logo: '💊',
   },
@@ -53,18 +55,18 @@ const SLICES: Slice[] = [
     name: 'Symbotic',
     allocation: 15,
     sector: 'Logistics / AI',
-    desc: 'Růstový motor. Robotizace skladů jede právě ve čtvrtletí, kdy retail plní regály.',
+    desc: 'Růstový motor. Robotizace skladů pro vánoční retail.',
     color: '#f59e0b',
     logo: '🤖',
   },
   {
-    id: 'NVO',
-    name: 'Novo Nordisk',
+    id: 'MC',
+    name: 'LVMH',
     allocation: 15,
-    sector: 'Pharma',
-    desc: 'Poptávka po lécích na hubnutí drží Novo v roli monopolního růstového jména.',
-    color: '#8b5cf6',
-    logo: '🧬',
+    sector: 'Luxury',
+    desc: 'Luxusní hotovost. Louis Vuitton, Dior, Tiffany a Sephora.',
+    color: '#d4d4d8',
+    logo: '👜',
   },
 ];
 
@@ -195,14 +197,18 @@ function Donut({
   data,
   dataKey,
   activeIndex,
+  pinnedIndex,
   onHover,
+  onSelect,
   centerLabel,
   centerValue,
 }: {
   data: TooltipRow[];
   dataKey: 'allocation' | 'weight';
   activeIndex: number | null;
+  pinnedIndex: number | null;
   onHover: (index: number | null) => void;
+  onSelect: (index: number) => void;
   centerLabel: string;
   centerValue: string;
 }) {
@@ -221,15 +227,22 @@ function Donut({
             stroke="none"
             onMouseEnter={(_entry, index) => onHover(index)}
             onMouseLeave={() => onHover(null)}
+            onClick={(_entry, index) => onSelect(index)}
           >
-            {data.map((entry, index) => (
+            {data.map((entry, index) => {
+              const selected = pinnedIndex === index;
+              const lit = activeIndex === null || activeIndex === index || selected;
+              return (
               <Cell
                 key={entry.id}
                 fill={entry.color}
-                fillOpacity={activeIndex === null || activeIndex === index ? 1 : 0.22}
-                stroke="none"
+                fillOpacity={lit ? 1 : 0.22}
+                stroke={selected ? '#ffffff' : 'none'}
+                strokeWidth={selected ? 2 : 0}
+                style={{ cursor: 'pointer' }}
               />
-            ))}
+              );
+            })}
           </Pie>
           <Tooltip content={<SliceTooltip />} cursor={{ fill: 'transparent' }} />
         </PieChart>
@@ -260,7 +273,7 @@ export default function PlanExperience() {
   const userChoseFocus = useRef(false);
   const appliedFokus = useRef(requested);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [pinnedIndex, setPinnedIndex] = useState<number | null>(0);
+  const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (requested === 'pie' || requested === 'plan') {
@@ -274,6 +287,11 @@ export default function PlanExperience() {
     appliedFokus.current = requested;
     if (isParent && !userChoseFocus.current) setFocus('pie');
   }, [requested, isParent]);
+
+  useEffect(() => {
+    if (focus !== 'plan' || pinnedIndex == null) return;
+    document.getElementById('position-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [focus, pinnedIndex]);
 
   const phase = currentPhase();
   const activeIndex = hoverIndex ?? pinnedIndex;
@@ -325,6 +343,7 @@ export default function PlanExperience() {
             activeIndex={activeIndex}
             activeSlice={activeSlice}
             masterPie={masterPie}
+            pinnedIndex={pinnedIndex}
             onHover={setHoverIndex}
             onPin={setPinnedIndex}
             onOpenPie={() => openFocus('pie')}
@@ -340,6 +359,7 @@ export default function PlanExperience() {
 function PlanView({
   phase,
   activeIndex,
+  pinnedIndex,
   activeSlice,
   masterPie,
   onHover,
@@ -348,6 +368,7 @@ function PlanView({
 }: {
   phase: number;
   activeIndex: number | null;
+  pinnedIndex: number | null;
   activeSlice: Slice | null;
   masterPie: TooltipRow[];
   onHover: (index: number | null) => void;
@@ -364,7 +385,7 @@ function PlanView({
               Q4 Master Plan
             </h1>
             <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
-              40 000 Kč rozdělených do defenzivy, vánočního retailu a dvou růstových jmen. Take-profit je v polovině prosince 2026, ještě před tím, než sezóna vychladne.
+              40 000 Kč v pěti titulech: NextEra a Pfizer drží defenzivu, Target vánoční retail, Symbotic skladovou robotiku a LVMH luxusní hotovost. Take-profit je v polovině prosince 2026, ještě před tím, než sezóna vychladne.
             </p>
           </div>
           <button
@@ -393,7 +414,9 @@ function PlanView({
             data={masterPie}
             dataKey="allocation"
             activeIndex={activeIndex}
+            pinnedIndex={pinnedIndex}
             onHover={onHover}
+            onSelect={onPin}
             centerLabel={activeSlice ? activeSlice.id : 'Kapitál'}
             centerValue={activeSlice ? formatCzk((MASTER_CAPITAL * activeSlice.allocation) / 100) : formatCzk(MASTER_CAPITAL)}
           />
@@ -408,13 +431,15 @@ function PlanView({
                 type="button"
                 onMouseEnter={() => onHover(index)}
                 onMouseLeave={() => onHover(null)}
+                aria-pressed={pinnedIndex === index}
                 onClick={() => onPin(index)}
-                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${on ? 'border-white/25 bg-white/[0.04]' : 'border-white/5 hover:border-white/15'}`}
+                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${pinnedIndex === index ? 'border-white/70 bg-white/[0.08] shadow-[0_0_0_1px_rgba(255,255,255,0.28)]' : on ? 'border-white/20 bg-white/[0.03]' : 'border-white/5 hover:border-white/15'}`}
               >
                 <div className="flex items-center gap-4">
-                  <span className="w-1.5 h-10 rounded-full" style={{ backgroundColor: on || activeIndex === null ? slice.color : '#3f3f46' }} />
+                  <span className="w-1.5 h-10 rounded-full" style={{ backgroundColor: pinnedIndex === index || on || activeIndex === null ? slice.color : '#3f3f46' }} />
                   <div className="min-w-[92px]">
-                    <span className="block text-sm font-bold text-white">{slice.id}</span>
+                    <span className={`block font-black text-white ${pinnedIndex === index ? 'text-2xl tracking-tight leading-none' : 'text-sm font-bold'}`}>{slice.id}</span>
+                    {pinnedIndex === index && <span className="block text-[10px] uppercase tracking-widest text-emerald-300 font-bold mt-1">Vybráno</span>}
                     <span className="block text-[10px] font-mono text-zinc-500">{slice.allocation} % · {formatCzk(amount)}</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -430,6 +455,21 @@ function PlanView({
           })}
         </div>
       </section>
+
+      {pinnedIndex != null && SLICES[pinnedIndex] ? (
+        <PositionDetail
+          ticker={SLICES[pinnedIndex].id}
+          name={SLICES[pinnedIndex].name}
+          amount={formatCzk((MASTER_CAPITAL * SLICES[pinnedIndex].allocation) / 100)}
+          sector={SLICES[pinnedIndex].sector}
+          color={SLICES[pinnedIndex].color}
+          body={MASTER_REASON[SLICES[pinnedIndex].id]}
+        />
+      ) : (
+        <PositionPrompt />
+      )}
+
+      <LvmhSwapNote />
 
       <section className="flex flex-col gap-5">
         <div>

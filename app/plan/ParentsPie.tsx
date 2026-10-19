@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { PositionDetail, PositionPrompt } from './PositionDetail';
+import { PARENT_REASON } from './reasons';
 
 const NET_DEPOSITS = 10_000;
 const OVERVIEW_VALUE = 10_336.88;
@@ -117,6 +119,12 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
   const activeIndex = hoverIndex ?? pinnedIndex;
   const active = activeIndex != null ? POSITIONS[activeIndex] : null;
+  const pinned = pinnedIndex != null ? POSITIONS[pinnedIndex] : null;
+
+  useEffect(() => {
+    if (pinnedIndex == null) return;
+    document.getElementById('position-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [pinnedIndex]);
 
   return (
     <div className="flex flex-col gap-12">
@@ -187,14 +195,20 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
                   onMouseLeave={() => setHoverIndex(null)}
                   onClick={(_entry, index) => setPinnedIndex(index)}
                 >
-                  {POSITIONS.map((position, index) => (
+                  {POSITIONS.map((position, index) => {
+                    const selected = pinnedIndex === index;
+                    const lit = activeIndex === null || activeIndex === index || selected;
+                    return (
                     <Cell
                       key={position.id}
                       fill={position.color}
-                      fillOpacity={activeIndex === null || activeIndex === index ? 1 : 0.22}
-                      stroke="none"
+                      fillOpacity={lit ? 1 : 0.22}
+                      stroke={selected ? '#ffffff' : 'none'}
+                      strokeWidth={selected ? 2 : 0}
+                      style={{ cursor: 'pointer' }}
                     />
-                  ))}
+                    );
+                  })}
                 </Pie>
                 <Tooltip content={<SliceTooltip />} cursor={{ fill: 'transparent' }} />
               </PieChart>
@@ -225,19 +239,22 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
                 onMouseEnter={() => setHoverIndex(index)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onClick={() => setPinnedIndex(index)}
-                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${on ? 'border-white/25 bg-white/[0.04]' : 'border-white/5 hover:border-white/15'}`}
+                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${pinnedIndex === index ? 'border-white/70 bg-white/[0.08] shadow-[0_0_0_1px_rgba(255,255,255,0.28)]' : on ? 'border-white/20 bg-white/[0.03]' : 'border-white/5 hover:border-white/15'}`}
               >
                 <div className="flex items-center gap-4">
-                  <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ backgroundColor: on || activeIndex === null ? position.color : '#3f3f46' }} />
+                  <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ backgroundColor: pinnedIndex === index || on || activeIndex === null ? position.color : '#3f3f46' }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
                       <span className="text-sm font-bold text-white">{position.name}</span>
                       <span className="text-sm font-mono font-bold text-white">{czk(position.value)}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-1">
-                      <span className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
-                        {position.id} · {position.sector}
+                      <span className={`uppercase tracking-widest font-bold ${pinnedIndex === index ? 'text-xl text-white tracking-tight' : 'text-[10px] text-zinc-400'}`}>
+                        {pinnedIndex === index ? position.id : `${position.id} · ${position.sector}`}
                       </span>
+                      {pinnedIndex === index && (
+                        <span className="text-[10px] uppercase tracking-widest text-emerald-300 font-bold">{position.sector} · Vybráno</span>
+                      )}
                       <span className={`text-[10px] font-mono font-bold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
                         {signedCzk(position.pnl)} ({pct(position.pnlPct)})
                       </span>
@@ -255,6 +272,19 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
           })}
         </div>
       </section>
+
+      {pinned ? (
+        <PositionDetail
+          ticker={pinned.id}
+          name={pinned.name}
+          amount={czk(pinned.value)}
+          sector={pinned.sector}
+          color={pinned.color}
+          body={PARENT_REASON[pinned.id]}
+        />
+      ) : (
+        <PositionPrompt />
+      )}
 
       <section className="flex flex-col gap-5">
         <div>

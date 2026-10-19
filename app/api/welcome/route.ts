@@ -45,7 +45,7 @@ async function fetchChartQuote(symbol: string) {
 
 export async function GET() {
   try {
-    const symbols = ['NEE', 'TGT', 'PFE', 'SYM', 'NVO', 'CZK=X'];
+    const symbols = ['NEE', 'TGT', 'PFE', 'SYM', 'MC.PA', 'CZK=X'];
     const quotes = await Promise.all(symbols.map(async (symbol) => [symbol, await fetchChartQuote(symbol)] as const));
     const data = Object.fromEntries(quotes);
 
