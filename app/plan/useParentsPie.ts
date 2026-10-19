@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PARENTS_SNAPSHOT, type ParentsPieModel } from './parentsModel';
+import { snapshotModel, type ParentsPieModel } from './parentsModel';
 
 function isModel(value: unknown): value is ParentsPieModel {
   if (!value || typeof value !== 'object') return false;
@@ -10,7 +10,7 @@ function isModel(value: unknown): value is ParentsPieModel {
 }
 
 export function useParentsPie(enabled = true) {
-  const [model, setModel] = useState<ParentsPieModel>(PARENTS_SNAPSHOT);
+  const [model, setModel] = useState<ParentsPieModel>(() => snapshotModel('unavailable'));
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export function useParentsPie(enabled = true) {
         const data: unknown = await response.json();
         if (!cancel && isModel(data)) setModel(data);
       } catch {
-        if (!cancel) setModel(PARENTS_SNAPSHOT);
+        if (!cancel) setModel(snapshotModel('unavailable'));
       } finally {
         if (!cancel) setReady(true);
       }

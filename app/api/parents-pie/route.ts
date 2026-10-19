@@ -34,12 +34,16 @@ async function readBody(response: Response): Promise<unknown> {
 }
 
 function authCandidates(secret: string): string[] {
-  // docs.trading212.com: current scheme is Basic base64(API_KEY:API_SECRET).
-  // The same reference still accepts legacyApiKeyHeader, the raw key in Authorization.
-  // Only one value is configured, so each documented shape is tried until one is accepted.
-  const asUser = Buffer.from(`${secret}:`, 'utf8').toString('base64');
-  const asPassword = Buffer.from(`:${secret}`, 'utf8').toString('base64');
-  return [secret, `Basic ${asUser}`, `Basic ${asPassword}`];
+  // docs.trading212.com: Basic base64(API_KEY:API_SECRET).
+  // T212_API_KEY may hold the full "key:secret" pair, or a legacy single token.
+  const out: string[] = [];
+  if (secret.includes(':')) {
+    out.push(`Basic ${Buffer.from(secret, 'utf8').toString('base64')}`);
+  }
+  out.push(secret);
+  out.push(`Basic ${Buffer.from(`${secret}:`, 'utf8').toString('base64')}`);
+  out.push(`Basic ${Buffer.from(`:${secret}`, 'utf8').toString('base64')}`);
+  return out;
 }
 
 async function getPath(base: string, path: string, authorization: string): Promise<{ status: number; json: unknown; reset: number | null }> {
@@ -73,12 +77,16 @@ async function openSession(secret: string): Promise<{ base: string; source: 'liv
       const summary = await getPathRetry(base, '/equity/account/summary', authorization);
       statuses.push(summary.status);
       if (summary.status === 200 && summary.json) return { base, source, authorization, summary: summary.json };
-      if (summary.status === 403) return { base, source, authorization, summary: {} };
+      // 403 often means this environment has no usable account — try the next env (demo).
+      if (summary.status === 403) break;
       if (summary.status !== 401) break;
     }
     attempts.push({ environment: source, statuses });
   }
-  console.info('[parents-pie] summary rejected', { attempts });
+  console.info(
+    '[parents-pie] summary rejected',
+    attempts.map((item) => `${item.environment}:${item.statuses.join(',')}`).join(' | '),
+  );
   return null;
 }
 

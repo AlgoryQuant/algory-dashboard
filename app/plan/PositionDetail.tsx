@@ -10,7 +10,7 @@ export function PositionPrompt() {
     >
       <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-zinc-500">Výběr titulu</p>
       <p className="mt-3 text-[15px] leading-7 text-zinc-300">
-        Klikněte na výsek nebo řádek. Objeví se ticker, částka v korunách a důvod, proč titul v knize je.
+        Klikněte na výsek nebo řádek. Objeví se ticker, čísla pozice a důvod, proč titul v knize je.
       </p>
     </section>
   );
@@ -23,6 +23,9 @@ export function PositionDetail({
   sector,
   color,
   body,
+  weight,
+  target,
+  pnl,
 }: {
   ticker: string;
   name: string;
@@ -30,7 +33,11 @@ export function PositionDetail({
   sector: string;
   color: string;
   body: string;
+  weight?: string;
+  target?: string;
+  pnl?: string;
 }) {
+  const hasPieStats = weight != null || target != null || pnl != null;
   return (
     <section
       id="position-detail"
@@ -47,6 +54,28 @@ export function PositionDetail({
       <p className="mt-3 text-base font-bold text-white">{name}</p>
       <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">{sector}</p>
       <p className="mt-3 text-2xl font-black font-mono text-white">{amount}</p>
+      {hasPieStats && (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {weight != null && (
+            <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Váha</p>
+              <p className="mt-1 text-lg font-black font-mono text-white">{weight}</p>
+            </div>
+          )}
+          {target != null && (
+            <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Cíl</p>
+              <p className="mt-1 text-lg font-black font-mono text-white">{target}</p>
+            </div>
+          )}
+          {pnl != null && (
+            <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Zisk / ztráta</p>
+              <p className="mt-1 text-lg font-black font-mono text-white">{pnl}</p>
+            </div>
+          )}
+        </div>
+      )}
       <p className="mt-4 text-[15px] leading-7 text-zinc-200">{body}</p>
     </section>
   );

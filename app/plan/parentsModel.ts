@@ -76,8 +76,17 @@ export function snapshotModel(fallback: ParentsPieModel['fallback']): ParentsPie
 export function pieStatusLabel(model: Pick<ParentsPieModel, 'source' | 'fallback'>): string {
   if (model.source === 'live') return 'Živě z Trading 212';
   if (model.source === 'demo') return 'Živě z Trading 212 · demo';
-  if (model.fallback === 'none') return 'Snímek';
-  return 'Snímek · živé Trading 212 se nepodařilo načíst';
+  if (model.fallback === 'missing-key') return 'Snímek · není živý stav (chybí klíč Trading 212)';
+  if (model.fallback === 'unauthorized') return 'Snímek · není živý stav (API odmítlo přístup)';
+  if (model.fallback === 'not-found') return 'Snímek · není živý stav (pie Parents nenalezen)';
+  if (model.fallback === 'unavailable') return 'Snímek · není živý stav (Trading 212 nedostupné)';
+  return 'Snímek · není živý stav';
+}
+
+/** Display tickers as shown in Trading 212 / Yahoo (LVMH is MC.PA). */
+export function displayTicker(id: string): string {
+  if (id === 'MC') return 'MC.PA';
+  return id;
 }
 
 export function formatMoney(value: number, currency = 'CZK', digits = 2): string {

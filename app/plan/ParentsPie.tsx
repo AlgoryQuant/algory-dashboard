@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { PositionDetail, PositionPrompt } from './PositionDetail';
-import { formatMoney, formatPercent, formatSignedMoney, pieStatusLabel, type ParentsPieModel, type ParentsPosition } from './parentsModel';
+import { displayTicker, formatMoney, formatPercent, formatSignedMoney, pieStatusLabel, type ParentsPieModel, type ParentsPosition } from './parentsModel';
 import { PARENT_REASON } from './reasons';
 import { useParentsPie } from './useParentsPie';
 
@@ -270,12 +270,15 @@ export default function ParentsPie({
 
       {pinned ? (
         <PositionDetail
-          ticker={pinned.id}
+          ticker={displayTicker(pinned.id)}
           name={pinned.name}
           amount={formatMoney(pinned.value, model.currency)}
           sector={pinned.sector}
           color={pinned.color}
-          body={`${PARENT_REASON[pinned.id] ?? 'Titul je v koláči rodičů. Částka a váha jsou z účtu Trading 212.'} V tomhle pie je teď skutečně ${formatPercent(pinned.actual)} proti cíli ${formatPercent(pinned.target, Number.isInteger(pinned.target) ? 0 : 2)}.`}
+          weight={formatPercent(pinned.actual)}
+          target={formatPercent(pinned.target, Number.isInteger(pinned.target) ? 0 : 2)}
+          pnl={`${formatSignedMoney(pinned.pnl, model.currency)} (${formatPercent(pinned.pnlPct)})`}
+          body={PARENT_REASON[pinned.id] ?? 'Titul je v koláči rodičů. Částka a váha jsou z účtu Trading 212.'}
         />
       ) : (
         <PositionPrompt />

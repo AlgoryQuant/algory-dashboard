@@ -471,9 +471,9 @@ function PlanView({
 
       {pinnedIndex != null && SLICES[pinnedIndex] ? (
         <PositionDetail
-          ticker={SLICES[pinnedIndex].id}
+          ticker={SLICES[pinnedIndex].id === 'MC' ? 'MC.PA' : SLICES[pinnedIndex].id}
           name={SLICES[pinnedIndex].name}
-          amount={formatCzk((MASTER_CAPITAL * SLICES[pinnedIndex].allocation) / 100)}
+          amount={`${SLICES[pinnedIndex].allocation} % · ${formatCzk((MASTER_CAPITAL * SLICES[pinnedIndex].allocation) / 100)}`}
           sector={SLICES[pinnedIndex].sector}
           color={SLICES[pinnedIndex].color}
           body={MASTER_REASON[SLICES[pinnedIndex].id]}
