@@ -54,6 +54,22 @@ export default function DashboardWelcome() {
         {/* STATIC INFORMATIONAL CARDS */}
         <div className="w-full max-w-4xl flex flex-col gap-4 lg:gap-6 mt-16 lg:mt-24 relative z-10 px-4 lg:px-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link href="/plan" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
+              <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 lg:mb-6">Q4 2026</div>
+              <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Master plán</h2>
+              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
+                40 000 Kč, pět titulů, harmonogram do poloviny prosince a tři scénáře vývoje.
+              </p>
+            </Link>
+            <Link href="/plan?fokus=pie" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
+              <div className="text-[10px] font-medium uppercase tracking-widest text-blue-300 mb-4 lg:mb-6">Rodiče</div>
+              <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Jejich koláč</h2>
+              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
+                Pie Parents. Vklad 10 000 Kč, hodnota pozic 10 434,73 Kč.
+              </p>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* MODULE 1: FOREX */}
             <div className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner">

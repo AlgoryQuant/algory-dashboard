@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -100,6 +101,9 @@ export default function MasterPlanQ4() {
             <p className="text-sm md:text-base text-zinc-500 max-w-2xl font-light tracking-wide">
               Taktická alokace kapitálu a ochrana před volatilitou během US voleb.
             </p>
+            <Link href="/plan" className="mt-3 inline-flex w-fit text-[10px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300">
+              Otevřít celou stránku
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mt-2">

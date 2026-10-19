@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   LineChart, Line, PieChart, Pie, Cell, 
@@ -247,7 +248,10 @@ export default function T212Portfolio() {
         <div className="flex items-center gap-3 mb-6">
           <svg className="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           <h1 className="text-xl font-bold tracking-tight text-white">Q4 Portfolio</h1>
-          <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded uppercase tracking-widest text-[9px] font-bold text-zinc-500 ml-auto">READ-ONLY</span>
+          <Link href="/plan?fokus=pie" className="ml-auto text-[9px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300">
+            Celý koláč
+          </Link>
+          <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded uppercase tracking-widest text-[9px] font-bold text-zinc-500">READ-ONLY</span>
         </div>
 
         <div className="flex bg-white/5 p-1 rounded-xl w-full max-w-sm mb-4">

@@ -15,6 +15,9 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 w-full p-6 lg:px-12 lg:py-6 flex justify-between items-center z-[100] bg-[#000000]/50 backdrop-blur-md border-b border-white/5">
         <div className="text-xl font-black tracking-tighter text-white">Algory<span className="text-zinc-600">.</span></div>
         <div className="flex items-center gap-4">
+          <Link href="/plan" className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+            Q4 Plán
+          </Link>
           {isLoaded && !userId && (
             <Link href="/sign-in">
               <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
