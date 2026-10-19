@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Area, AreaChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { useState } from 'react';
+import Link from 'next/link';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 const NET_DEPOSITS = 10_000;
 const OVERVIEW_VALUE = 10_336.88;
@@ -28,300 +29,268 @@ const POSITIONS: Position[] = [
   { id: 'V', name: 'Visa', target: 25, actual: 26.56, value: 2771.93, pnl: 267.25, pnlPct: 10.67, color: '#3b82f6', sector: 'Payments' },
   { id: 'PFE', name: 'Pfizer', target: 20, actual: 19.83, value: 2069.59, pnl: 156.71, pnlPct: 8.19, color: '#22d3ee', sector: 'Healthcare' },
   { id: 'LMT', name: 'Lockheed Martin', target: 15, actual: 15.49, value: 1616.77, pnl: 89.9, pnlPct: 5.89, color: '#a855f7', sector: 'Aerospace' },
-  { id: 'MC', name: 'LVMH', target: 15, actual: 14.45, value: 1508.12, pnl: -2.54, pnlPct: 0.17, color: '#d4d4d8', sector: 'Luxury' },
+  { id: 'MC', name: 'LVMH Moet Hennessy Louis Vuitton', target: 15, actual: 14.45, value: 1508.12, pnl: -2.54, pnlPct: 0.17, color: '#d4d4d8', sector: 'Luxury' },
 ];
 
-const RANGES = ['1D', '1W', '1M', '3M', '1Y', 'MAX'] as const;
-type Range = (typeof RANGES)[number];
-
-const INSIGHTS = [
+const SCENARIOS = [
   {
-    id: 'weight',
-    title: "What's over- and under-weight in my pie?",
-    body: 'Nad cílem je Visa (26,56 % proti 25 %) a Lockheed Martin (15,49 % proti 15 %). Pod cílem je Target (23,65 % proti 25 %), LVMH (14,45 % proti 15 %) a Pfizer (19,83 % proti 20 %).',
+    id: 'up',
+    title: 'Optimistický',
+    label: '+12 % až +15 %',
+    low: 0.12,
+    high: 0.15,
+    tone: 'emerald',
+    copy: 'Po volbách strach opadne a přijde nákupní vlna. Santa rally vytáhne retail i růstová jména.',
   },
   {
-    id: 'performance',
-    title: "How's my pie performing?",
-    body: 'Pozice dohromady vydělaly +Kč 541.10, tedy 5,47 % proti nákladům. Za poslední týden je pie výš o +Kč 124.44, což je 1,2 %. Čistý vklad je Kč 10,000.00.',
+    id: 'base',
+    title: 'Reálný',
+    label: '+7 % až +10 %',
+    low: 0.07,
+    high: 0.1,
+    tone: 'yellow',
+    copy: 'Běžný předvánoční růst s krátkou korekcí hned po volbách. Fundament pěti titulů drží.',
   },
   {
-    id: 'sector',
-    title: "Break down my pie's return by sector",
-    body: 'Nejvíc táhne payments: Visa +Kč 267.25. Healthcare Pfizer +Kč 156.71, aerospace Lockheed +Kč 89.90, retail Target +Kč 29.78. Luxury LVMH je −Kč 2.54.',
-  },
-  {
-    id: 'about',
-    title: "What's this pie?",
-    body: 'Parents. Pět titulů s cíli 25 / 25 / 20 / 15 / 15: Target, Visa, Pfizer, Lockheed Martin a LVMH. Vklad Kč 10,000.00, hodnota pozic Kč 10,434.73.',
+    id: 'down',
+    title: 'Pesimistický',
+    label: '−2 % až −5 %',
+    low: -0.05,
+    high: -0.02,
+    tone: 'red',
+    copy: 'Makrošok. Defenzivní pozice fungují jako tlumič, takže ztráta má strop, ne volný pád.',
   },
 ];
 
-function money(value: number, signed = false) {
-  const text = Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (!signed) return `Kč ${text}`;
-  if (value < 0) return `−Kč ${text}`;
-  if (value > 0) return `+Kč ${text}`;
-  return `Kč ${text}`;
+const toneClass: Record<string, string> = {
+  emerald: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
+  yellow: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30',
+  red: 'text-red-300 bg-red-500/10 border-red-500/30',
+};
+
+function czk(value: number, digits = 2) {
+  return `${new Intl.NumberFormat('cs-CZ', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)} Kč`;
 }
 
-const WEEK_START = Math.round((OVERVIEW_VALUE - WEEK_CHANGE) * 100) / 100;
-const WEEK_POINTS = [
-  { index: 0, value: WEEK_START },
-  { index: 1, value: OVERVIEW_VALUE },
-];
+function signedCzk(value: number, digits = 2) {
+  const core = czk(Math.abs(value), digits);
+  if (value > 0) return `+${core}`;
+  if (value < 0) return `−${core}`;
+  return core;
+}
 
-function Mark({ position }: { position: Position }) {
-  const letter = position.id === 'MC' ? 'LV' : position.id === 'TGT' ? '' : position.id.slice(0, 1);
+function pct(value: number, digits = 2) {
+  return `${new Intl.NumberFormat('cs-CZ', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)} %`;
+}
+
+function SliceTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: Position }>;
+}) {
+  const row = payload?.[0]?.payload;
+  if (!active || !row) return null;
   return (
-    <span className="relative w-9 h-9 rounded-full shrink-0 flex items-center justify-center font-black text-white text-sm" style={{ backgroundColor: position.color }}>
-      {position.id === 'TGT' ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white" /> : letter}
-    </span>
+    <div className="bg-[#0a0a0a] border border-white/10 px-3 py-2.5 rounded-xl shadow-2xl">
+      <p className="text-white font-bold text-xs tracking-wide flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: row.color }} />
+        {row.name}
+      </p>
+      <p className="text-zinc-400 text-[10px] mt-1">{row.sector}</p>
+      <p className="text-white text-xs font-mono font-bold mt-2">
+        {pct(row.actual)} · {czk(row.value)}
+      </p>
+    </div>
   );
 }
 
 export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) {
-  const [tab, setTab] = useState<'overview' | 'holdings'>('overview');
-  const [range, setRange] = useState<Range>('1W');
-  const [insight, setInsight] = useState<string | null>(null);
-  const [goal, setGoal] = useState('');
-  const [note, setNote] = useState<string | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<'target' | 'value'>('target');
-  const ordered = useMemo(() => {
-    const rows = [...POSITIONS];
-    if (sortMode === 'value') rows.sort((a, b) => b.value - a.value);
-    return rows;
-  }, [sortMode]);
-  const openInsight = INSIGHTS.find((item) => item.id === insight);
-  const goalValue = Number(goal.replace(',', '.'));
-  const goalReady = Number.isFinite(goalValue) && goalValue > 0;
-
-  const mirror = (label: string) => {
-    setNote(`${label} tady žádný pokyn neodešle. Je to zrcadlo jen ke čtení a objednávky zůstávají v Trading 212.`);
-  };
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
+  const activeIndex = hoverIndex ?? pinnedIndex;
+  const active = activeIndex != null ? POSITIONS[activeIndex] : null;
 
   return (
-    <div className="mx-auto w-full max-w-md text-white">
-      <div className="flex items-center justify-between px-1 pb-4">
-        <span className="w-8" />
-        <h1 className="text-base font-semibold tracking-tight">Parents</h1>
-        <button
-          type="button"
-          aria-label="Další možnosti"
-          onClick={() => setNote(note ? null : 'Náhled pie Parents pro rodice@seznam.cz.')}
-          className="w-8 h-8 text-zinc-400 text-lg leading-none"
-        >
-          ···
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 border-b border-white/10 mb-6">
-        {(['overview', 'holdings'] as const).map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setTab(item)}
-            className={`pb-3 text-sm capitalize ${tab === item ? 'text-white border-b-2 border-white' : 'text-zinc-500'}`}
-          >
-            {item === 'overview' ? 'Overview' : 'Holdings'}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'overview' ? (
-        <div className="flex flex-col gap-6">
-          <div>
-            <p className="text-4xl font-semibold tracking-tight">{money(OVERVIEW_VALUE)}</p>
-            <div className="grid grid-cols-2 gap-6 mt-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-zinc-500">Last week</p>
-                <p className="text-emerald-400 font-semibold mt-1">{money(WEEK_CHANGE, true)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-zinc-500">Rate of return</p>
-                <p className="text-emerald-400 font-semibold mt-1">↗ {WEEK_RETURN.toFixed(1)}%</p>
-              </div>
-            </div>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              {money(NET_DEPOSITS)} net deposits
-            </div>
-          </div>
-
-          {range === '1W' ? (
-            <div>
-              <div className="h-[180px] w-full min-w-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={WEEK_POINTS}>
-                    <defs>
-                      <linearGradient id="parentsFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.45} />
-                        <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        const point = payload?.[0]?.value;
-                        if (!active || typeof point !== 'number') return null;
-                        return <div className="bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-xs">{money(point)}</div>;
-                      }}
-                    />
-                    <Area type="linear" dataKey="value" stroke="#67e8f9" strokeWidth={2} fill="url(#parentsFill)" dot={{ r: 3, fill: '#67e8f9' }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="text-[11px] text-zinc-500 mt-2">1W spojuje {money(WEEK_START)} a {money(OVERVIEW_VALUE)}.</p>
-            </div>
-          ) : (
-            <p className="text-sm text-zinc-400 rounded-2xl border border-white/10 px-4 py-8 text-center">
-              Historie pro {range} ve snímku není.
+    <div className="flex flex-col gap-12">
+      <section className="flex flex-col gap-8">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-blue-300 mb-4">
+              Pie Parents · rodice@seznam.cz
             </p>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-[0.95]">
+              Koláč rodičů
+            </h1>
+            <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
+              Účet rodice@seznam.cz drží pie Parents. Vklad {czk(NET_DEPOSITS, 0)} je v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH.
+            </p>
+          </div>
+          {onOpenPlan ? (
+            <button
+              type="button"
+              onClick={onOpenPlan}
+              className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
+            >
+              <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Širší plán</span>
+              <span className="block text-white font-bold mt-1">Master plán · 40 000 Kč</span>
+              <span className="block text-xs text-zinc-500 mt-1">Harmonogram, fáze a scénáře.</span>
+            </button>
+          ) : (
+            <Link
+              href="/plan"
+              className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
+            >
+              <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Širší plán</span>
+              <span className="block text-white font-bold mt-1">Master plán · 40 000 Kč</span>
+              <span className="block text-xs text-zinc-500 mt-1">Harmonogram, fáze a scénáře.</span>
+            </Link>
           )}
-
-          <div className="flex items-center justify-between text-xs text-zinc-500">
-            {RANGES.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setRange(item)}
-                aria-pressed={range === item}
-                className={`px-2.5 py-1 rounded-full ${range === item ? 'bg-zinc-800 text-white' : ''}`}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => mirror('Invest')} className="h-12 rounded-full bg-[#0095ff] font-semibold">Invest</button>
-            <button type="button" onClick={() => mirror('Withdraw')} className="h-12 rounded-full bg-zinc-800 font-semibold text-zinc-200">Withdraw</button>
-          </div>
-          {note && <p className="text-xs text-zinc-400">{note}</p>}
-
-          <section>
-            <h2 className="text-sm text-zinc-400 mb-3">AI analysis</h2>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {INSIGHTS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setInsight(insight === item.id ? null : item.id)}
-                  className={`shrink-0 max-w-[180px] text-left rounded-2xl px-3 py-3 text-xs leading-snug ${insight === item.id ? 'bg-zinc-700' : 'bg-zinc-900'}`}
-                >
-                  {item.title}
-                </button>
-              ))}
-            </div>
-            {openInsight && <p className="mt-3 text-sm text-zinc-300 leading-relaxed">{openInsight.body}</p>}
-          </section>
-
-          <section>
-            <h2 className="text-sm text-zinc-400 mb-3">Goal</h2>
-            {goalReady ? (
-              <button type="button" onClick={() => setGoal('')} className="w-full text-left rounded-2xl border border-white/10 px-4 py-4">
-                <span className="block text-xs text-zinc-500">Cíl na tomto náhledu</span>
-                <span className="block mt-1 font-semibold">{money(goalValue)}</span>
-                <span className="mt-3 block h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                  <span className="block h-full bg-[#0095ff]" style={{ width: `${Math.min((HOLDINGS_VALUE / goalValue) * 100, 100)}%` }} />
-                </span>
-              </button>
-            ) : (
-              <label className="block rounded-2xl border border-white/10 px-4 py-4 text-sm text-zinc-500">
-                Set your desired goal and keep track of your investment progress
-                <input
-                  value={goal}
-                  onChange={(event) => setGoal(event.target.value)}
-                  inputMode="decimal"
-                  placeholder="Kč"
-                  className="mt-3 w-full bg-transparent text-white outline-none placeholder:text-zinc-600"
-                />
-              </label>
-            )}
-          </section>
-
-          <section className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-sm text-zinc-300">AutoInvest</h2>
-              <p className="text-xs text-zinc-500 mt-2 leading-relaxed">Build your pie by setting an investment schedule and automating your deposits</p>
-            </div>
-            <span className="text-xs text-zinc-500 shrink-0">Off</span>
-          </section>
-          <section className="flex items-start justify-between gap-4 pb-8">
-            <div>
-              <h2 className="text-sm text-zinc-300">Invest spare change</h2>
-            </div>
-            <span className="text-xs text-zinc-500 shrink-0">Off</span>
-          </section>
         </div>
-      ) : (
-        <div className="flex flex-col gap-6 pb-10">
-          <div className="flex items-center gap-4">
-            <div className="relative h-[168px] w-[168px] shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={POSITIONS} dataKey="value" innerRadius={62} outerRadius={80} stroke="none" paddingAngle={2}>
-                    {POSITIONS.map((position) => (
-                      <Cell key={position.id} fill={position.color} fillOpacity={activeId === null || activeId === position.id ? 1 : 0.25} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-6">
-                <span className="text-sm font-semibold">{money(HOLDINGS_VALUE)}</span>
-                <span className="text-[10px] text-emerald-400 mt-0.5">{money(HOLDINGS_PNL, true)} ({HOLDINGS_RETURN.toFixed(2)}%)</span>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Stat label="Vklad" value={czk(NET_DEPOSITS, 0)} hint="Čistý vklad" />
+          <Stat label="Hodnota" value={czk(HOLDINGS_VALUE)} hint="Pozice v pie" />
+          <Stat label="Týden" value={signedCzk(WEEK_CHANGE)} hint={`${pct(WEEK_RETURN, 1)} · přehled ${czk(OVERVIEW_VALUE)}`} />
+          <Stat label="Zisk" value={signedCzk(HOLDINGS_PNL)} hint={pct(HOLDINGS_RETURN)} />
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/10 rounded-3xl bg-[#050505] p-5 md:p-8">
+        <div className="lg:col-span-5">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Složení pie</p>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+              {signedCzk(HOLDINGS_PNL)} · {pct(HOLDINGS_RETURN)}
+            </span>
+          </div>
+          <div className="relative h-[320px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={POSITIONS}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={88}
+                  outerRadius={124}
+                  paddingAngle={4}
+                  dataKey="value"
+                  stroke="none"
+                  onMouseEnter={(_entry, index) => setHoverIndex(index)}
+                  onMouseLeave={() => setHoverIndex(null)}
+                  onClick={(_entry, index) => setPinnedIndex(index)}
+                >
+                  {POSITIONS.map((position, index) => (
+                    <Cell
+                      key={position.id}
+                      fill={position.color}
+                      fillOpacity={activeIndex === null || activeIndex === index ? 1 : 0.22}
+                      stroke="none"
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<SliceTooltip />} cursor={{ fill: 'transparent' }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div data-pie-center className="w-[9.5rem] text-center">
+                <span className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-bold">
+                  {active ? active.id : 'Parents'}
+                </span>
+                <span className="block text-sm font-bold text-white mt-1 leading-tight">{active ? active.name : 'Celá pie'}</span>
+                <span className="block text-lg font-black text-white font-mono mt-1">
+                  {czk(active ? active.value : HOLDINGS_VALUE)}
+                </span>
               </div>
             </div>
-            <div className="flex-1 flex flex-col gap-3">
-              <button type="button" onClick={() => mirror('Edit pie')} className="h-11 rounded-full bg-zinc-800 text-sm font-semibold">Edit pie</button>
-              <button type="button" onClick={() => mirror('Rebalance')} className="h-11 rounded-full bg-zinc-800 text-sm font-semibold">Rebalance</button>
-            </div>
           </div>
-          {note && <p className="text-xs text-zinc-400">{note}</p>}
-
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-sm font-semibold">Holdings</h2>
-              <p className="text-[11px] text-zinc-500 mt-1">{sortMode === 'target' ? 'Sorted by target weight' : 'Sorted by value'}</p>
-            </div>
-            <button type="button" aria-label="Změnit řazení" onClick={() => setSortMode(sortMode === 'target' ? 'value' : 'target')} className="text-zinc-400 text-sm">
-              ↕
-            </button>
-          </div>
-
-          <div className="flex flex-col">
-            {ordered.map((position) => {
-              const up = position.pnl >= 0;
-              const on = activeId === position.id;
-              return (
-                <button
-                  key={position.id}
-                  type="button"
-                  onClick={() => setActiveId(on ? null : position.id)}
-                  className={`flex items-center gap-3 py-3 text-left border-b border-white/5 ${on ? 'bg-white/[0.03]' : ''}`}
-                >
-                  <Mark position={position} />
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium truncate">{position.name}</span>
-                    <span className="block text-[11px] text-emerald-400 mt-0.5">{position.actual.toFixed(2)}% / {position.target}%</span>
-                  </span>
-                  <span className="text-right">
-                    <span className="block text-sm font-medium">{money(position.value)}</span>
-                    <span className={`block text-[11px] mt-0.5 ${up ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {money(position.pnl, true)} ({Math.abs(position.pnlPct).toFixed(2)}%)
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {onOpenPlan && (
-            <button type="button" onClick={onOpenPlan} className="text-xs uppercase tracking-widest text-zinc-500 text-left">
-              Master plán 40 000 Kč
-            </button>
-          )}
         </div>
-      )}
+
+        <div className="lg:col-span-7 flex flex-col gap-2">
+          {POSITIONS.map((position, index) => {
+            const on = activeIndex === index;
+            const up = position.pnl >= 0;
+            return (
+              <button
+                key={position.id}
+                type="button"
+                aria-pressed={pinnedIndex === index}
+                onMouseEnter={() => setHoverIndex(index)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onClick={() => setPinnedIndex(index)}
+                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${on ? 'border-white/25 bg-white/[0.04]' : 'border-white/5 hover:border-white/15'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ backgroundColor: on || activeIndex === null ? position.color : '#3f3f46' }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                      <span className="text-sm font-bold text-white">{position.name}</span>
+                      <span className="text-sm font-mono font-bold text-white">{czk(position.value)}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-1">
+                      <span className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
+                        {position.id} · {position.sector}
+                      </span>
+                      <span className={`text-[10px] font-mono font-bold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {signedCzk(position.pnl)} ({pct(position.pnlPct)})
+                      </span>
+                    </div>
+                    <span className="block text-[10px] font-mono text-zinc-500 mt-1">
+                      cíl {pct(position.target, 0)} · skutečně {pct(position.actual)}
+                    </span>
+                    <span className="mt-2 block h-1 rounded-full bg-white/5 overflow-hidden">
+                      <span className="block h-full rounded-full" style={{ width: `${Math.min(position.actual, 100)}%`, backgroundColor: position.color }} />
+                    </span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-5">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-white">Tři scénáře do prosince</h2>
+          <p className="text-xs uppercase tracking-widest text-zinc-500 font-bold mt-2">Na vkladu {czk(NET_DEPOSITS, 0)}</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {SCENARIOS.map((scenario) => {
+            const low = NET_DEPOSITS * scenario.low;
+            const high = NET_DEPOSITS * scenario.high;
+            const [from, to] = low < high ? [low, high] : [high, low];
+            return (
+              <article key={scenario.id} className="rounded-3xl border border-white/10 bg-[#050505] p-5 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-white font-bold">{scenario.title}</h3>
+                  <span className={`text-[10px] font-mono font-bold uppercase tracking-widest px-2 py-1 rounded-full border ${toneClass[scenario.tone]}`}>
+                    {scenario.label}
+                  </span>
+                </div>
+                <p className="text-lg font-black text-white font-mono">{signedCzk(from, 0)} až {signedCzk(to, 0)}</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">{scenario.copy}</p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#050505] px-4 py-4">
+      <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{label}</p>
+      <p className="text-lg md:text-xl font-black text-white font-mono mt-2">{value}</p>
+      {hint && <p className="text-[11px] text-zinc-500 mt-1">{hint}</p>}
     </div>
   );
 }

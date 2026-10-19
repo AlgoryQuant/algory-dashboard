@@ -382,7 +382,7 @@ function PlanView({
           <Stat label="Celkový kapitál" value={formatCzk(MASTER_CAPITAL)} />
           <Stat label="Aktivní fáze" value={phase >= 4 ? 'Take-profit' : `Fáze ${phase}`} />
           <Stat label="Take-profit" value="15. 12. 2026" />
-          <Stat label="Pie Parents" value="Kč 10,434.73" hint="Vklad Kč 10,000.00 · +5,47 %" />
+          <Stat label="Pie Parents" value="10 434,73 Kč" hint="Vklad 10 000 Kč · +5,47 %" />
         </div>
       </section>
 
