@@ -6,8 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import ParentsPie from './ParentsPie';
+import { formatMoney, formatPercent, pieStatusLabel, type ParentsPieModel } from './parentsModel';
 import { LvmhSwapNote, PositionDetail, PositionPrompt } from './PositionDetail';
 import { MASTER_REASON } from './reasons';
+import { useParentsPie } from './useParentsPie';
 
 const PARENT_EMAIL = 'rodice@seznam.cz';
 const MASTER_CAPITAL = 40_000;
@@ -294,6 +296,7 @@ export default function PlanExperience() {
   }, [focus, pinnedIndex]);
 
   const phase = currentPhase();
+  const parents = useParentsPie();
   const activeIndex = hoverIndex ?? pinnedIndex;
   const activeSlice = activeIndex != null ? SLICES[activeIndex] : null;
 
@@ -347,9 +350,10 @@ export default function PlanExperience() {
             onHover={setHoverIndex}
             onPin={setPinnedIndex}
             onOpenPie={() => openFocus('pie')}
+            parents={parents.model}
           />
         ) : (
-          <ParentsPie onOpenPlan={() => openFocus('plan')} />
+          <ParentsPie model={parents.model} ready={parents.ready} onOpenPlan={() => openFocus('plan')} />
         )}
       </main>
     </div>
@@ -365,6 +369,7 @@ function PlanView({
   onHover,
   onPin,
   onOpenPie,
+  parents,
 }: {
   phase: number;
   activeIndex: number | null;
@@ -374,7 +379,11 @@ function PlanView({
   onHover: (index: number | null) => void;
   onPin: (index: number) => void;
   onOpenPie: () => void;
+  parents: ParentsPieModel;
 }) {
+  const depositDigits = Number.isInteger(parents.deposits) ? 0 : 2;
+  const parentsDeposit = formatMoney(parents.deposits, parents.currency, depositDigits);
+  const parentsValue = formatMoney(parents.holdingsValue, parents.currency);
   return (
     <>
       <section className="flex flex-col gap-8">
@@ -394,7 +403,7 @@ function PlanView({
             className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
           >
             <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Přístup pro rodiče</span>
-            <span className="block text-white font-bold mt-1">Parents · vklad 10 000 Kč</span>
+            <span className="block text-white font-bold mt-1">Parents · vklad {parentsDeposit}</span>
             <span className="block text-xs text-zinc-500 mt-1">Target, Visa, Pfizer, Lockheed, LVMH.</span>
           </button>
         </div>
@@ -403,7 +412,11 @@ function PlanView({
           <Stat label="Celkový kapitál" value={formatCzk(MASTER_CAPITAL)} />
           <Stat label="Aktivní fáze" value={phase >= 4 ? 'Take-profit' : `Fáze ${phase}`} />
           <Stat label="Take-profit" value="15. 12. 2026" />
-          <Stat label="Pie Parents" value="10 434,73 Kč" hint="Vklad 10 000 Kč · +5,47 %" />
+          <Stat
+            label="Pie Parents"
+            value={parentsValue}
+            hint={parents.source === 'snapshot' ? `${pieStatusLabel(parents)} · ${formatPercent(parents.holdingsReturn)}` : `${parents.depositHint} ${parentsDeposit} · ${formatPercent(parents.holdingsReturn)}`}
+          />
         </div>
       </section>
 
