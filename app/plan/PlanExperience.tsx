@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import ParentsPie from './ParentsPie';
-import { formatMoney, formatPercent, pieStatusLabel, type ParentsPieModel } from './parentsModel';
+import { financeQuote, formatMoney, formatPercent, pieStatusLabel, type ParentsPieModel } from './parentsModel';
 import { LvmhSwapNote, PositionDetail, PositionPrompt } from './PositionDetail';
 import { MASTER_REASON } from './reasons';
 import { useParentsPie } from './useParentsPie';
@@ -473,9 +473,11 @@ function PlanView({
         <PositionDetail
           ticker={SLICES[pinnedIndex].id === 'MC' ? 'MC.PA' : SLICES[pinnedIndex].id}
           name={SLICES[pinnedIndex].name}
-          amount={`${SLICES[pinnedIndex].allocation} % · ${formatCzk((MASTER_CAPITAL * SLICES[pinnedIndex].allocation) / 100)}`}
+          amount={formatCzk((MASTER_CAPITAL * SLICES[pinnedIndex].allocation) / 100)}
           sector={SLICES[pinnedIndex].sector}
           color={SLICES[pinnedIndex].color}
+          weight={`${SLICES[pinnedIndex].allocation} %`}
+          quote={financeQuote(SLICES[pinnedIndex].id)}
           body={MASTER_REASON[SLICES[pinnedIndex].id]}
         />
       ) : (

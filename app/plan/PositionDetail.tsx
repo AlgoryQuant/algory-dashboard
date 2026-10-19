@@ -27,7 +27,7 @@ export function PositionDetail({
   color,
   body,
   weight,
-  target,
+  quote,
   pnl,
 }: {
   ticker: string;
@@ -37,10 +37,11 @@ export function PositionDetail({
   color: string;
   body: string;
   weight?: string;
-  target?: string;
+  /** Google Finance style, e.g. "NYSE: PFE". */
+  quote?: string;
   pnl?: string;
 }) {
-  const hasPieStats = weight != null || target != null || pnl != null;
+  const hasPieStats = weight != null || quote != null || pnl != null;
   return (
     <section
       id="position-detail"
@@ -65,10 +66,10 @@ export function PositionDetail({
               <p className="mt-1 text-lg font-black font-mono text-white">{weight}</p>
             </div>
           )}
-          {target != null && (
+          {quote != null && (
             <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Cíl</p>
-              <p className="mt-1 text-lg font-black font-mono text-white">{target}</p>
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Ticker</p>
+              <p className="mt-1 text-lg font-black font-mono text-white tracking-tight">{quote}</p>
             </div>
           )}
           {pnl != null && (

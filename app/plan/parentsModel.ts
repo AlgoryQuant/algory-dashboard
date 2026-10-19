@@ -89,6 +89,16 @@ export function displayTicker(id: string): string {
   return id;
 }
 
+/** Google Finance style exchange:ticker for the detail card. */
+export function financeQuote(id: string): string {
+  const key = id.toUpperCase().replace(/\.PA$/, '');
+  if (key === 'MC') return 'EURONEXT: MC';
+  if (key === 'NEE' || key === 'TGT' || key === 'PFE' || key === 'SYM' || key === 'V' || key === 'LMT' || key === 'NVO' || key === 'LLY') {
+    return `NYSE: ${key}`;
+  }
+  return key;
+}
+
 export function formatMoney(value: number, currency = 'CZK', digits = 2): string {
   const formatted = new Intl.NumberFormat('cs-CZ', {
     minimumFractionDigits: digits,
