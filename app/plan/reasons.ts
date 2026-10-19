@@ -14,7 +14,49 @@ export const PARENT_REASON: Record<string, string> = {
   MC: 'LVMH, ticker MC na pařížské burze, drží Louis Vuitton, Dior, Tiffany a Sephoru. V oznámení z 12. října 2026 měla skupina za devět měsíců tržby 57,1 miliardy eur a organický růst 2 %. Ve třetím čtvrtletí organicky přibylo 1 %, protože Čína zpomalila a Spojené státy, Evropa a Japonsko rostly. Móda a kůže ve třetím čtvrtletí organicky klesly o 5 %. Akcie MC.PA od 612,10 eura dne 20. října 2025 klesly k zavírací ceně 390,00 eura dne 19. října 2026, zhruba o 36,3 %. Roční pohyb pařížské akcie je samostatné číslo proti koruně ve vkladu. Role v pie je luxusní hotovost.',
 };
 
-export const SWAP_PARAGRAPHS = [
-  'Novo Nordisk (NVO) v master plánu stálo jako růstové jméno na lécích GLP-1. Tahle teze se rozpadla na konkurenci. CNBC 4. února 2026 popsala, že Novo na rok 2026 čeká pokles tržeb i zisku o 5 až 13 %, zatímco Eli Lilly ve stejném týdnu vedla růst. CNBC 11. února 2026 odhadovala Lilly zhruba 60 % globálního značkového trhu GLP-1 a Novo asi 39 %. Akcie na NYSE šly od zavírací ceny 55,74 USD dne 20. října 2025 na poslední kotaci Yahoo Finance 19. října 2026 v 17:10 UTC ve výši 38,45 USD, zhruba o 31,0 % níž. Roční pásmo 35,12–64,16 USD je pořád u dna. CNBC 25. února 2026 psala i o poklesu zhruba o 75 % od vrcholu těsně nad 1 000 dánskými korunami v polovině roku 2024.',
-  'LVMH (ticker MC) přináší do stejných 15 % peněžní tok z luxusu: Louis Vuitton, Dior, Tiffany, Sephora a další značky. Za devět měsíců 2026 skupina v oznámení z 12. října 2026 vykázala tržby 57,1 miliardy eur a organický růst 2 %. Ve třetím čtvrtletí organicky přibylo 1 %: Čína byla slabší, Spojené státy, Evropa a Japonsko rostly, móda a kůže organicky klesly o 5 %, hodinky a šperky za devět měsíců organicky přidaly 8 % a selektivní maloobchod včetně Sephory 6 %. Ani akcie LVMH nejsou vítěz posledního roku. MC.PA zavřelo 19. října 2026 na 390,00 eura proti 612,10 eura dne 20. října 2025, zhruba minus 36,3 %, těsně nad ročním minimem 375,65 eura. Výměna je o roli v knize: 6 000 Kč je stejný luxusní rukáv, který už drží pie rodičů, vedle Pfizeru jako jediné farmacie.',
+export type SwapStock = {
+  id: string;
+  name: string;
+  tv: string;
+  role: string;
+  color: string;
+  body: string;
+};
+
+/** Stocks named in the NVO → LVMH swap note, with TradingView symbols. */
+export const SWAP_STOCKS: SwapStock[] = [
+  {
+    id: 'NVO',
+    name: 'Novo Nordisk',
+    tv: 'NYSE:NVO',
+    role: 'Odcházející',
+    color: '#a1a1aa',
+    body: 'Novo Nordisk (NVO) v master plánu stálo jako růstové jméno na lécích GLP-1. Tahle teze se rozpadla na konkurenci. CNBC 4. února 2026 popsala, že Novo na rok 2026 čeká pokles tržeb i zisku o 5 až 13 %. Akcie na NYSE šly od zavírací ceny 55,74 USD dne 20. října 2025 na poslední kotaci Yahoo Finance 19. října 2026 v 17:10 UTC ve výši 38,45 USD, zhruba o 31,0 % níž. Roční pásmo 35,12–64,16 USD je pořád u dna. CNBC 25. února 2026 psala i o poklesu zhruba o 75 % od vrcholu těsně nad 1 000 dánskými korunami v polovině roku 2024.',
+  },
+  {
+    id: 'LLY',
+    name: 'Eli Lilly',
+    tv: 'NYSE:LLY',
+    role: 'Konkurence',
+    color: '#fbbf24',
+    body: 'Eli Lilly ve stejném týdnu jako Novo vedla růst GLP-1. CNBC 11. února 2026 odhadovala Lilly zhruba 60 % globálního značkového trhu GLP-1 a Novo asi 39 %. Právě tenhle posun tržního podílu rozbil tezi, proč Novo drželo 15 % v master plánu.',
+  },
+  {
+    id: 'MC',
+    name: 'LVMH',
+    tv: 'EURONEXT:MC',
+    role: 'Nová alokace · 15 %',
+    color: '#d4d4d8',
+    body: 'LVMH (ticker MC) přináší do stejných 15 % peněžní tok z luxusu: Louis Vuitton, Dior, Tiffany, Sephora a další značky. Za devět měsíců 2026 skupina v oznámení z 12. října 2026 vykázala tržby 57,1 miliardy eur a organický růst 2 %. Ve třetím čtvrtletí organicky přibylo 1 %: Čína byla slabší, Spojené státy, Evropa a Japonsko rostly, móda a kůže organicky klesly o 5 %. MC.PA zavřelo 19. října 2026 na 390,00 eura proti 612,10 eura dne 20. října 2025, zhruba minus 36,3 %. Výměna je o roli v knize: 6 000 Kč je stejný luxusní rukáv, který už drží pie rodičů.',
+  },
+  {
+    id: 'PFE',
+    name: 'Pfizer',
+    tv: 'NYSE:PFE',
+    role: 'Zůstává v knize',
+    color: '#10b981',
+    body: 'Pfizer zůstává v master plánu jako jediná farmacie vedle LVMH. Po výměně NVO → LVMH drží zdravotnický štít 20 % kapitálu (8 000 Kč), zatímco luxusní hotovost bere stejných 15 %, která dřív patřila Novu.',
+  },
 ];
+
+export const SWAP_PARAGRAPHS = SWAP_STOCKS.map((stock) => stock.body);
