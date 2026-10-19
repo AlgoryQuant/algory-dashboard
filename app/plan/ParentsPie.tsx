@@ -28,7 +28,7 @@ const POSITIONS: Position[] = [
   { id: 'V', name: 'Visa', target: 25, actual: 26.56, value: 2771.93, pnl: 267.25, pnlPct: 10.67, color: '#3b82f6', sector: 'Payments' },
   { id: 'PFE', name: 'Pfizer', target: 20, actual: 19.83, value: 2069.59, pnl: 156.71, pnlPct: 8.19, color: '#22d3ee', sector: 'Healthcare' },
   { id: 'LMT', name: 'Lockheed Martin', target: 15, actual: 15.49, value: 1616.77, pnl: 89.9, pnlPct: 5.89, color: '#a855f7', sector: 'Aerospace' },
-  { id: 'MC', name: 'LVMH Moet Hennessy Louis Vuitton', target: 15, actual: 14.45, value: 1508.12, pnl: -2.54, pnlPct: -0.17, color: '#d4d4d8', sector: 'Luxury' },
+  { id: 'MC', name: 'LVMH', target: 15, actual: 14.45, value: 1508.12, pnl: -2.54, pnlPct: 0.17, color: '#d4d4d8', sector: 'Luxury' },
 ];
 
 const RANGES = ['1D', '1W', '1M', '3M', '1Y', 'MAX'] as const;
@@ -65,14 +65,11 @@ function money(value: number, signed = false) {
   return `Kč ${text}`;
 }
 
-function weekSeries() {
-  const start = OVERVIEW_VALUE - WEEK_CHANGE;
-  return Array.from({ length: 28 }, (_, index) => {
-    const t = index / 27;
-    const eased = t * t * (3 - 2 * t);
-    return { index, value: start + WEEK_CHANGE * eased };
-  });
-}
+const WEEK_START = Math.round((OVERVIEW_VALUE - WEEK_CHANGE) * 100) / 100;
+const WEEK_POINTS = [
+  { index: 0, value: WEEK_START },
+  { index: 1, value: OVERVIEW_VALUE },
+];
 
 function Mark({ position }: { position: Position }) {
   const letter = position.id === 'MC' ? 'LV' : position.id === 'TGT' ? '' : position.id.slice(0, 1);
@@ -91,7 +88,6 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
   const [note, setNote] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<'target' | 'value'>('target');
-  const series = useMemo(() => weekSeries(), []);
   const ordered = useMemo(() => {
     const rows = [...POSITIONS];
     if (sortMode === 'value') rows.sort((a, b) => b.value - a.value);
@@ -102,7 +98,7 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
   const goalReady = Number.isFinite(goalValue) && goalValue > 0;
 
   const mirror = (label: string) => {
-    setNote(`${label} zůstává v Trading 212. Tady je náhled pie Parents.`);
+    setNote(`${label} tady žádný pokyn neodešle. Je to zrcadlo jen ke čtení a objednávky zůstávají v Trading 212.`);
   };
 
   return (
@@ -136,15 +132,15 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
       {tab === 'overview' ? (
         <div className="flex flex-col gap-6">
           <div>
-            <p className="text-4xl font-semibold tracking-tight">{money(range === '1W' ? OVERVIEW_VALUE : HOLDINGS_VALUE)}</p>
+            <p className="text-4xl font-semibold tracking-tight">{money(OVERVIEW_VALUE)}</p>
             <div className="grid grid-cols-2 gap-6 mt-4">
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-zinc-500">Last week</p>
-                <p className="text-emerald-400 font-semibold mt-1">{range === '1W' ? money(WEEK_CHANGE, true) : 'Jen u 1W'}</p>
+                <p className="text-emerald-400 font-semibold mt-1">{money(WEEK_CHANGE, true)}</p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-zinc-500">Rate of return</p>
-                <p className="text-emerald-400 font-semibold mt-1">{range === '1W' ? `↗ ${WEEK_RETURN.toFixed(1)}%` : `${HOLDINGS_RETURN.toFixed(2)}% celkem`}</p>
+                <p className="text-emerald-400 font-semibold mt-1">↗ {WEEK_RETURN.toFixed(1)}%</p>
               </div>
             </div>
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300">
@@ -153,31 +149,35 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
             </div>
           </div>
 
-          <div className="h-[180px] w-full min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={range === '1W' ? series : [{ index: 0, value: HOLDINGS_VALUE }, { index: 1, value: HOLDINGS_VALUE }]}>
-                <defs>
-                  <linearGradient id="parentsFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    const point = payload?.[0]?.value;
-                    if (!active || typeof point !== 'number') return null;
-                    return <div className="bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-xs">{money(point)}</div>;
-                  }}
-                />
-                <Area type="monotone" dataKey="value" stroke="#67e8f9" strokeWidth={2} fill="url(#parentsFill)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-[11px] text-zinc-500 -mt-4">
-            {range === '1W'
-              ? '1W spojuje začátek týdne a Kč 10,336.88. Mezihodnoty nejsou burzovní tisky.'
-              : 'Historii za toto období ze snímku nemáme. Číslo nahoře je aktuální hodnota pozic.'}
-          </p>
+          {range === '1W' ? (
+            <div>
+              <div className="h-[180px] w-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={WEEK_POINTS}>
+                    <defs>
+                      <linearGradient id="parentsFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        const point = payload?.[0]?.value;
+                        if (!active || typeof point !== 'number') return null;
+                        return <div className="bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-xs">{money(point)}</div>;
+                      }}
+                    />
+                    <Area type="linear" dataKey="value" stroke="#67e8f9" strokeWidth={2} fill="url(#parentsFill)" dot={{ r: 3, fill: '#67e8f9' }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-2">1W spojuje {money(WEEK_START)} a {money(OVERVIEW_VALUE)}.</p>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-400 rounded-2xl border border-white/10 px-4 py-8 text-center">
+              Historie pro {range} ve snímku není.
+            </p>
+          )}
 
           <div className="flex items-center justify-between text-xs text-zinc-500">
             {RANGES.map((item) => (
@@ -185,6 +185,7 @@ export default function ParentsPie({ onOpenPlan }: { onOpenPlan?: () => void }) 
                 key={item}
                 type="button"
                 onClick={() => setRange(item)}
+                aria-pressed={range === item}
                 className={`px-2.5 py-1 rounded-full ${range === item ? 'bg-zinc-800 text-white' : ''}`}
               >
                 {item}
