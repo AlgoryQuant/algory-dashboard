@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { PositionDetail, PositionPrompt } from './PositionDetail';
@@ -46,6 +46,8 @@ const toneClass: Record<string, string> = {
   red: 'text-red-300 bg-red-500/10 border-red-500/30',
 };
 
+const PIE_INITIAL = { width: 360, height: 320 } as const;
+
 function moneyDigits(value: number) {
   return Number.isInteger(value) ? 0 : 2;
 }
@@ -75,6 +77,85 @@ function SliceTooltip({
   );
 }
 
+/** Isolated Recharts tree — avoids remounting when unrelated ParentsPie state updates. */
+const ParentsDonut = memo(function ParentsDonut({
+  positions,
+  currency,
+  holdingsValue,
+  pieName,
+  activeIndex,
+  pinnedIndex,
+  onHover,
+  onSelect,
+}: {
+  positions: Position[];
+  currency: string;
+  holdingsValue: number;
+  pieName: string;
+  activeIndex: number | null;
+  pinnedIndex: number | null;
+  onHover: (index: number | null) => void;
+  onSelect: (index: number) => void;
+}) {
+  const active = activeIndex != null ? positions[activeIndex] : null;
+  const tooltipContent = useCallback(
+    (props: { active?: boolean; payload?: ReadonlyArray<{ payload?: Position }> }) => (
+      <SliceTooltip active={props.active} payload={props.payload} currency={currency} />
+    ),
+    [currency],
+  );
+
+  return (
+    <div className="relative h-[320px] w-full">
+      <ResponsiveContainer width="100%" height={320} debounce={120} initialDimension={PIE_INITIAL}>
+        <PieChart>
+          <Pie
+            data={positions}
+            cx="50%"
+            cy="50%"
+            innerRadius={88}
+            outerRadius={124}
+            paddingAngle={4}
+            dataKey="value"
+            stroke="none"
+            isAnimationActive={false}
+            onMouseEnter={(_entry, index) => onHover(index)}
+            onMouseLeave={() => onHover(null)}
+            onClick={(_entry, index) => onSelect(index)}
+          >
+            {positions.map((position, index) => {
+              const selected = pinnedIndex === index;
+              const lit = activeIndex === null || activeIndex === index || selected;
+              return (
+                <Cell
+                  key={position.id}
+                  fill={position.color}
+                  fillOpacity={lit ? 1 : 0.22}
+                  stroke={selected ? '#ffffff' : 'none'}
+                  strokeWidth={selected ? 2 : 0}
+                  style={{ cursor: 'pointer' }}
+                />
+              );
+            })}
+          </Pie>
+          <Tooltip content={tooltipContent} cursor={{ fill: 'transparent' }} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div data-pie-center className="w-[9.5rem] text-center">
+          <span className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-bold">
+            {active ? active.id : pieName}
+          </span>
+          <span className="block text-sm font-bold text-white mt-1 leading-tight">{active ? active.name : 'Celá pie'}</span>
+          <span data-holdings-value className="block text-lg font-black text-white font-mono mt-1">
+            {formatMoney(active ? active.value : holdingsValue, currency)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function ParentsPie({
   onOpenPlan,
   model: modelProp,
@@ -91,10 +172,12 @@ export default function ParentsPie({
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
   const activeIndex = hoverIndex ?? pinnedIndex;
-  const active = activeIndex != null ? positions[activeIndex] : null;
   const pinned = pinnedIndex != null ? positions[pinnedIndex] : null;
   const depositDigits = moneyDigits(model.deposits);
   const weekKnown = model.weekChange != null && model.weekReturn != null;
+
+  const onHover = useCallback((index: number | null) => setHoverIndex(index), []);
+  const onSelect = useCallback((index: number) => setPinnedIndex(index), []);
 
   useEffect(() => {
     if (pinnedIndex == null) return;
@@ -165,61 +248,16 @@ export default function ParentsPie({
               {formatSignedMoney(model.holdingsPnl, model.currency)} · {formatPercent(model.holdingsReturn)}
             </span>
           </div>
-          <div className="relative h-[320px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={positions}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={88}
-                  outerRadius={124}
-                  paddingAngle={4}
-                  dataKey="value"
-                  stroke="none"
-                  onMouseEnter={(_entry, index) => setHoverIndex(index)}
-                  onMouseLeave={() => setHoverIndex(null)}
-                  onClick={(_entry, index) => setPinnedIndex(index)}
-                >
-                  {positions.map((position, index) => {
-                    const selected = pinnedIndex === index;
-                    const lit = activeIndex === null || activeIndex === index || selected;
-                    return (
-                    <Cell
-                      key={position.id}
-                      fill={position.color}
-                      fillOpacity={lit ? 1 : 0.22}
-                      stroke={selected ? '#ffffff' : 'none'}
-                      strokeWidth={selected ? 2 : 0}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    );
-                  })}
-                </Pie>
-                <Tooltip
-                  content={(props) => (
-                    <SliceTooltip
-                      active={props.active}
-                      payload={props.payload as ReadonlyArray<{ payload?: Position }> | undefined}
-                      currency={model.currency}
-                    />
-                  )}
-                  cursor={{ fill: 'transparent' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div data-pie-center className="w-[9.5rem] text-center">
-                <span className="block text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-bold">
-                  {active ? active.id : model.pieName}
-                </span>
-                <span className="block text-sm font-bold text-white mt-1 leading-tight">{active ? active.name : 'Celá pie'}</span>
-                <span data-holdings-value className="block text-lg font-black text-white font-mono mt-1">
-                  {formatMoney(active ? active.value : model.holdingsValue, model.currency)}
-                </span>
-              </div>
-            </div>
-          </div>
+          <ParentsDonut
+            positions={positions}
+            currency={model.currency}
+            holdingsValue={model.holdingsValue}
+            pieName={model.pieName}
+            activeIndex={activeIndex}
+            pinnedIndex={pinnedIndex}
+            onHover={onHover}
+            onSelect={onSelect}
+          />
         </div>
 
         <div className="lg:col-span-7 flex flex-col gap-2">
