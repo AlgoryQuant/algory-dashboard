@@ -51,69 +51,36 @@ export default function DashboardWelcome() {
           </Link>
         </motion.div>
 
-        {/* STATIC INFORMATIONAL CARDS */}
-        <div className="w-full max-w-4xl flex flex-col gap-4 lg:gap-6 mt-16 lg:mt-24 relative z-10 px-4 lg:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link href="/plan" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
-              <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 lg:mb-6">Q4 2026</div>
-              <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Master plán</h2>
-              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
-                40 000 Kč, pět titulů, harmonogram do poloviny prosince a tři scénáře vývoje.
-              </p>
-            </Link>
-            <Link href="/plan?fokus=pie" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
-              <div className="text-[10px] font-medium uppercase tracking-widest text-blue-300 mb-4 lg:mb-6">Rodiče</div>
-              <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Jejich koláč</h2>
-              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
-                Pie Parents. Vklad 20 000 Kč · do prosince +10 000 Kč měsíčně.
-              </p>
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* MODULE 1: FOREX */}
-            <div className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner">
-              <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Market Data</div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-xl font-medium tracking-tight text-zinc-100">Global Forex</h2>
-              </div>
-              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">
-                Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
-              </p>
-            </div>
-
-            {/* MODULE 2: CRYPTO */}
-            <div className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner">
-              <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Digital Assets</div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-xl font-medium tracking-tight text-zinc-100">Crypto Matrices</h2>
-              </div>
-              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">
-                Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
-              </p>
-            </div>
-
-          </div>
-
-          {/* MODULE 3: ACADEMY */}
-          <Link
-            href="/academy"
-            className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-left backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors"
-          >
-            <div className="flex flex-col">
-              <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/60"></span>
-                Edukace
-              </div>
-              <h2 className="text-2xl font-medium tracking-tight text-zinc-100 mb-2">
-                Algory Academy
-              </h2>
-              <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-2xl">
-                Forex, crypto a algotrading — lekce a koncepty. Edukace, ne trading bot. Bez živého obchodování a bez spouštění vašeho kódu.
-              </p>
-            </div>
+        {/* NAVIGATION CARDS — parents pie is intentionally omitted (sidebar /plan?fokus=pie only) */}
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-16 lg:mt-24 relative z-10 px-4 lg:px-0">
+          <Link href="/plan" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 lg:mb-6">Q4 2026</div>
+            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Master plán</h2>
+            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
+              40 000 Kč, pět titulů, harmonogram do poloviny prosince a tři scénáře vývoje.
+            </p>
           </Link>
-
+          <Link href="/academy" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 lg:mb-6">Edukace</div>
+            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Academy</h2>
+            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
+              Forex, crypto a algotrading — lekce a koncepty. Edukace, ne trading bot.
+            </p>
+          </Link>
+          <Link href="/terminal" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Market Data</div>
+            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Global Forex</h2>
+            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">
+              Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
+            </p>
+          </Link>
+          <Link href="/terminal" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Digital Assets</div>
+            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Crypto Matrices</h2>
+            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">
+              Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
+            </p>
+          </Link>
         </div>
       </div>
     </div>
