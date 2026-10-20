@@ -15,6 +15,10 @@ const privateLanDevOrigins = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: privateLanDevOrigins,
+  // Hide the Next.js / Turbopack on-screen badge during `next dev`
+  // (parents viewing a shared local URL should not see it). Production
+  // builds never show this indicator.
+  devIndicators: false,
 };
 
 export default nextConfig;

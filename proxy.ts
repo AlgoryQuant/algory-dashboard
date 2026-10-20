@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
-import { shouldRunClerk } from './lib/clerk-configured';
+import { clerkKeysConfigured } from './lib/clerk-configured';
 
 const isProtectedRoute = createRouteMatcher(['/api/restricted(.*)']);
 
@@ -18,7 +18,8 @@ function unavailableAuth(req: NextRequest) {
 }
 
 export default async function proxy(req: NextRequest, event: NextFetchEvent) {
-  if (!shouldRunClerk()) {
+  // Require real keys (no keyless fallback) so the Clerk configure widget never appears.
+  if (!clerkKeysConfigured()) {
     return unavailableAuth(req);
   }
 

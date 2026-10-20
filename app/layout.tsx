@@ -4,7 +4,7 @@ import "./globals.css";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { dark } from "@clerk/themes";
-import { shouldRunClerk } from "@/lib/clerk-configured";
+import { clerkKeysConfigured } from "@/lib/clerk-configured";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +26,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const clerkOn = shouldRunClerk();
+  // Only mount Clerk when real keys exist. Skipping the provider (and
+  // disableKeyless below) prevents the keyless "Configure your application"
+  // floating panel that appears with temporary development keys.
+  const clerkOn = clerkKeysConfigured();
   let userId: string | null = null;
   if (clerkOn) {
     try {
@@ -73,9 +76,13 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider
+      disableKeyless
       appearance={
         {
           baseTheme: dark,
+          options: {
+            unsafe_disableDevelopmentModeWarnings: true,
+          },
           elements: {
             card: "bg-[#050505] border border-white/10 shadow-2xl",
             navbar: "hidden",

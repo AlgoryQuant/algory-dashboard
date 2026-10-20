@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { shouldRunClerk } from '@/lib/clerk-configured';
+import { clerkKeysConfigured } from '@/lib/clerk-configured';
 import PlanExperience from './PlanExperience';
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function PlanPage() {
   return (
     <Suspense fallback={<div className="min-h-[100dvh] w-full bg-black" />}>
-      <PlanExperience clerkEnabled={shouldRunClerk()} />
+      <PlanExperience clerkEnabled={clerkKeysConfigured()} />
     </Suspense>
   );
 }
