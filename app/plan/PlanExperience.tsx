@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
@@ -9,7 +9,8 @@ import ParentsPie from './ParentsPie';
 import { financeQuote, formatMoney, formatPercent, pieStatusLabel, yahooSymbol, type ParentsPieModel } from './parentsModel';
 import { LvmhSwapNote, PositionDetail, PositionPrompt } from './PositionDetail';
 import { MASTER_REASON } from './reasons';
-import { formatRefreshCountdown, useParentsPie } from './useParentsPie';
+import { RefreshCountdown } from './RefreshCountdown';
+import { useParentsPie } from './useParentsPie';
 
 const PARENT_EMAIL = 'rodice@seznam.cz';
 const MASTER_CAPITAL = 40_000;
@@ -71,6 +72,8 @@ const SLICES: Slice[] = [
     logo: '👜',
   },
 ];
+
+const DONUT_INITIAL = { width: 360, height: 320 } as const;
 
 const PHASES = [
   {
@@ -142,6 +145,11 @@ type TooltipRow = {
   value?: number;
 };
 
+const MASTER_PIE: TooltipRow[] = SLICES.map((slice) => ({
+  ...slice,
+  valueCzk: (MASTER_CAPITAL * slice.allocation) / 100,
+}));
+
 function formatCzk(value: number, digits = 0) {
   return `${new Intl.NumberFormat('cs-CZ', {
     minimumFractionDigits: digits,
@@ -195,7 +203,7 @@ function SliceTooltip({
   );
 }
 
-function Donut({
+const Donut = memo(function Donut({
   data,
   dataKey,
   activeIndex,
@@ -216,7 +224,7 @@ function Donut({
 }) {
   return (
     <div className="relative h-[320px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={320} debounce={120} initialDimension={DONUT_INITIAL}>
         <PieChart>
           <Pie
             data={data}
@@ -227,6 +235,7 @@ function Donut({
             paddingAngle={4}
             dataKey={dataKey}
             stroke="none"
+            isAnimationActive={false}
             onMouseEnter={(_entry, index) => onHover(index)}
             onMouseLeave={() => onHover(null)}
             onClick={(_entry, index) => onSelect(index)}
@@ -235,14 +244,14 @@ function Donut({
               const selected = pinnedIndex === index;
               const lit = activeIndex === null || activeIndex === index || selected;
               return (
-              <Cell
-                key={entry.id}
-                fill={entry.color}
-                fillOpacity={lit ? 1 : 0.22}
-                stroke={selected ? '#ffffff' : 'none'}
-                strokeWidth={selected ? 2 : 0}
-                style={{ cursor: 'pointer' }}
-              />
+                <Cell
+                  key={entry.id}
+                  fill={entry.color}
+                  fillOpacity={lit ? 1 : 0.22}
+                  stroke={selected ? '#ffffff' : 'none'}
+                  strokeWidth={selected ? 2 : 0}
+                  style={{ cursor: 'pointer' }}
+                />
               );
             })}
           </Pie>
@@ -255,7 +264,7 @@ function Donut({
       </div>
     </div>
   );
-}
+});
 
 const toneClass: Record<string, string> = {
   blue: 'text-blue-300 bg-blue-500/10 border-blue-500/30',
@@ -311,17 +320,16 @@ function PlanExperienceContent({ isParent }: { isParent: boolean }) {
   const activeIndex = hoverIndex ?? pinnedIndex;
   const activeSlice = activeIndex != null ? SLICES[activeIndex] : null;
 
-  const openFocus = (next: Focus) => {
+  const openFocus = useCallback((next: Focus) => {
     userChoseFocus.current = true;
     setFocus(next);
     setHoverIndex(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  const masterPie: TooltipRow[] = SLICES.map((slice) => ({
-    ...slice,
-    valueCzk: (MASTER_CAPITAL * slice.allocation) / 100,
-  }));
+  const openPie = useCallback(() => openFocus('pie'), [openFocus]);
+  const openPlan = useCallback(() => openFocus('plan'), [openFocus]);
+
   return (
     <div className="min-h-[100dvh] w-full bg-black text-zinc-200 font-sans selection:bg-zinc-800">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-xl">
@@ -348,15 +356,7 @@ function PlanExperienceContent({ isParent }: { isParent: boolean }) {
                 Koláč rodičů
               </button>
             </div>
-            {parents.ready && parents.remainingMs != null && (
-              <p
-                data-refresh-countdown
-                title="Další načtení pie Parents"
-                className="text-[9px] sm:text-[10px] font-mono text-zinc-500 tracking-wide whitespace-nowrap tabular-nums shrink-0"
-              >
-                obnova za {formatRefreshCountdown(parents.remainingMs)}
-              </p>
-            )}
+            <RefreshCountdown nextAt={parents.nextAt} ready={parents.ready} />
           </div>
         </div>
       </header>
@@ -367,15 +367,15 @@ function PlanExperienceContent({ isParent }: { isParent: boolean }) {
             phase={phase}
             activeIndex={activeIndex}
             activeSlice={activeSlice}
-            masterPie={masterPie}
+            masterPie={MASTER_PIE}
             pinnedIndex={pinnedIndex}
             onHover={setHoverIndex}
             onPin={setPinnedIndex}
-            onOpenPie={() => openFocus('pie')}
+            onOpenPie={openPie}
             parents={parents.model}
           />
         ) : (
-          <ParentsPie model={parents.model} ready={parents.ready} onOpenPlan={() => openFocus('plan')} />
+          <ParentsPie model={parents.model} ready={parents.ready} onOpenPlan={openPlan} />
         )}
       </main>
     </div>

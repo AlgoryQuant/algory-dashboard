@@ -12,6 +12,36 @@ function isModel(value: unknown): value is ParentsPieModel {
   return Array.isArray(model.positions) && model.positions.length > 0 && typeof model.source === 'string';
 }
 
+/** Skip setState when poll returns the same pie numbers (avoids remounting Recharts). */
+function samePieNumbers(a: ParentsPieModel, b: ParentsPieModel) {
+  if (a === b) return true;
+  if (
+    a.source !== b.source ||
+    a.fallback !== b.fallback ||
+    a.holdingsValue !== b.holdingsValue ||
+    a.holdingsPnl !== b.holdingsPnl ||
+    a.deposits !== b.deposits ||
+    a.currency !== b.currency ||
+    a.positions.length !== b.positions.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.positions.length; i += 1) {
+    const left = a.positions[i];
+    const right = b.positions[i];
+    if (
+      left.id !== right.id ||
+      left.value !== right.value ||
+      left.pnl !== right.pnl ||
+      left.actual !== right.actual ||
+      left.color !== right.color
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function formatRefreshCountdown(remainingMs: number) {
   const total = Math.max(0, Math.ceil(remainingMs / 1000));
   const minutes = Math.floor(total / 60);
@@ -23,12 +53,13 @@ export function useParentsPie(enabled = true) {
   const [model, setModel] = useState<ParentsPieModel>(() => snapshotModel('unavailable'));
   const [ready, setReady] = useState(false);
   const [nextAt, setNextAt] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!enabled) return;
     let cancel = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let deferId: ReturnType<typeof setTimeout> | undefined;
+    let idleId: number | undefined;
 
     const schedule = (ms: number) => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -45,35 +76,47 @@ export function useParentsPie(enabled = true) {
         const data: unknown = await response.json();
         if (cancel) return;
         if (isModel(data)) {
-          setModel(data);
+          setModel((prev) => (samePieNumbers(prev, data) ? prev : data));
           schedule(REFRESH_MS);
         } else {
-          setModel(snapshotModel('unavailable'));
+          setModel((prev) => {
+            const snap = snapshotModel('unavailable');
+            return samePieNumbers(prev, snap) ? prev : snap;
+          });
           schedule(REFRESH_MS);
         }
       } catch {
         if (cancel) return;
-        setModel(snapshotModel('unavailable'));
+        setModel((prev) => {
+          const snap = snapshotModel('unavailable');
+          return samePieNumbers(prev, snap) ? prev : snap;
+        });
         schedule(REFRESH_MS);
       } finally {
         if (!cancel) setReady(true);
       }
     }
 
-    void load();
+    // Defer network work until after first paint so the snapshot pie can mount first.
+    const start = () => {
+      if (cancel) return;
+      void load();
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(start, { timeout: 400 });
+    } else {
+      deferId = setTimeout(start, 0);
+    }
+
     return () => {
       cancel = true;
       if (timeoutId) clearTimeout(timeoutId);
+      if (deferId) clearTimeout(deferId);
+      if (idleId != null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleId);
+      }
     };
   }, [enabled]);
 
-  useEffect(() => {
-    if (!enabled || nextAt == null) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [enabled, nextAt]);
-
-  const remainingMs = nextAt == null ? null : Math.max(0, nextAt - now);
-
-  return { model, ready, remainingMs };
+  return { model, ready, nextAt };
 }
