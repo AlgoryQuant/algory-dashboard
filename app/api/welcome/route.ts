@@ -10,39 +10,44 @@ export const revalidate = 60;
 // ==========================================
 // [GET] MARKET DATA TELEMETRY PIPELINE
 // ==========================================
+type YahooChartMeta = {
+  regularMarketPrice?: number;
+  chartPreviousClose?: number;
+  regularMarketChangePercent?: number;
+};
+
+async function fetchChartQuote(symbol: string) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`;
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json'
+    },
+    next: { revalidate: 60 }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Exchange HTTP Error: ${response.status} (${symbol})`);
+  }
+
+  const json = await response.json();
+  const meta = json?.chart?.result?.[0]?.meta as YahooChartMeta | undefined;
+  if (!meta?.regularMarketPrice) {
+    throw new Error(`Missing quote for ${symbol}`);
+  }
+
+  return {
+    price: meta.regularMarketPrice,
+    prevClose: meta.chartPreviousClose || meta.regularMarketPrice,
+    changePercent: meta.regularMarketChangePercent || 0
+  };
+}
+
 export async function GET() {
   try {
-    const symbols = ['NEE', 'TGT', 'PFE', 'SYM', 'NVO', 'CZK=X'];
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(',')}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Exchange HTTP Error: ${response.status}`);
-    }
-
-    const json = await response.json();
-    const results = json?.quoteResponse?.result;
-
-    if (!results || !Array.isArray(results)) {
-      throw new Error("Invalid payload structure from exchange.");
-    }
-    
-    const data = results.reduce((acc: Record<string, any>, quote: any) => {
-      if (quote && quote.symbol) {
-        acc[quote.symbol] = {
-          price: quote.regularMarketPrice || 0,
-          prevClose: quote.regularMarketPreviousClose || 0,
-          changePercent: quote.regularMarketChangePercent || 0
-        };
-      }
-      return acc;
-    }, {} as Record<string, any>);
+    const symbols = ['NEE', 'TGT', 'PFE', 'SYM', 'MC.PA', 'CZK=X'];
+    const quotes = await Promise.all(symbols.map(async (symbol) => [symbol, await fetchChartQuote(symbol)] as const));
+    const data = Object.fromEntries(quotes);
 
     if (!data['CZK=X']) {
       throw new Error("Currency conversion matrix failed.");

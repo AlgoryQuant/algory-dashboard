@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { SignInButton, useUser, useAuth } from '@clerk/nextjs';
+import { clerkBrowserEnabled } from '@/lib/clerk-browser';
 import { 
   DndContext, DragOverlay, closestCorners, DragStartEvent, DragEndEvent,
   defaultDropAnimationSideEffects, KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -161,10 +162,34 @@ const DraggableWidget = ({ id, children }: { id: string, children: React.ReactNo
   );
 };
 
-export default function TerminalCore() {
+export default function TerminalPage() {
+  if (!clerkBrowserEnabled()) {
+    return <TerminalCore user={null} isUserLoaded userId={null} />;
+  }
+  return <TerminalAuthed />;
+}
+
+function TerminalAuthed() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const { userId } = useAuth();
-  
+  return (
+    <TerminalCore
+      user={user ?? null}
+      isUserLoaded={isUserLoaded}
+      userId={userId ?? null}
+    />
+  );
+}
+
+function TerminalCore({
+  user,
+  isUserLoaded,
+  userId,
+}: {
+  user: { primaryEmailAddress?: { emailAddress?: string | null } | null } | null;
+  isUserLoaded: boolean;
+  userId: string | null;
+}) {
   const userEmail = user?.primaryEmailAddress?.emailAddress;
   const isParentAccount = userEmail === 'rodice@seznam.cz';
 

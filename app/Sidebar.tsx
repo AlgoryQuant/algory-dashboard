@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useMemo } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SignInButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
+import { clerkBrowserEnabled } from '@/lib/clerk-browser';
 import { useRouter } from 'next/navigation';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
@@ -216,19 +218,42 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
   }
 };
 
-export default function Sidebar({
+export default function Sidebar(props: SidebarProps) {
+  if (!clerkBrowserEnabled()) {
+    return <SidebarView {...props} isLoaded={false} userId={null} email={null} />;
+  }
+  return <SidebarAuthed {...props} />;
+}
+
+function SidebarAuthed(props: SidebarProps) {
+  const { isLoaded, userId } = useAuth();
+  const { user } = useUser();
+  return (
+    <SidebarView
+      {...props}
+      isLoaded={isLoaded}
+      userId={userId}
+      email={user?.primaryEmailAddress?.emailAddress ?? null}
+    />
+  );
+}
+
+function SidebarView({
   activeView, setActiveView,
   marketMode, setMarketMode, cryptoMode, setCryptoMode, activePair, setActivePair,
   data, spatialArbData, triangularArbData, fundingRateData,
-  openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
-}: SidebarProps) {
+  openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase,
+  isLoaded, userId, email,
+}: SidebarProps & {
+  isLoaded: boolean;
+  userId: string | null | undefined;
+  email: string | null;
+}) {
 
-  const { isLoaded, userId } = useAuth();
-  const { user } = useUser();
   const router = useRouter();
 
   // ROLE-BASED ACCESS CONTROL (RBAC)
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const userEmail = email;
   const isParentAccount = userEmail === 'rodice@seznam.cz';
   
   const sensors = useSensors(
@@ -383,7 +408,24 @@ export default function Sidebar({
           </div>
           
           <div className="flex bg-zinc-900/80 rounded-xl p-1 mt-6 border border-white/5 shadow-inner relative overflow-hidden">
-            {!isParentAccount && (
+            {isParentAccount ? (
+              <>
+                <button
+                  onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }}
+                  className={`flex-1 z-10 text-[9px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'portfolio' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  PORTFOLIO
+                </button>
+                <Link
+                  href="/plan?fokus=pie"
+                  onClick={() => SoundEngine.playClick()}
+                  className="flex-1 z-10 text-[9px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 text-zinc-500 hover:text-zinc-300 text-center"
+                >
+                  KOLÁČ
+                </Link>
+                <div className="absolute top-1 bottom-1 w-[calc(50%-4px)] left-1 bg-emerald-500/20 border border-emerald-500/30 rounded-lg z-0"></div>
+              </>
+            ) : (
               <>
                 <button 
                   onClick={() => { SoundEngine.playClick(); setActiveView('terminal'); }} 
@@ -398,27 +440,23 @@ export default function Sidebar({
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                   LAB
                 </button>
-                <button 
-                  onClick={() => { SoundEngine.playClick(); setActiveView('q4plan'); }} 
+                <Link
+                  href="/plan"
+                  onClick={() => SoundEngine.playClick()}
                   className={`flex-1 z-10 text-[9px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-1 ${activeView === 'q4plan' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
                   Q4 PLAN
+                </Link>
+                <button 
+                  onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }} 
+                  className={`flex-1 z-10 text-[9px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'portfolio' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  PORTFOLIO
                 </button>
-              </>
-            )}
-            <button 
-              onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }} 
-              className={`flex-1 z-10 text-[9px] font-bold tracking-widest uppercase py-2 rounded-lg transition-all duration-300 ${activeView === 'portfolio' ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-            >
-              PORTFOLIO
-            </button>
 
-            {/* Posuvné pozadí tlačítek (Slider logic pro 4 tlačítka) */}
-            {!isParentAccount ? (
-              <div className={`absolute top-1 bottom-1 w-[calc(25%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'terminal' ? 'translate-x-0 left-1' : activeView === 'laboratory' ? 'translate-x-[100%] ml-1' : activeView === 'q4plan' ? 'translate-x-[200%] ml-1' : 'translate-x-[300%] ml-1'}`}></div>
-            ) : (
-              <div className={`absolute top-1 bottom-1 w-[calc(100%-8px)] left-1 bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 translate-x-0`}></div>
+                <div className={`absolute top-1 bottom-1 w-[calc(25%-4px)] bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-transform duration-300 ease-out z-0 ${activeView === 'terminal' ? 'translate-x-0 left-1' : activeView === 'laboratory' ? 'translate-x-[100%] ml-1' : activeView === 'q4plan' ? 'translate-x-[200%] ml-1' : 'translate-x-[300%] ml-1'}`}></div>
+              </>
             )}
           </div>
 
@@ -449,11 +487,17 @@ export default function Sidebar({
 
         {/* ASYMETRICKÉ VYTVOŘENÍ SIDEBAR MENU PODLE ROLE */}
         {isParentAccount ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 opacity-50">
-            <svg className="w-8 h-8 text-zinc-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-center">Institutional<br/>Read-Only Access</span>
+          <div className="flex-1 flex flex-col justify-between p-6">
+            <div className="rounded-2xl border border-white/10 bg-black/40 p-5 flex flex-col gap-3">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Rodičovský přístup</span>
+              <p className="text-sm text-zinc-300 leading-relaxed">Pie Parents je na samostatné stránce. Vklad 20 000 Kč: Target, Visa, Pfizer, Lockheed a LVMH. Do prosince posílají každý měsíc dalších 10 000 Kč.</p>
+              <Link href="/plan?fokus=pie" onClick={() => SoundEngine.playClick()} className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest bg-white text-black rounded-xl py-3 hover:bg-zinc-200 transition-colors">
+                Otevřít koláč
+              </Link>
+              <Link href="/plan" onClick={() => SoundEngine.playClick()} className="text-center text-[10px] font-bold uppercase tracking-widest border border-white/10 text-zinc-300 rounded-xl py-3 hover:text-white hover:border-white/20 transition-colors">
+                Celý master plán
+              </Link>
+            </div>
           </div>
         ) : (
           <nav className={`flex-1 overflow-y-auto pb-6 custom-scrollbar pr-2 pl-2 flex flex-col ${(activeView === 'laboratory' || activeView === 'portfolio' || activeView === 'q4plan') ? 'opacity-50 pointer-events-none grayscale' : 'opacity-100'}`}>
@@ -556,7 +600,25 @@ export default function Sidebar({
         )}
         
         <div className="flex justify-around items-center px-2 py-2">
-          {!isParentAccount && (
+          {isParentAccount ? (
+            <>
+              <button
+                onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }}
+                className={`flex flex-col items-center justify-center gap-1 w-1/2 py-2 transition-colors ${activeView === 'portfolio' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
+              >
+                <span className="text-xl">📈</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Portfolio</span>
+              </button>
+              <Link
+                href="/plan?fokus=pie"
+                onClick={() => SoundEngine.playClick()}
+                className="flex flex-col items-center justify-center gap-1 w-1/2 py-2 text-zinc-500"
+              >
+                <span className="text-xl">🎯</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Koláč</span>
+              </Link>
+            </>
+          ) : (
             <>
               <button 
                 onClick={() => { SoundEngine.playClick(); setMarketMode('FOREX'); setActiveView('terminal'); }} 
@@ -582,23 +644,24 @@ export default function Sidebar({
                 <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Lab</span>
               </button>
 
-              <button 
-                onClick={() => { SoundEngine.playClick(); setActiveView('q4plan'); }} 
-                className={`flex flex-col items-center justify-center gap-1 w-1/5 py-2 transition-colors ${activeView === 'q4plan' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-zinc-500'}`}
+              <Link
+                href="/plan"
+                onClick={() => SoundEngine.playClick()}
+                className="flex flex-col items-center justify-center gap-1 w-1/5 py-2 text-zinc-500"
               >
                 <span className="text-xl">🎯</span>
                 <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Q4 Plan</span>
+              </Link>
+
+              <button 
+                onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }} 
+                className={`flex flex-col items-center justify-center gap-1 w-1/5 py-2 transition-colors ${activeView === 'portfolio' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
+              >
+                <span className="text-xl">📈</span>
+                <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Portfolio</span>
               </button>
             </>
           )}
-
-          <button 
-            onClick={() => { SoundEngine.playClick(); setActiveView('portfolio'); }} 
-            className={`flex flex-col items-center justify-center gap-1 ${isParentAccount ? 'w-full' : 'w-1/5'} py-2 transition-colors ${activeView === 'portfolio' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-zinc-500'}`}
-          >
-            <span className="text-xl">📈</span>
-            <span className="text-[8px] font-bold uppercase tracking-widest mt-1">Portfolio</span>
-          </button>
         </div>
       </div>
     </>

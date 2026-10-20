@@ -4,6 +4,11 @@ import "./globals.css";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { dark } from "@clerk/themes";
+import { clerkBrowserEnabled } from "@/lib/clerk-browser";
+import { clerkKeysConfigured } from "@/lib/clerk-configured";
+import { themeInitScript } from "@/lib/theme";
+import { GlobalThemeToggle } from "./GlobalThemeToggle";
+import { ThemeProvider } from "./ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,13 +30,72 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
+  // Auth needs both keys. The provider needs the publishable key, which is
+  // also what client hooks check. With neither key, skip Clerk entirely so
+  // production prerender does not throw and the keyless dev panel stays hidden.
+  const clerkOn = clerkKeysConfigured();
+  const showClerk = clerkBrowserEnabled();
+  let userId: string | null = null;
+  if (clerkOn) {
+    try {
+      userId = (await auth()).userId;
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') throw error;
+      userId = null;
+    }
+  }
+
+  const page = (
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ThemeProvider>
+          <div className="fixed top-6 right-6 lg:top-8 lg:right-8 z-[100] flex items-center gap-3">
+            <GlobalThemeToggle />
+            {userId && (
+              <>
+                <div className="hidden lg:flex items-center gap-3 px-3 py-1.5 rounded-full border border-edge bg-background/50 backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted">System Online</span>
+                </div>
+                <div className="p-0.5 rounded-full border border-edge bg-background/80 hover:border-foreground/20 transition-colors shadow-2xl">
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        userButtonAvatarBox: "w-8 h-8 rounded-full border border-transparent",
+                        userButtonPopoverActionButtonIcon: "text-zinc-400"
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+
+  if (!showClerk) {
+    return page;
+  }
 
   return (
     <ClerkProvider
       appearance={
         {
           baseTheme: dark,
+          options: {
+            unsafe_disableDevelopmentModeWarnings: true,
+          },
           elements: {
             card: "bg-[#050505] border border-white/10 shadow-2xl",
             navbar: "hidden",
@@ -54,34 +118,7 @@ export default async function RootLayout({
         } as any
       }
     >
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      >
-        <body className="min-h-full flex flex-col bg-[#050505] text-white">
-          {/* GLOBAL TOP-BAR OVERLAY (Visible only when authenticated) */}
-          {userId && (
-            <div className="fixed top-6 right-6 lg:top-8 lg:right-8 z-[100] flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-3 px-3 py-1.5 rounded-full border border-white/5 bg-black/50 backdrop-blur-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">System Online</span>
-              </div>
-              <div className="p-0.5 rounded-full border border-white/10 bg-black/80 hover:border-white/20 transition-colors shadow-2xl">
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      userButtonAvatarBox: "w-8 h-8 rounded-full border border-transparent",
-                      userButtonPopoverActionButtonIcon: "text-zinc-400"
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          
-          {children}
-        </body>
-      </html>
+      {page}
     </ClerkProvider>
   );
 }
