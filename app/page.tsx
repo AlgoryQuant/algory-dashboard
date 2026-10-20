@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
 import { clerkBrowserEnabled } from '@/lib/clerk-browser';
 import { CandlestickBackdrop } from './dashboard/CandlestickBackdrop';
@@ -30,76 +29,74 @@ function LandingView({
     <div className="min-h-[100dvh] w-full bg-background text-foreground font-sans overflow-x-hidden scroll-smooth">
       
       {/* GLOBAL HEADER */}
-      <header className="fixed top-0 left-0 w-full p-6 lg:px-12 lg:py-6 flex justify-between items-center z-[100] bg-background/50 backdrop-blur-md border-b border-edge">
-        <div className="text-xl font-black tracking-tighter text-foreground">Algory<span className="text-muted">.</span></div>
-        <div className="flex items-center gap-4">
-          <Link href="/plan" className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-muted hover:text-foreground transition-colors">
-            Q4 Plán
+      <header className="fixed top-0 left-0 z-[100] flex w-full items-center justify-between border-b border-edge bg-background/80 px-6 py-4 backdrop-blur-sm sm:px-10 lg:px-16">
+        <div className="text-lg font-semibold tracking-tight text-foreground">
+          Algory<span className="text-muted">.</span>
+        </div>
+        <div className="flex items-center gap-5">
+          <Link
+            href="/plan"
+            className="text-xs font-medium tracking-wide text-muted transition-colors hover:text-foreground"
+          >
+            Q4 plán
           </Link>
           {isLoaded && !userId && (
-            <Link href="/sign-in">
-              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-muted hover:text-foreground transition-colors">
-                Sign In
-              </button>
+            <Link
+              href="/sign-in"
+              className="text-xs font-medium tracking-wide text-muted transition-colors hover:text-foreground"
+            >
+              Sign in
             </Link>
           )}
           {isLoaded && userId && (
-            <Link href="/terminal">
-              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-accent hover:opacity-80 transition-opacity">
-                Active Session
-              </button>
+            <Link
+              href="/terminal"
+              className="text-xs font-medium tracking-wide text-foreground transition-opacity hover:opacity-80"
+            >
+              Terminal
             </Link>
           )}
         </div>
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center pt-20 px-6 z-10 overflow-hidden">
+      <section className="relative z-10 flex min-h-[88vh] w-full flex-col justify-center overflow-hidden px-6 pb-16 pt-28 sm:px-10 lg:px-16">
         <CandlestickBackdrop />
-        
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full"
-        >
-          <p className="mb-6 font-mono text-[10px] font-medium uppercase tracking-[0.35em] text-accent lg:text-xs">
-            Quantitative Execution Engine
-          </p>
-          
-          <h1 className="mb-5 text-6xl font-black tracking-tighter text-foreground md:text-7xl lg:mb-6 lg:text-8xl lg:leading-[0.95]">
+
+        <div className="relative z-10 mx-auto w-full max-w-3xl animate-[hubFade_0.55s_ease_both]">
+          <h1 className="mb-4 text-5xl font-semibold tracking-tight text-foreground sm:text-6xl lg:text-7xl lg:leading-[1.05]">
             Algory<span className="text-muted">.</span>
           </h1>
 
-          <p className="mb-4 text-lg font-medium tracking-tight text-foreground/80 md:text-xl lg:text-2xl">
-            Institutional grade. Retail access.
+          <p className="mb-9 max-w-md text-[15px] leading-relaxed text-muted sm:text-base">
+            Terminál, plán a academy na jednom místě — trhy bez marketingového šumu.
           </p>
-          
-          <p className="text-sm md:text-base lg:text-lg text-muted font-light tracking-wide max-w-2xl leading-relaxed mb-12">
-            Real-time market topology, multi-exchange arbitrage matrices, and a Python backtesting lab — execute with precision.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
+
+          <div className="flex flex-wrap items-center gap-3">
             {isLoaded && !userId && (
-              <Link href="/sign-up" className="w-full sm:w-auto">
-                <button className="w-full sm:w-auto px-8 py-4 bg-foreground text-background text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
-                  Get Started
-                </button>
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center border border-foreground bg-foreground px-5 py-2.5 text-xs font-medium tracking-wide text-background transition-opacity hover:opacity-90"
+              >
+                Začít
               </Link>
             )}
             {isLoaded && userId && (
-              <Link href="/terminal" className="w-full sm:w-auto">
-                <button className="w-full px-8 py-4 bg-foreground text-background text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
-                  Enter Terminal
-                </button>
+              <Link
+                href="/terminal"
+                className="inline-flex items-center border border-foreground bg-foreground px-5 py-2.5 text-xs font-medium tracking-wide text-background transition-opacity hover:opacity-90"
+              >
+                Terminal
               </Link>
             )}
-            
-            <a href="#features" className="w-full sm:w-auto px-8 py-4 bg-transparent border border-edge text-xs font-bold uppercase tracking-widest text-foreground hover:bg-row-hover transition-colors text-center">
-              View Features
+            <a
+              href="#features"
+              className="inline-flex items-center border border-edge px-5 py-2.5 text-xs font-medium tracking-wide text-foreground transition-colors hover:border-foreground/35 hover:bg-row-hover"
+            >
+              Co umí
             </a>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* BENTO GRID SHOWCASE */}
