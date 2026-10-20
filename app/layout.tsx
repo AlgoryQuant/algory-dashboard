@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { dark } from "@clerk/themes";
+import { clerkBrowserEnabled } from "@/lib/clerk-browser";
 import { clerkKeysConfigured } from "@/lib/clerk-configured";
 
 const geistSans = Geist({
@@ -26,10 +27,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Only mount Clerk when real keys exist. Skipping the provider (and
-  // disableKeyless below) prevents the keyless "Configure your application"
-  // floating panel that appears with temporary development keys.
+  // Auth needs both keys. The provider needs the publishable key, which is
+  // also what client hooks check. With neither key, skip Clerk entirely so
+  // production prerender does not throw and the keyless dev panel stays hidden.
   const clerkOn = clerkKeysConfigured();
+  const showClerk = clerkBrowserEnabled();
   let userId: string | null = null;
   if (clerkOn) {
     try {
@@ -70,13 +72,12 @@ export default async function RootLayout({
     </html>
   );
 
-  if (!clerkOn) {
+  if (!showClerk) {
     return page;
   }
 
   return (
     <ClerkProvider
-      disableKeyless
       appearance={
         {
           baseTheme: dark,

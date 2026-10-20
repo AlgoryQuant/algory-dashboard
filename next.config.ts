@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
   // (parents viewing a shared local URL should not see it). Production
   // builds never show this indicator.
   devIndicators: false,
+  // Disables Clerk keyless mode (the "Configure your application" floating
+  // panel). Prefer real Production keys on Vercel for the parent plan link.
+  env: {
+    NEXT_PUBLIC_CLERK_KEYLESS_DISABLED: "true",
+  },
 };
 
 export default nextConfig;

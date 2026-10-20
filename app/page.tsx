@@ -4,10 +4,27 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
+import { clerkBrowserEnabled } from '@/lib/clerk-browser';
 
 export default function LandingPage() {
-  const { isLoaded, userId } = useAuth();
+  if (!clerkBrowserEnabled()) {
+    return <LandingView isLoaded={false} userId={null} />;
+  }
+  return <LandingAuthed />;
+}
 
+function LandingAuthed() {
+  const { isLoaded, userId } = useAuth();
+  return <LandingView isLoaded={isLoaded} userId={userId} />;
+}
+
+function LandingView({
+  isLoaded,
+  userId,
+}: {
+  isLoaded: boolean;
+  userId: string | null | undefined;
+}) {
   return (
     <div className="min-h-[100dvh] w-full bg-[#000000] text-zinc-200 selection:bg-zinc-800 font-sans overflow-x-hidden scroll-smooth">
       

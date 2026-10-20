@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ResponsiveContainer, LineChart, Line } from 'recharts';
 import { SignInButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
+import { clerkBrowserEnabled } from '@/lib/clerk-browser';
 import { useRouter } from 'next/navigation';
 import { 
   DndContext, DragOverlay, closestCorners, pointerWithin, rectIntersection,
@@ -217,19 +218,42 @@ const ArbSidebarItemNode = ({ data, isActive, onClick, type }: { data: any, isAc
   }
 };
 
-export default function Sidebar({
+export default function Sidebar(props: SidebarProps) {
+  if (!clerkBrowserEnabled()) {
+    return <SidebarView {...props} isLoaded={false} userId={null} email={null} />;
+  }
+  return <SidebarAuthed {...props} />;
+}
+
+function SidebarAuthed(props: SidebarProps) {
+  const { isLoaded, userId } = useAuth();
+  const { user } = useUser();
+  return (
+    <SidebarView
+      {...props}
+      isLoaded={isLoaded}
+      userId={userId}
+      email={user?.primaryEmailAddress?.emailAddress ?? null}
+    />
+  );
+}
+
+function SidebarView({
   activeView, setActiveView,
   marketMode, setMarketMode, cryptoMode, setCryptoMode, activePair, setActivePair,
   data, spatialArbData, triangularArbData, fundingRateData,
-  openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase
-}: SidebarProps) {
+  openGroups, setOpenGroups, favorites, setFavorites, activeDragId, setActiveDragId, handleSeedFirebase,
+  isLoaded, userId, email,
+}: SidebarProps & {
+  isLoaded: boolean;
+  userId: string | null | undefined;
+  email: string | null;
+}) {
 
-  const { isLoaded, userId } = useAuth();
-  const { user } = useUser();
   const router = useRouter();
 
   // ROLE-BASED ACCESS CONTROL (RBAC)
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const userEmail = email;
   const isParentAccount = userEmail === 'rodice@seznam.cz';
   
   const sensors = useSensors(
