@@ -9,6 +9,7 @@ import ParentsPie from './ParentsPie';
 import { financeQuote, formatMoney, formatPercent, pieStatusLabel, yahooSymbol, type ParentsPieModel } from './parentsModel';
 import { LvmhSwapNote, PositionDetail, PositionPrompt } from './PositionDetail';
 import { MASTER_REASON } from './reasons';
+import { ThemeToggle } from '../ThemeToggle';
 import { RefreshCountdown } from './RefreshCountdown';
 import { useParentsPie } from './useParentsPie';
 
@@ -190,13 +191,13 @@ function SliceTooltip({
   const amount = row.value ?? row.valueCzk;
   const weight = row.weight ?? row.allocation;
   return (
-    <div className="bg-[#0a0a0a] border border-white/10 px-3 py-2.5 rounded-xl shadow-2xl">
-      <p className="text-white font-bold text-xs tracking-wide flex items-center gap-2">
+    <div className="bg-surface-muted border border-edge px-3 py-2.5 rounded-xl shadow-2xl">
+      <p className="text-foreground font-bold text-xs tracking-wide flex items-center gap-2">
         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: row.color }} />
         {row.id}
       </p>
-      <p className="text-zinc-400 text-[10px] mt-1">{row.sector}</p>
-      <p className="text-white text-xs font-mono font-bold mt-2">
+      <p className="text-muted text-[10px] mt-1">{row.sector}</p>
+      <p className="text-foreground text-xs font-mono font-bold mt-2">
         {weight.toFixed(weight % 1 === 0 ? 0 : 1)} %{amount != null ? ` · ${formatCzk(amount, 0)}` : ''}
       </p>
     </div>
@@ -259,18 +260,18 @@ const Donut = memo(function Donut({
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-bold">{centerLabel}</span>
-        <span className="text-xl font-black text-white font-mono mt-1 text-center px-16">{centerValue}</span>
+        <span className="text-[10px] uppercase tracking-[0.22em] text-muted font-bold">{centerLabel}</span>
+        <span className="text-xl font-black text-foreground font-mono mt-1 text-center px-16">{centerValue}</span>
       </div>
     </div>
   );
 });
 
 const toneClass: Record<string, string> = {
-  blue: 'text-blue-300 bg-blue-500/10 border-blue-500/30',
-  red: 'text-red-300 bg-red-500/10 border-red-500/30',
-  emerald: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
-  yellow: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30',
+  blue: 'text-blue-700 dark:text-blue-300 bg-blue-500/10 border-blue-600/35 dark:border-blue-500/30',
+  red: 'text-red-700 dark:text-red-300 bg-red-500/10 border-red-600/35 dark:border-red-500/30',
+  emerald: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-600/35 dark:border-emerald-500/30',
+  yellow: 'text-amber-800 dark:text-yellow-300 bg-yellow-500/10 border-amber-600/35 dark:border-yellow-500/30',
 };
 
 export default function PlanExperience({ clerkEnabled = false }: { clerkEnabled?: boolean }) {
@@ -331,19 +332,19 @@ function PlanExperienceContent({ isParent }: { isParent: boolean }) {
   const openPlan = useCallback(() => openFocus('plan'), [openFocus]);
 
   return (
-    <div className="min-h-[100dvh] w-full bg-black text-zinc-200 font-sans selection:bg-zinc-800">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-xl">
+    <div className="min-h-[100dvh] w-full bg-background text-foreground font-sans">
+      <header className="sticky top-0 z-40 border-b border-edge bg-background/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-5 lg:px-8 py-4 flex items-center gap-3 sm:gap-4 pr-20 lg:pr-36">
-          <Link href="/dashboard" className="text-xl font-black tracking-tighter text-white shrink-0">
+          <Link href="/dashboard" className="text-xl font-black tracking-tighter text-foreground shrink-0">
             Algory<span className="text-emerald-500">.</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3 ml-auto min-w-0">
-            <div className="flex bg-white/5 border border-white/10 rounded-full p-1 shrink-0">
+            <div className="flex bg-foreground/[0.04] border border-edge rounded-full p-1 shrink-0">
               <button
                 type="button"
                 aria-pressed={focus === 'plan'}
                 onClick={() => openFocus('plan')}
-                className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'plan' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'plan' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground'}`}
               >
                 Master plán
               </button>
@@ -351,11 +352,12 @@ function PlanExperienceContent({ isParent }: { isParent: boolean }) {
                 type="button"
                 aria-pressed={focus === 'pie'}
                 onClick={() => openFocus('pie')}
-                className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'pie' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
+                className={`px-3 sm:px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${focus === 'pie' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground'}`}
               >
                 Koláč rodičů
               </button>
             </div>
+            <ThemeToggle />
             <RefreshCountdown
               nextAt={parents.nextAt}
               ready={parents.ready}
@@ -418,23 +420,23 @@ function PlanView({
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-3xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-emerald-400 mb-4">Q4 2026 · pět titulů</p>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-[0.95]">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground leading-[0.95]">
               Q4 Master Plan
             </h1>
-            <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
+            <p className="mt-5 text-sm md:text-base text-muted max-w-2xl leading-relaxed">
               40 000 Kč v pěti titulech: NextEra a Pfizer drží defenzivu, Target vánoční retail, Symbotic skladovou robotiku a LVMH luxusní hotovost. Take-profit je v polovině prosince 2026, ještě před tím, než sezóna vychladne.
             </p>
           </div>
           <button
             type="button"
             onClick={onOpenPie}
-            className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
+            className="shrink-0 text-left border border-edge bg-row-hover hover:bg-row-selected rounded-2xl px-5 py-4 transition-colors"
           >
-            <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Přístup pro rodiče</span>
-            <span className="block text-white font-bold mt-1">
+            <span className="block text-[10px] uppercase tracking-widest text-muted font-bold">Přístup pro rodiče</span>
+            <span className="block text-foreground font-bold mt-1">
               {parentsReady ? `Parents · vklad ${parentsDeposit}` : 'Parents · načítám pie…'}
             </span>
-            <span className="block text-xs text-zinc-500 mt-1">Target, Visa, Pfizer, Lockheed, LVMH.</span>
+            <span className="block text-xs text-muted mt-1">Target, Visa, Pfizer, Lockheed, LVMH.</span>
           </button>
         </div>
 
@@ -456,9 +458,9 @@ function PlanView({
         </div>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/10 rounded-3xl bg-[#050505] p-5 md:p-8">
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-edge rounded-3xl bg-surface p-5 md:p-8">
         <div className="lg:col-span-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Distribuční model</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Distribuční model</p>
           <Donut
             data={masterPie}
             dataKey="allocation"
@@ -482,19 +484,19 @@ function PlanView({
                 onMouseLeave={() => onHover(null)}
                 aria-pressed={pinnedIndex === index}
                 onClick={() => onPin(index)}
-                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${pinnedIndex === index ? 'border-white/70 bg-white/[0.08] shadow-[0_0_0_1px_rgba(255,255,255,0.28)]' : on ? 'border-white/20 bg-white/[0.03]' : 'border-white/5 hover:border-white/15'}`}
+                className={`text-left rounded-2xl border px-4 py-3 transition-colors ${pinnedIndex === index ? 'border-foreground/55 bg-row-selected shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_22%,transparent)]' : on ? 'border-foreground/30 bg-row-hover' : 'border-edge hover:border-foreground/25 hover:bg-row-hover'}`}
               >
                 <div className="flex items-center gap-4">
                   <span className="w-1.5 h-10 rounded-full" style={{ backgroundColor: pinnedIndex === index || on || activeIndex === null ? slice.color : '#3f3f46' }} />
                   <div className="min-w-[92px]">
-                    <span className={`block font-black text-white ${pinnedIndex === index ? 'text-2xl tracking-tight leading-none' : 'text-sm font-bold'}`}>{slice.id}</span>
-                    {pinnedIndex === index && <span className="block text-[10px] uppercase tracking-widest text-emerald-300 font-bold mt-1">Vybráno</span>}
-                    <span className="block text-[10px] font-mono text-zinc-500">{slice.allocation} % · {formatCzk(amount)}</span>
+                    <span className={`block font-black text-foreground ${pinnedIndex === index ? 'text-2xl tracking-tight leading-none' : 'text-sm font-bold'}`}>{slice.id}</span>
+                    {pinnedIndex === index && <span className="block text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-300 font-bold mt-1">Vybráno</span>}
+                    <span className="block text-[10px] font-mono text-muted">{slice.allocation} % · {formatCzk(amount)}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="block text-[10px] uppercase tracking-widest text-zinc-400 font-bold">{slice.sector}</span>
-                    <span className="block text-xs text-zinc-500 mt-1 leading-relaxed">{slice.desc}</span>
-                    <span className="mt-2 block h-1 rounded-full bg-white/5 overflow-hidden">
+                    <span className="block text-[10px] uppercase tracking-widest text-muted font-bold">{slice.sector}</span>
+                    <span className="block text-xs text-muted mt-1 leading-relaxed">{slice.desc}</span>
+                    <span className="mt-2 block h-1 rounded-full bg-track overflow-hidden">
                       <span className="block h-full rounded-full" style={{ width: `${slice.allocation * 4}%`, backgroundColor: slice.color }} />
                     </span>
                   </div>
@@ -525,24 +527,24 @@ function PlanView({
 
       <section className="flex flex-col gap-5">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-white">Architektura exekuce</h2>
-          <p className="text-xs uppercase tracking-widest text-zinc-500 font-bold mt-2">Tři tranše, jeden koláč</p>
+          <h2 className="text-2xl font-black tracking-tight text-foreground">Architektura exekuce</h2>
+          <p className="text-xs uppercase tracking-widest text-muted font-bold mt-2">Tři tranše, jeden koláč</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {PHASES.map((item) => {
             const status = phaseStatus(item.id, phase);
             const live = status === 'Právě teď';
             return (
-              <article key={item.id} className={`rounded-3xl border p-5 flex flex-col gap-4 bg-[#050505] ${live ? 'border-white/30' : 'border-white/10'}`}>
+              <article key={item.id} className={`rounded-3xl border p-5 flex flex-col gap-4 bg-surface ${live ? 'border-foreground/30' : 'border-edge'}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border ${toneClass[item.tone]}`}>{item.badge}</span>
-                  <span className={`text-[10px] font-bold uppercase tracking-widest ${live ? 'text-white' : 'text-zinc-500'}`}>{status}</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${live ? 'text-foreground' : 'text-muted'}`}>{status}</span>
                 </div>
                 <div>
-                  <h3 className="text-white font-bold">{item.title}</h3>
-                  <p className="text-2xl font-black text-white font-mono mt-2">{formatCzk(item.amount)}</p>
+                  <h3 className="text-foreground font-bold">{item.title}</h3>
+                  <p className="text-2xl font-black text-foreground font-mono mt-2">{formatCzk(item.amount)}</p>
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">{item.copy}</p>
+                <p className="text-xs text-muted leading-relaxed">{item.copy}</p>
               </article>
             );
           })}
@@ -558,8 +560,8 @@ function ScenarioGrid({ capital, caption }: { capital: number; caption: string }
   return (
     <section className="flex flex-col gap-5">
       <div>
-        <h2 className="text-2xl font-black tracking-tight text-white">Tři scénáře do prosince</h2>
-        <p className="text-xs uppercase tracking-widest text-zinc-500 font-bold mt-2">{caption}</p>
+        <h2 className="text-2xl font-black tracking-tight text-foreground">Tři scénáře do prosince</h2>
+        <p className="text-xs uppercase tracking-widest text-muted font-bold mt-2">{caption}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {SCENARIOS.map((scenario) => {
@@ -567,15 +569,15 @@ function ScenarioGrid({ capital, caption }: { capital: number; caption: string }
           const high = capital * scenario.high;
           const [from, to] = low < high ? [low, high] : [high, low];
           return (
-            <article key={scenario.id} className="rounded-3xl border border-white/10 bg-[#050505] p-5 flex flex-col gap-4">
+            <article key={scenario.id} className="rounded-3xl border border-edge bg-surface p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-white font-bold">{scenario.title}</h3>
+                <h3 className="text-foreground font-bold">{scenario.title}</h3>
                 <span className={`text-[10px] font-mono font-bold uppercase tracking-widest px-2 py-1 rounded-full border ${toneClass[scenario.tone]}`}>
                   {scenario.label}
                 </span>
               </div>
-              <p className="text-lg font-black text-white font-mono">{formatSignedCzk(from)} až {formatSignedCzk(to)}</p>
-              <p className="text-xs text-zinc-400 leading-relaxed">{scenario.copy}</p>
+              <p className="text-lg font-black text-foreground font-mono">{formatSignedCzk(from)} až {formatSignedCzk(to)}</p>
+              <p className="text-xs text-muted leading-relaxed">{scenario.copy}</p>
             </article>
           );
         })}
@@ -586,10 +588,10 @@ function ScenarioGrid({ capital, caption }: { capital: number; caption: string }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#050505] px-4 py-4">
-      <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{label}</p>
-      <p className="text-lg md:text-xl font-black text-white font-mono mt-2">{value}</p>
-      {hint && <p className="text-[11px] text-zinc-500 mt-1">{hint}</p>}
+    <div className="rounded-2xl border border-edge bg-surface px-4 py-4">
+      <p className="text-[10px] uppercase tracking-widest text-muted font-bold">{label}</p>
+      <p className="text-lg md:text-xl font-black text-foreground font-mono mt-2">{value}</p>
+      {hint && <p className="text-[11px] text-muted mt-1">{hint}</p>}
     </div>
   );
 }

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PlanPage() {
   return (
-    <Suspense fallback={<div className="min-h-[100dvh] w-full bg-black" />}>
+    <Suspense fallback={<div className="min-h-[100dvh] w-full bg-background" />}>
       <PlanExperience clerkEnabled={clerkKeysConfigured()} />
     </Suspense>
   );

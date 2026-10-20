@@ -34,7 +34,7 @@ export function RefreshCountdown({
       <p
         data-refresh-countdown
         title="Další načtení pie Parents"
-        className="text-[9px] sm:text-[10px] font-mono text-zinc-500 tracking-wide whitespace-nowrap tabular-nums"
+        className="text-[9px] sm:text-[10px] font-mono text-muted tracking-wide whitespace-nowrap tabular-nums"
       >
         obnova za {formatRefreshCountdown(remainingMs)}
       </p>
@@ -46,7 +46,7 @@ export function RefreshCountdown({
           title="Obnovit pie teď"
           disabled={busy}
           onClick={onRefresh}
-          className="inline-flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-zinc-500/35 hover:text-zinc-400/70 hover:bg-white/[0.04] transition-colors disabled:pointer-events-none disabled:opacity-40"
+          className="inline-flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-muted/35 hover:text-muted hover:bg-foreground/[0.04] transition-colors disabled:pointer-events-none disabled:opacity-40"
         >
           <svg
             viewBox="0 0 16 16"

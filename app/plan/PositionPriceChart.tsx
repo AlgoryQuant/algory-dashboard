@@ -48,9 +48,9 @@ function ChartTooltip({
   if (!active || !row) return null;
   const day = new Intl.DateTimeFormat('cs-CZ', { day: 'numeric', month: 'short', year: 'numeric' }).format(row.t);
   return (
-    <div className="bg-[#0a0a0a] border border-white/10 px-3 py-2 rounded-xl shadow-2xl">
-      <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{day}</p>
-      <p className="text-white text-xs font-mono font-bold mt-1">{formatPrice(row.close, currency)}</p>
+    <div className="bg-surface-muted border border-edge px-3 py-2 rounded-xl shadow-2xl">
+      <p className="text-[10px] uppercase tracking-widest text-muted font-bold">{day}</p>
+      <p className="text-foreground text-xs font-mono font-bold mt-1">{formatPrice(row.close, currency)}</p>
     </div>
   );
 }
@@ -92,14 +92,14 @@ export default function PositionPriceChart({
   const stroke = up ? '#34d399' : '#f87171';
 
   return (
-    <div className="mt-5 rounded-2xl border border-white/10 bg-black/40 p-4" data-price-chart={symbol}>
+    <div className="mt-5 rounded-2xl border border-edge bg-foreground/[0.04] p-4" data-price-chart={symbol}>
       <div className="flex items-end justify-between gap-3 mb-3">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Cena · 6 měsíců</p>
+          <p className="text-[10px] uppercase tracking-widest text-muted font-bold">Cena · 6 měsíců</p>
           {state === 'ready' && data?.price != null ? (
-            <p className="mt-1 text-xl font-black font-mono text-white">{formatPrice(data.price, data.currency)}</p>
+            <p className="mt-1 text-xl font-black font-mono text-foreground">{formatPrice(data.price, data.currency)}</p>
           ) : (
-            <p className="mt-1 text-sm text-zinc-500">{state === 'error' ? 'Graf teď nejde načíst' : 'Načítám…'}</p>
+            <p className="mt-1 text-sm text-muted">{state === 'error' ? 'Graf teď nejde načíst' : 'Načítám…'}</p>
           )}
         </div>
         {state === 'ready' && data?.changePct != null && (
@@ -141,7 +141,7 @@ export default function PositionPriceChart({
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full w-full rounded-xl border border-dashed border-white/10 bg-white/[0.02]" />
+          <div className="h-full w-full rounded-xl border border-dashed border-edge bg-foreground/[0.02]" />
         )}
       </div>
     </div>
