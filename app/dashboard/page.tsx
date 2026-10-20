@@ -65,7 +65,7 @@ export default function DashboardWelcome() {
               <div className="text-[10px] font-medium uppercase tracking-widest text-blue-300 mb-4 lg:mb-6">Rodiče</div>
               <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Jejich koláč</h2>
               <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
-                Pie Parents. Vklad 10 000 Kč, hodnota pozic 10 434,73 Kč.
+                Pie Parents. Vklad 20 000 Kč · do prosince +10 000 Kč měsíčně.
               </p>
             </Link>
           </div>

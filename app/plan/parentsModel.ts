@@ -47,7 +47,7 @@ export const PARENTS_SNAPSHOT: ParentsPieModel = {
   matchedBy: 'snapshot',
   currency: 'CZK',
   pieName: 'Parents',
-  deposits: 10_000,
+  deposits: 20_000,
   depositHint: 'Čistý vklad',
   overviewValue: 10_336.88,
   weekChange: 124.44,

@@ -490,7 +490,7 @@ function SidebarView({
           <div className="flex-1 flex flex-col justify-between p-6">
             <div className="rounded-2xl border border-white/10 bg-black/40 p-5 flex flex-col gap-3">
               <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Rodičovský přístup</span>
-              <p className="text-sm text-zinc-300 leading-relaxed">Pie Parents je na samostatné stránce. Vklad 10 000 Kč: Target, Visa, Pfizer, Lockheed a LVMH.</p>
+              <p className="text-sm text-zinc-300 leading-relaxed">Pie Parents je na samostatné stránce. Vklad 20 000 Kč: Target, Visa, Pfizer, Lockheed a LVMH. Do prosince posílají každý měsíc dalších 10 000 Kč.</p>
               <Link href="/plan?fokus=pie" onClick={() => SoundEngine.playClick()} className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest bg-white text-black rounded-xl py-3 hover:bg-zinc-200 transition-colors">
                 Otevřít koláč
               </Link>

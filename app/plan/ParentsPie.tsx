@@ -48,8 +48,16 @@ const toneClass: Record<string, string> = {
 
 const PIE_INITIAL = { width: 360, height: 320 } as const;
 
+/** Plan: net deposits grow by 10 000 Kč each month through December. */
+const PARENTS_CONTRIBUTION = 'Do prosince posílají každý měsíc dalších 10 000 Kč';
+const PARENTS_CONTRIBUTION_HINT = 'do prosince +10 000 Kč / měsíc';
+
 function moneyDigits(value: number) {
   return Number.isInteger(value) ? 0 : 2;
+}
+
+function depositStatHint(hint: string) {
+  return hint.includes('prosince') ? hint : `${hint} · ${PARENTS_CONTRIBUTION_HINT}`;
 }
 
 function SliceTooltip({
@@ -199,7 +207,7 @@ function ParentsPieLoading({ onOpenPlan }: { onOpenPlan?: () => void }) {
               Načítám pie…
             </p>
             <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
-              Účet rodice@seznam.cz drží pie Parents v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH.
+              Účet rodice@seznam.cz drží pie Parents v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH. {PARENTS_CONTRIBUTION}.
             </p>
           </div>
           <PlanLink onOpenPlan={onOpenPlan} />
@@ -213,6 +221,7 @@ function ParentsPieLoading({ onOpenPlan }: { onOpenPlan?: () => void }) {
             </div>
           ))}
         </div>
+        <p className="text-xs text-zinc-500 leading-relaxed -mt-4">{PARENTS_CONTRIBUTION}.</p>
       </section>
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/10 rounded-3xl bg-[#050505] p-5 md:p-8">
         <div className="lg:col-span-5">
@@ -287,14 +296,14 @@ export default function ParentsPie({
               {pieStatusLabel(model)}
             </p>
             <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
-              Účet rodice@seznam.cz drží pie {model.pieName}. Vklad {formatMoney(model.deposits, model.currency, depositDigits)} je v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH.
+              Účet rodice@seznam.cz drží pie {model.pieName}. Vklad {formatMoney(model.deposits, model.currency, depositDigits)} je v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH. {PARENTS_CONTRIBUTION}.
             </p>
           </div>
           <PlanLink onOpenPlan={onOpenPlan} />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Stat label="Vklad" value={formatMoney(model.deposits, model.currency, depositDigits)} hint={model.depositHint} />
+          <Stat label="Vklad" value={formatMoney(model.deposits, model.currency, depositDigits)} hint={depositStatHint(model.depositHint)} />
           <Stat label="Hodnota" value={formatMoney(model.holdingsValue, model.currency)} hint={model.source === 'snapshot' ? 'Pozice v pie' : `Pozice v pie · ${model.currency}`} />
           {weekKnown ? (
             <Stat label="Týden" value={formatSignedMoney(model.weekChange ?? 0, model.currency)} hint={`${formatPercent(model.weekReturn ?? 0, 1)} · přehled ${formatMoney(model.overviewValue, model.currency)}`} />
@@ -302,11 +311,16 @@ export default function ParentsPie({
             <Stat
               label="Účet"
               value={formatMoney(model.overviewValue, model.currency)}
-              hint={model.cashAvailable != null ? `hotovost ${formatMoney(model.cashAvailable, model.currency, moneyDigits(model.cashAvailable))} · ${model.currency}` : model.currency}
+              hint={
+                model.cashAvailable != null
+                  ? `hotovost ${formatMoney(model.cashAvailable, model.currency, moneyDigits(model.cashAvailable))} · ${PARENTS_CONTRIBUTION_HINT}`
+                  : PARENTS_CONTRIBUTION_HINT
+              }
             />
           )}
           <Stat label="Zisk" value={formatSignedMoney(model.holdingsPnl, model.currency)} hint={formatPercent(model.holdingsReturn)} />
         </div>
+        <p className="text-xs text-zinc-500 leading-relaxed -mt-4">{PARENTS_CONTRIBUTION}.</p>
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/10 rounded-3xl bg-[#050505] p-5 md:p-8">
