@@ -264,12 +264,23 @@ const toneClass: Record<string, string> = {
   yellow: 'text-yellow-300 bg-yellow-500/10 border-yellow-500/30',
 };
 
-export default function PlanExperience() {
-  const params = useSearchParams();
-  const requested = params.get('fokus');
+export default function PlanExperience({ clerkEnabled = false }: { clerkEnabled?: boolean }) {
+  if (!clerkEnabled) {
+    return <PlanExperienceContent isParent={false} />;
+  }
+  return <PlanExperienceSignedIn />;
+}
+
+function PlanExperienceSignedIn() {
   const { isLoaded, user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
-  const isParent = isLoaded && email === PARENT_EMAIL;
+  const isParent = Boolean(isLoaded && email === PARENT_EMAIL);
+  return <PlanExperienceContent isParent={isParent} />;
+}
+
+function PlanExperienceContent({ isParent }: { isParent: boolean }) {
+  const params = useSearchParams();
+  const requested = params.get('fokus');
 
   const [focus, setFocus] = useState<Focus>(requested === 'pie' ? 'pie' : 'plan');
   const userChoseFocus = useRef(false);
