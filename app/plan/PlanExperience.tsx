@@ -401,11 +401,12 @@ function PlanView({
   onHover: (index: number | null) => void;
   onPin: (index: number) => void;
   onOpenPie: () => void;
-  parents: ParentsPieModel;
+  parents: ParentsPieModel | null;
 }) {
-  const depositDigits = Number.isInteger(parents.deposits) ? 0 : 2;
-  const parentsDeposit = formatMoney(parents.deposits, parents.currency, depositDigits);
-  const parentsValue = formatMoney(parents.holdingsValue, parents.currency);
+  const parentsReady = parents != null;
+  const depositDigits = parentsReady && Number.isInteger(parents.deposits) ? 0 : 2;
+  const parentsDeposit = parentsReady ? formatMoney(parents.deposits, parents.currency, depositDigits) : '…';
+  const parentsValue = parentsReady ? formatMoney(parents.holdingsValue, parents.currency) : 'Načítám…';
   return (
     <>
       <section className="flex flex-col gap-8">
@@ -425,7 +426,9 @@ function PlanView({
             className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
           >
             <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Přístup pro rodiče</span>
-            <span className="block text-white font-bold mt-1">Parents · vklad {parentsDeposit}</span>
+            <span className="block text-white font-bold mt-1">
+              {parentsReady ? `Parents · vklad ${parentsDeposit}` : 'Parents · načítám pie…'}
+            </span>
             <span className="block text-xs text-zinc-500 mt-1">Target, Visa, Pfizer, Lockheed, LVMH.</span>
           </button>
         </div>
@@ -437,7 +440,13 @@ function PlanView({
           <Stat
             label="Pie Parents"
             value={parentsValue}
-            hint={parents.source === 'snapshot' ? `${pieStatusLabel(parents)} · ${formatPercent(parents.holdingsReturn)}` : `${parents.depositHint} ${parentsDeposit} · ${formatPercent(parents.holdingsReturn)}`}
+            hint={
+              !parentsReady
+                ? 'Načítám pie…'
+                : parents.source === 'snapshot'
+                  ? `${pieStatusLabel(parents)} · ${formatPercent(parents.holdingsReturn)}`
+                  : `${parents.depositHint} ${parentsDeposit} · ${formatPercent(parents.holdingsReturn)}`
+            }
           />
         </div>
       </section>

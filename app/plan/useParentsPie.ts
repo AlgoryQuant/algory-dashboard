@@ -49,8 +49,12 @@ export function formatRefreshCountdown(remainingMs: number) {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Loads /api/parents-pie immediately. First paint is loading (no snapshot flash).
+ * Snapshot is only applied after a failed/unauthorized/missing-key response.
+ */
 export function useParentsPie(enabled = true) {
-  const [model, setModel] = useState<ParentsPieModel>(() => snapshotModel('unavailable'));
+  const [model, setModel] = useState<ParentsPieModel | null>(null);
   const [ready, setReady] = useState(false);
   const [nextAt, setNextAt] = useState<number | null>(null);
 
@@ -58,8 +62,6 @@ export function useParentsPie(enabled = true) {
     if (!enabled) return;
     let cancel = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let deferId: ReturnType<typeof setTimeout> | undefined;
-    let idleId: number | undefined;
 
     const schedule = (ms: number) => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -76,12 +78,12 @@ export function useParentsPie(enabled = true) {
         const data: unknown = await response.json();
         if (cancel) return;
         if (isModel(data)) {
-          setModel((prev) => (samePieNumbers(prev, data) ? prev : data));
+          setModel((prev) => (prev && samePieNumbers(prev, data) ? prev : data));
           schedule(REFRESH_MS);
         } else {
           setModel((prev) => {
             const snap = snapshotModel('unavailable');
-            return samePieNumbers(prev, snap) ? prev : snap;
+            return prev && samePieNumbers(prev, snap) ? prev : snap;
           });
           schedule(REFRESH_MS);
         }
@@ -89,7 +91,7 @@ export function useParentsPie(enabled = true) {
         if (cancel) return;
         setModel((prev) => {
           const snap = snapshotModel('unavailable');
-          return samePieNumbers(prev, snap) ? prev : snap;
+          return prev && samePieNumbers(prev, snap) ? prev : snap;
         });
         schedule(REFRESH_MS);
       } finally {
@@ -97,24 +99,11 @@ export function useParentsPie(enabled = true) {
       }
     }
 
-    // Defer network work until after first paint so the snapshot pie can mount first.
-    const start = () => {
-      if (cancel) return;
-      void load();
-    };
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = window.requestIdleCallback(start, { timeout: 400 });
-    } else {
-      deferId = setTimeout(start, 0);
-    }
+    void load();
 
     return () => {
       cancel = true;
       if (timeoutId) clearTimeout(timeoutId);
-      if (deferId) clearTimeout(deferId);
-      if (idleId != null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleId);
-      }
     };
   }, [enabled]);
 

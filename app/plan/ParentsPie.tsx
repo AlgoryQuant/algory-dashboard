@@ -156,25 +156,103 @@ const ParentsDonut = memo(function ParentsDonut({
   );
 });
 
+function PlanLink({ onOpenPlan }: { onOpenPlan?: () => void }) {
+  if (onOpenPlan) {
+    return (
+      <button
+        type="button"
+        onClick={onOpenPlan}
+        className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
+      >
+        <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Širší plán</span>
+        <span className="block text-white font-bold mt-1">Master plán · 40 000 Kč</span>
+        <span className="block text-xs text-zinc-500 mt-1">Harmonogram, fáze a scénáře.</span>
+      </button>
+    );
+  }
+  return (
+    <Link
+      href="/plan"
+      className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
+    >
+      <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Širší plán</span>
+      <span className="block text-white font-bold mt-1">Master plán · 40 000 Kč</span>
+      <span className="block text-xs text-zinc-500 mt-1">Harmonogram, fáze a scénáře.</span>
+    </Link>
+  );
+}
+
+/** First paint while /api/parents-pie is in flight — never shows snapshot numbers. */
+function ParentsPieLoading({ onOpenPlan }: { onOpenPlan?: () => void }) {
+  return (
+    <div className="flex flex-col gap-12" data-pie-source="loading" data-pie-fallback="loading">
+      <section className="flex flex-col gap-8">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-blue-300 mb-4">
+              Pie Parents · rodice@seznam.cz
+            </p>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-[0.95]">
+              Koláč rodičů
+            </h1>
+            <p data-pie-status data-pie-fallback="loading" className="mt-3 text-xs font-bold tracking-wide text-zinc-400">
+              Načítám pie…
+            </p>
+            <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
+              Účet rodice@seznam.cz drží pie Parents v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH.
+            </p>
+          </div>
+          <PlanLink onOpenPlan={onOpenPlan} />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {['Vklad', 'Hodnota', 'Účet', 'Zisk'].map((label) => (
+            <div key={label} className="rounded-2xl border border-white/10 bg-[#050505] px-4 py-4">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{label}</p>
+              <div className="mt-3 h-6 w-24 rounded bg-white/5 animate-pulse" />
+              <div className="mt-2 h-3 w-16 rounded bg-white/[0.03] animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border border-white/10 rounded-3xl bg-[#050505] p-5 md:p-8">
+        <div className="lg:col-span-5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Složení pie</p>
+          <div className="relative h-[320px] w-full flex items-center justify-center">
+            <div className="h-56 w-56 rounded-full border-[14px] border-white/5 animate-pulse" />
+            <p className="absolute text-xs font-bold text-zinc-500 tracking-wide">Načítám pie…</p>
+          </div>
+        </div>
+        <div className="lg:col-span-7 flex flex-col gap-2">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="rounded-2xl border border-white/5 px-4 py-3">
+              <div className="h-4 w-32 rounded bg-white/5 animate-pulse" />
+              <div className="mt-2 h-3 w-48 rounded bg-white/[0.03] animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function ParentsPie({
   onOpenPlan,
   model: modelProp,
   ready: readyProp,
 }: {
   onOpenPlan?: () => void;
-  model?: ParentsPieModel;
+  /** Pass explicitly (including null) when PlanExperience owns the fetch. */
+  model?: ParentsPieModel | null;
   ready?: boolean;
 }) {
-  const fetched = useParentsPie(modelProp == null);
-  const model = modelProp ?? fetched.model;
-  const ready = modelProp == null ? fetched.ready : (readyProp ?? true);
-  const positions = model.positions;
+  // Controlled when model prop is provided (even null). Avoids double-fetch.
+  const controlled = modelProp !== undefined;
+  const fetched = useParentsPie(!controlled);
+  const model = controlled ? modelProp : fetched.model;
+  const ready = controlled ? (readyProp ?? model != null) : fetched.ready;
+
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null);
-  const activeIndex = hoverIndex ?? pinnedIndex;
-  const pinned = pinnedIndex != null ? positions[pinnedIndex] : null;
-  const depositDigits = moneyDigits(model.deposits);
-  const weekKnown = model.weekChange != null && model.weekReturn != null;
 
   const onHover = useCallback((index: number | null) => setHoverIndex(index), []);
   const onSelect = useCallback((index: number) => setPinnedIndex(index), []);
@@ -184,8 +262,18 @@ export default function ParentsPie({
     document.getElementById('position-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [pinnedIndex]);
 
+  if (!ready || model == null) {
+    return <ParentsPieLoading onOpenPlan={onOpenPlan} />;
+  }
+
+  const positions = model.positions;
+  const activeIndex = hoverIndex ?? pinnedIndex;
+  const pinned = pinnedIndex != null ? positions[pinnedIndex] : null;
+  const depositDigits = moneyDigits(model.deposits);
+  const weekKnown = model.weekChange != null && model.weekReturn != null;
+
   return (
-    <div className="flex flex-col gap-12" data-pie-source={ready ? model.source : 'loading'} data-pie-name={model.pieName}>
+    <div className="flex flex-col gap-12" data-pie-source={model.source} data-pie-name={model.pieName}>
       <section className="flex flex-col gap-8">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-3xl">
@@ -195,33 +283,14 @@ export default function ParentsPie({
             <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white leading-[0.95]">
               Koláč rodičů
             </h1>
-            <p data-pie-status data-pie-fallback={ready ? model.fallback : 'loading'} className={`mt-3 text-xs font-bold tracking-wide ${ready && model.source !== 'snapshot' ? 'text-emerald-300' : 'text-zinc-400'}`}>
-              {ready ? pieStatusLabel(model) : 'Načítám pie…'}
+            <p data-pie-status data-pie-fallback={model.fallback} className={`mt-3 text-xs font-bold tracking-wide ${model.source !== 'snapshot' ? 'text-emerald-300' : 'text-zinc-400'}`}>
+              {pieStatusLabel(model)}
             </p>
             <p className="mt-5 text-sm md:text-base text-zinc-400 max-w-2xl leading-relaxed">
               Účet rodice@seznam.cz drží pie {model.pieName}. Vklad {formatMoney(model.deposits, model.currency, depositDigits)} je v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH.
             </p>
           </div>
-          {onOpenPlan ? (
-            <button
-              type="button"
-              onClick={onOpenPlan}
-              className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
-            >
-              <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Širší plán</span>
-              <span className="block text-white font-bold mt-1">Master plán · 40 000 Kč</span>
-              <span className="block text-xs text-zinc-500 mt-1">Harmonogram, fáze a scénáře.</span>
-            </button>
-          ) : (
-            <Link
-              href="/plan"
-              className="shrink-0 text-left border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] rounded-2xl px-5 py-4 transition-colors"
-            >
-              <span className="block text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Širší plán</span>
-              <span className="block text-white font-bold mt-1">Master plán · 40 000 Kč</span>
-              <span className="block text-xs text-zinc-500 mt-1">Harmonogram, fáze a scénáře.</span>
-            </Link>
-          )}
+          <PlanLink onOpenPlan={onOpenPlan} />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
