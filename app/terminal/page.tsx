@@ -21,8 +21,8 @@ import NewsPanel from '../NewsPanel';
 import ChartArea from '../ChartArea';
 import { SpatialArbitragePanel, TriangularArbitragePanel, FundingRatesPanel } from '../ArbitragePanel';
 import type { SpatialArbData, TriangularArbData, FundingRateData } from '../ArbitragePanel';
-import BacktestLab from '../BacktestLab';
 import MarketMonitor from '../MarketMonitor';
+// BacktestLab kept in repo for possible reuse; Lab UI removed — see /academy
 import OrderBook from '../OrderBook';
 import LiveTape from '../LiveTape';
 import T212Portfolio from '../T212Portfolio';
@@ -198,8 +198,7 @@ function TerminalCore({
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   
-  // Přidán stav q4plan
-  const [activeView, setActiveView] = useState<'terminal' | 'laboratory' | 'portfolio' | 'q4plan'>('terminal');
+  const [activeView, setActiveView] = useState<'terminal' | 'portfolio' | 'q4plan'>('terminal');
   const [marketMode, setMarketMode] = useState<'FOREX' | 'CRYPTO' | null>('CRYPTO');
   const [cryptoMode, setCryptoMode] = useState<'standard' | 'spatial_arb' | 'triangular_arb' | 'funding_rates'>('standard');
   const [rightPanelMode, setRightPanelMode] = useState<'news' | 'whales'>('whales');
@@ -306,7 +305,6 @@ function TerminalCore({
   const getPageBackground = () => {
     if (activeView === 'portfolio') return 'from-[#050505] via-[#050505] to-[#050505]';
     if (activeView === 'q4plan') return 'from-blue-950/20 via-[#050505] to-[#050505]';
-    if (activeView === 'laboratory') return 'from-indigo-950/20 via-zinc-950/20 to-[#050505]/40';
     if (marketMode === 'CRYPTO' && cryptoMode !== 'standard') return 'from-blue-950/10 via-zinc-950/20 to-[#050505]/40';
     if (inferredDirection === 'BUY') return marketMode === 'CRYPTO' ? 'from-blue-950/10 via-[#0a0a0a]/40 to-[#050505]/40' : 'from-emerald-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
     if (inferredDirection === 'SELL') return 'from-red-950/10 via-[#0a0a0a]/40 to-[#050505]/40';
@@ -505,7 +503,7 @@ function TerminalCore({
             <MarketMonitor lastRefresh={lastRefresh} mode={marketMode === 'CRYPTO' ? `CRYPTO (${cryptoMode.toUpperCase()})` : 'FOREX'} activeView={activeView} />
           )}
 
-          <div className={`${(activeView === 'laboratory' || activeView === 'q4plan') ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1700px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
+          <div className={`${activeView === 'q4plan' ? 'w-full max-w-full p-4 lg:p-6' : 'max-w-[1700px] mx-auto w-full p-4 md:p-6 lg:p-8'} relative z-10 transition-all duration-500`}>
             
             {activeView === 'portfolio' ? (
               <T212Portfolio />
@@ -516,15 +514,6 @@ function TerminalCore({
                 <AuthGuard 
                   title="Q4 Master Plan Restricted" 
                   description="Strategic capital allocation data is restricted to verified accounts. Please sign in to view the tactical roadmap." 
-                />
-              )
-            ) : activeView === 'laboratory' ? (
-              userId ? (
-                <BacktestLab onBack={() => { setActiveView('terminal'); setMarketMode('FOREX'); }} />
-              ) : (
-                <AuthGuard 
-                  title="AI Quant Laboratory Restricted" 
-                  description="Development environment and strategy backtesting require an active authenticated session. Please sign in to deploy Python models." 
                 />
               )
             ) : loading && !data.majors ? (

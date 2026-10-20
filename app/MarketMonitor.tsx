@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function MarketMonitor({ lastRefresh, mode, activeView }: { lastRefresh: Date | null, mode: string, activeView: string }) {
+export default function MarketMonitor({ lastRefresh, mode }: { lastRefresh: Date | null, mode: string, activeView?: string }) {
   const displayTime = lastRefresh || new Date();
   const hour = displayTime.getHours();
   
@@ -12,8 +12,6 @@ export default function MarketMonitor({ lastRefresh, mode, activeView }: { lastR
     { name: "NY", isActive: hour >= 14 && hour < 22 },
   ];
   
-  if (activeView === 'laboratory') return null;
-
   return (
     <div className="sticky top-0 z-50 w-full h-10 md:h-12 bg-[#050505]/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 lg:px-6 font-mono text-[10px] md:text-xs text-zinc-400 shadow-md">
       

@@ -167,34 +167,31 @@ function LandingView({
             </div>
           </div>
 
-          {/* BENTO BOX 3: Python Lab */}
-          <div className="md:col-span-3 md:row-span-1 bg-[#050505] border border-white/10 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:border-white/20 transition-colors">
-            <div className="absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          {/* BENTO BOX 3: Academy */}
+          <Link
+            href="/academy"
+            className="md:col-span-3 md:row-span-1 bg-[#050505] border border-white/10 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group hover:border-white/20 transition-colors"
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10 w-full md:w-1/3">
-              <h3 className="text-lg font-bold text-white tracking-tight">AI Quant Laboratory</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-2">Edukace</p>
+              <h3 className="text-lg font-bold text-white tracking-tight">Algory Academy</h3>
               <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
-                Develop, backtest, and deploy algorithmic models directly in the browser. Powered by historical tick data integration and strict evaluation metrics.
+                Forex, crypto a algotrading — vzdělávací portál. Edukace, ne trading bot. Bez živého obchodování a bez spouštění kódu.
               </p>
             </div>
-            <div className="relative z-10 w-full md:w-2/3 bg-[#0a0a0a] border border-white/5 rounded-xl p-4 h-full overflow-hidden shadow-inner">
-              <div className="flex items-center gap-1.5 mb-3 border-b border-white/5 pb-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
-                <span className="ml-2 text-[9px] font-mono text-zinc-600">strategy_engine.py</span>
-              </div>
-              <pre className="font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-hidden">
-                <span className="text-purple-400">def</span> <span className="text-blue-400">calculate_arbitrage_spread</span>(data, pair):<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;ask = data[<span className="text-emerald-400">'binance'</span>][pair][<span className="text-emerald-400">'ask'</span>]<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;bid = data[<span className="text-emerald-400">'kraken'</span>][pair][<span className="text-emerald-400">'bid'</span>]<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;spread = ((bid - ask) / ask) * <span className="text-orange-400">100</span><br/>
-                <br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">if</span> spread &gt; <span className="text-orange-400">0.15</span>:<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">return</span> <span className="text-blue-400">ExecuteOrder</span>(side=<span className="text-emerald-400">'BUY'</span>, volume=<span className="text-orange-400">1.5</span>)<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-purple-400">return</span> <span className="text-orange-400">None</span>
-              </pre>
+            <div className="relative z-10 w-full md:w-2/3 border border-white/5 rounded-xl p-5 bg-[#0a0a0a] flex flex-col gap-3">
+              {['Forex — měnové trhy a risk', 'Crypto — spot, deriváty, funding', 'Algotrading — edge a disciplína'].map((line) => (
+                <div key={line} className="flex items-center gap-3 text-xs text-zinc-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70 shrink-0" />
+                  {line}
+                </div>
+              ))}
+              <span className="mt-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                Otevřít Academy →
+              </span>
             </div>
-          </div>
+          </Link>
 
         </div>
       </section>

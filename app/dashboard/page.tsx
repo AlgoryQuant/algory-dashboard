@@ -95,21 +95,24 @@ export default function DashboardWelcome() {
 
           </div>
 
-          {/* MODULE 3: LABORATORY */}
-          <div className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-left backdrop-blur-sm shadow-inner">
+          {/* MODULE 3: ACADEMY */}
+          <Link
+            href="/academy"
+            className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 text-left backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors"
+          >
             <div className="flex flex-col">
-              <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-white/20"></span>
-                Development Environment
+              <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/60"></span>
+                Edukace
               </div>
               <h2 className="text-2xl font-medium tracking-tight text-zinc-100 mb-2">
-                AI Quant Laboratory
+                Algory Academy
               </h2>
               <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-2xl">
-                Develop & backtest Python models on historical tick data. Features OpenAI insights, dynamic strategy generation, and strict evaluation limits.
+                Forex, crypto a algotrading — lekce a koncepty. Edukace, ne trading bot. Bez živého obchodování a bez spouštění vašeho kódu.
               </p>
             </div>
-          </div>
+          </Link>
 
         </div>
       </div>
