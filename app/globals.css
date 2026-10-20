@@ -65,12 +65,3 @@ body {
 ::selection {
   background: var(--selection);
 }
-
-@keyframes hubFade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
