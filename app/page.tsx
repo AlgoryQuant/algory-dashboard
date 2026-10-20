@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
 import { clerkBrowserEnabled } from '@/lib/clerk-browser';
+import { CandlestickBackdrop } from './dashboard/CandlestickBackdrop';
 
 export default function LandingPage() {
   if (!clerkBrowserEnabled()) {
@@ -26,25 +27,25 @@ function LandingView({
   userId: string | null | undefined;
 }) {
   return (
-    <div className="min-h-[100dvh] w-full bg-[#000000] text-zinc-200 selection:bg-zinc-800 font-sans overflow-x-hidden scroll-smooth">
+    <div className="min-h-[100dvh] w-full bg-background text-foreground font-sans overflow-x-hidden scroll-smooth">
       
       {/* GLOBAL HEADER */}
-      <header className="fixed top-0 left-0 w-full p-6 lg:px-12 lg:py-6 flex justify-between items-center z-[100] bg-[#000000]/50 backdrop-blur-md border-b border-white/5">
-        <div className="text-xl font-black tracking-tighter text-white">Algory<span className="text-zinc-600">.</span></div>
+      <header className="fixed top-0 left-0 w-full p-6 lg:px-12 lg:py-6 flex justify-between items-center z-[100] bg-background/50 backdrop-blur-md border-b border-edge">
+        <div className="text-xl font-black tracking-tighter text-foreground">Algory<span className="text-muted">.</span></div>
         <div className="flex items-center gap-4">
-          <Link href="/plan" className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+          <Link href="/plan" className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-muted hover:text-foreground transition-colors">
             Q4 Plán
           </Link>
           {isLoaded && !userId && (
             <Link href="/sign-in">
-              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-muted hover:text-foreground transition-colors">
                 Sign In
               </button>
             </Link>
           )}
           {isLoaded && userId && (
             <Link href="/terminal">
-              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300 transition-colors">
+              <button className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-accent hover:opacity-80 transition-opacity">
                 Active Session
               </button>
             </Link>
@@ -53,8 +54,8 @@ function LandingView({
       </header>
 
       {/* HERO SECTION */}
-      <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center pt-20 px-6 z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/40 via-[#000000] to-[#000000] z-0 pointer-events-none" />
+      <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center pt-20 px-6 z-10 overflow-hidden">
+        <CandlestickBackdrop />
         
         <motion.div 
           initial={{ opacity: 0, y: 30 }} 
@@ -62,35 +63,39 @@ function LandingView({
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 flex flex-col items-center text-center max-w-4xl w-full"
         >
-          <span className="px-3 py-1 mb-8 rounded-full border border-white/10 bg-white/5 text-[10px] uppercase tracking-widest text-zinc-400 font-medium backdrop-blur-sm">
+          <p className="mb-6 font-mono text-[10px] font-medium uppercase tracking-[0.35em] text-accent lg:text-xs">
             Quantitative Execution Engine
-          </span>
+          </p>
           
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-600 mb-6 leading-[1.1]">
-            Institutional Grade.<br />Retail Access.
+          <h1 className="mb-5 text-6xl font-black tracking-tighter text-foreground md:text-7xl lg:mb-6 lg:text-8xl lg:leading-[0.95]">
+            Algory<span className="text-muted">.</span>
           </h1>
+
+          <p className="mb-4 text-lg font-medium tracking-tight text-foreground/80 md:text-xl lg:text-2xl">
+            Institutional grade. Retail access.
+          </p>
           
-          <p className="text-sm md:text-base lg:text-lg text-zinc-400 font-light tracking-wide max-w-2xl leading-relaxed mb-12">
-            Advanced real-time market topology, multi-exchange spatial arbitrage matrices, and Python-driven backtesting environment. Execute with absolute precision.
+          <p className="text-sm md:text-base lg:text-lg text-muted font-light tracking-wide max-w-2xl leading-relaxed mb-12">
+            Real-time market topology, multi-exchange arbitrage matrices, and a Python backtesting lab — execute with precision.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
             {isLoaded && !userId && (
               <Link href="/sign-up" className="w-full sm:w-auto">
-                <button className="w-full sm:w-auto px-8 py-4 bg-white text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+                <button className="w-full sm:w-auto px-8 py-4 bg-foreground text-background text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
                   Get Started
                 </button>
               </Link>
             )}
             {isLoaded && userId && (
               <Link href="/terminal" className="w-full sm:w-auto">
-                <button className="w-full px-8 py-4 bg-white text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:shadow-[0_0_40px_rgba(255,255,255,0.25)]">
+                <button className="w-full px-8 py-4 bg-foreground text-background text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
                   Enter Terminal
                 </button>
               </Link>
             )}
             
-            <a href="#features" className="w-full sm:w-auto px-8 py-4 bg-transparent border border-white/10 rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-all text-center">
+            <a href="#features" className="w-full sm:w-auto px-8 py-4 bg-transparent border border-edge text-xs font-bold uppercase tracking-widest text-foreground hover:bg-row-hover transition-colors text-center">
               View Features
             </a>
           </div>
@@ -197,8 +202,8 @@ function LandingView({
       </section>
       
       {/* FOOTER */}
-      <footer className="w-full border-t border-white/5 py-8 mt-12 text-center relative z-10 bg-[#000000]">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+      <footer className="w-full border-t border-edge py-8 mt-12 text-center relative z-10 bg-background">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-muted">
           © 2026 ALGORY SYSTEMS. <br className="sm:hidden"/>ALL RIGHTS RESERVED.
         </div>
       </footer>

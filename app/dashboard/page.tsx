@@ -1,87 +1,137 @@
-"use client";
+'use client';
 
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { CandlestickBackdrop } from './CandlestickBackdrop';
+
+const MODULES = [
+  {
+    href: '/plan',
+    kicker: 'Q4 2026',
+    title: 'Master plán',
+    body: '40 000 Kč, pět titulů, harmonogram do poloviny prosince a tři scénáře vývoje.',
+    accent: true,
+  },
+  {
+    href: '/academy',
+    kicker: 'Edukace',
+    title: 'Academy',
+    body: 'Forex, crypto a algotrading — lekce a koncepty. Edukace, ne trading bot.',
+    accent: true,
+  },
+  {
+    href: '/terminal',
+    kicker: 'Market Data',
+    title: 'Forex',
+    body: 'Live liquidity streams, cross-pair tracking a orderflow metriky.',
+    accent: false,
+  },
+  {
+    href: '/terminal',
+    kicker: 'Digital Assets',
+    title: 'Crypto',
+    body: 'Funding rates, arbitrage monitoring a derivative flow přehled.',
+    accent: false,
+  },
+] as const;
+
+const ease = [0.16, 1, 0.3, 1] as const;
 
 export default function DashboardWelcome() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full relative overflow-hidden font-sans bg-[#050505] p-6 lg:p-0">
-      
-      {/* EXPLICIT HEADER */}
-      <header className="absolute top-0 left-0 w-full p-6 lg:px-12 lg:py-8 flex justify-between items-center z-50">
-        <div className="text-xl font-black tracking-tighter text-white">Algory<span className="text-zinc-600">.</span></div>
-        {/* Poznamka: Uživatelský avatar (UserButton) je automaticky injektován globálním layoutem vpravo nahoře */}
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-hidden bg-background px-6 pb-16 pt-6 font-sans text-foreground lg:px-0 lg:pb-24">
+      <header className="absolute top-0 left-0 z-50 flex w-full items-center justify-between p-6 lg:px-12 lg:py-8">
+        <div className="text-xl font-black tracking-tighter text-foreground">
+          Algory<span className="text-muted">.</span>
+        </div>
       </header>
 
-      {/* BACKGROUND GRADIENTS & 3D GLOW */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950/20 via-[#050505] to-[#050505] z-0" />
-      <motion.div 
-        animate={{ y: [0, -40, 0], x: [0, 20, 0] }} 
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }} 
-        className="absolute top-[-10%] left-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-indigo-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" 
-      />
-      <motion.div 
-        animate={{ y: [0, 50, 0], x: [0, -30, 0] }} 
-        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }} 
-        className="absolute bottom-[-10%] right-[-10%] w-[60vw] lg:w-[40vw] h-[60vw] lg:h-[40vw] max-w-[600px] max-h-[600px] bg-emerald-600 rounded-full blur-[80px] lg:blur-[120px] opacity-20 z-0 pointer-events-none" 
-      />
-      
-      <div className="relative z-10 flex flex-col items-center text-center w-full max-w-5xl mt-16">
-        
-        {/* HERO SECTION */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex flex-col items-center">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-400 font-bold tracking-[0.4em] text-[10px] lg:text-xs mb-4 lg:mb-6 uppercase drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-            WELCOME TO ALGORY
-          </span>
-          <h1 className="text-5xl md:text-7xl lg:text-9xl font-black tracking-tighter text-white drop-shadow-2xl mb-4 lg:mb-6">
-            Algory<span className="text-zinc-600">.</span>
-          </h1>
-          <p className="text-zinc-400 text-xs md:text-sm lg:text-lg font-light tracking-wide max-w-2xl leading-relaxed mb-8 lg:mb-12">
-            Advanced quantitative analysis & real-time execution engine.
+      <CandlestickBackdrop />
+
+      <div className="relative z-10 mt-20 flex w-full max-w-5xl flex-col items-center text-center lg:mt-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, ease }}
+          className="flex flex-col items-center"
+        >
+          <p className="mb-5 font-mono text-[10px] font-medium uppercase tracking-[0.35em] text-accent lg:mb-6 lg:text-xs">
+            Welcome to Algory
           </p>
-          
-          <Link href="/terminal">
-            <button className="flex items-center gap-3 px-8 py-3.5 lg:px-10 lg:py-4 bg-white/5 border border-white/10 rounded-full text-xs lg:text-sm font-bold uppercase tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all group shadow-2xl">
-              Initialize Engine
-              <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
-          </Link>
+
+          <h1 className="mb-5 text-6xl font-black tracking-tighter text-foreground md:text-8xl lg:mb-6 lg:text-[9rem] lg:leading-[0.9]">
+            Algory<span className="text-muted">.</span>
+          </h1>
+
+          <p className="mb-10 max-w-xl text-sm font-light leading-relaxed tracking-wide text-muted md:text-base lg:mb-12 lg:text-lg">
+            Quantitative analysis & real-time execution — editorial terminal for Q4.
+          </p>
+
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+            <Link href="/terminal">
+              <span className="group inline-flex items-center gap-3 border border-foreground bg-foreground px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-background transition-opacity hover:opacity-90 lg:px-10 lg:py-4 lg:text-sm">
+                Initialize Engine
+                <svg
+                  className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </span>
+            </Link>
+            <Link href="/plan">
+              <span className="inline-flex items-center gap-2 border border-edge px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-foreground transition-colors hover:border-foreground/40 hover:bg-row-hover lg:px-10 lg:py-4 lg:text-sm">
+                Open Q4 plán
+              </span>
+            </Link>
+          </div>
         </motion.div>
 
-        {/* NAVIGATION CARDS — parents pie is intentionally omitted (sidebar /plan?fokus=pie only) */}
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-16 lg:mt-24 relative z-10 px-4 lg:px-0">
-          <Link href="/plan" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 lg:mb-6">Q4 2026</div>
-            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Master plán</h2>
-            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
-              40 000 Kč, pět titulů, harmonogram do poloviny prosince a tři scénáře vývoje.
-            </p>
-          </Link>
-          <Link href="/academy" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-emerald-400 mb-4 lg:mb-6">Edukace</div>
-            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Academy</h2>
-            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed">
-              Forex, crypto a algotrading — lekce a koncepty. Edukace, ne trading bot.
-            </p>
-          </Link>
-          <Link href="/terminal" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Market Data</div>
-            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Global Forex</h2>
-            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">
-              Live liquidity streams, cross-pair institutional arbitrage tracking, and deep orderflow metrics.
-            </p>
-          </Link>
-          <Link href="/terminal" className="p-6 lg:p-8 bg-black/40 border border-white/5 rounded-xl flex flex-col text-left h-full backdrop-blur-sm shadow-inner hover:border-white/15 transition-colors">
-            <div className="text-[10px] font-medium uppercase tracking-widest text-zinc-500 mb-4 lg:mb-6">Digital Assets</div>
-            <h2 className="text-xl font-medium tracking-tight text-zinc-100 mb-2">Crypto Matrices</h2>
-            <p className="text-xs lg:text-sm text-zinc-500 leading-relaxed max-w-xs">
-              Spatial crypto arbitrage monitoring, real-time funding rates analysis, and derivative flow pools.
-            </p>
-          </Link>
-        </div>
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.08, delayChildren: 0.35 } },
+          }}
+          className="mt-16 grid w-full max-w-4xl grid-cols-1 gap-0 border-t border-edge md:mt-24 md:grid-cols-2"
+        >
+          {MODULES.map((mod) => (
+            <motion.div
+              key={mod.title}
+              variants={{
+                hidden: { opacity: 0, y: 16 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.55, ease } },
+              }}
+            >
+              <Link
+                href={mod.href}
+                className="group flex h-full flex-col border-b border-edge px-1 py-7 text-left transition-colors hover:bg-row-hover md:border-r md:odd:pr-8 md:even:border-r-0 md:even:pl-8 lg:py-9"
+              >
+                <div className="mb-4 flex items-center justify-between gap-3 lg:mb-5">
+                  <span
+                    className={`font-mono text-[10px] font-medium uppercase tracking-[0.28em] ${
+                      mod.accent ? 'text-accent' : 'text-muted'
+                    }`}
+                  >
+                    {mod.kicker}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted opacity-0 transition-opacity group-hover:opacity-100">
+                    Open →
+                  </span>
+                </div>
+                <h2 className="mb-2 text-2xl font-bold tracking-tight text-foreground lg:text-[1.65rem]">
+                  {mod.title}
+                </h2>
+                <p className="max-w-sm text-xs leading-relaxed text-muted lg:text-sm">{mod.body}</p>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </div>
   );
