@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { snapshotModel, type ParentsPieModel } from './parentsModel';
 
 /** Client refetch cadence for /api/parents-pie (countdown matches this). */
@@ -58,6 +58,9 @@ export function useParentsPie(enabled = true) {
   const [model, setModel] = useState<ParentsPieModel | null>(null);
   const [ready, setReady] = useState(false);
   const [nextAt, setNextAt] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const loadRef = useRef<(fresh: boolean) => Promise<void>>(async () => {});
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
@@ -73,8 +76,15 @@ export function useParentsPie(enabled = true) {
     };
 
     async function load(fresh: boolean) {
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+      setRefreshing(true);
       try {
-        // Full page load bypasses the short in-memory server cache so ZISK is not a stale snapshot.
+        // Full page load / manual refresh bypasses the short in-memory server cache so ZISK is not a stale snapshot.
         const url = fresh ? `/api/parents-pie?fresh=${Date.now()}` : '/api/parents-pie';
         const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) throw new Error('route');
@@ -98,17 +108,28 @@ export function useParentsPie(enabled = true) {
         });
         schedule(REFRESH_MS);
       } finally {
-        if (!cancel) setReady(true);
+        inFlightRef.current = false;
+        if (!cancel) {
+          setReady(true);
+          setRefreshing(false);
+        }
       }
     }
 
+    loadRef.current = load;
     void load(true);
 
     return () => {
       cancel = true;
       if (timeoutId) clearTimeout(timeoutId);
+      loadRef.current = async () => {};
+      inFlightRef.current = false;
     };
   }, [enabled]);
 
-  return { model, ready, nextAt };
+  const refresh = useCallback(() => {
+    void loadRef.current(true);
+  }, []);
+
+  return { model, ready, nextAt, refreshing, refresh };
 }

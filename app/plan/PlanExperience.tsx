@@ -356,7 +356,12 @@ function PlanExperienceContent({ isParent }: { isParent: boolean }) {
                 Koláč rodičů
               </button>
             </div>
-            <RefreshCountdown nextAt={parents.nextAt} ready={parents.ready} />
+            <RefreshCountdown
+              nextAt={parents.nextAt}
+              ready={parents.ready}
+              refreshing={parents.refreshing}
+              onRefresh={parents.refresh}
+            />
           </div>
         </div>
       </header>
