@@ -40,6 +40,8 @@ const KNOWN: Record<string, { name: string; sector: string; color: string }> = {
 
 const ORDER = ['TGT', 'V', 'PFE', 'LMT', 'MC'];
 const PARENT_IDS = ['TGT', 'V', 'PFE', 'LMT', 'MC'] as const;
+/** Net cash parents put in — shown separately from live holdings PnL. */
+export const PARENTS_NET_DEPOSIT = 20_000;
 
 export const PARENTS_SNAPSHOT: ParentsPieModel = {
   source: 'snapshot',
@@ -47,7 +49,7 @@ export const PARENTS_SNAPSHOT: ParentsPieModel = {
   matchedBy: 'snapshot',
   currency: 'CZK',
   pieName: 'Parents',
-  deposits: 20_000,
+  deposits: PARENTS_NET_DEPOSIT,
   depositHint: 'Čistý vklad',
   overviewValue: 10_336.88,
   weekChange: 124.44,
@@ -353,8 +355,6 @@ export function buildLiveModel(input: {
   const holdingsValue = pieResult?.priceAvgValue && pieResult.priceAvgValue > 0 ? pieResult.priceAvgValue : valueSum;
   const holdingsPnl = pieResult?.priceAvgResult ?? rows.reduce((total, row) => total + row.pnl, 0);
   const holdingsReturn = pieResult ? resultPercent(pieResult) : invested > 0 ? (holdingsPnl / invested) * 100 : 0;
-  const initial = detail.settings?.initialInvestment;
-  const deposits = initial != null && initial > 0 ? initial : invested;
   const currency =
     (typeof summary.currency === 'string' && summary.currency) ||
     positions.find((position) => position.walletImpact?.currency)?.walletImpact?.currency ||
@@ -370,8 +370,9 @@ export function buildLiveModel(input: {
     matchedBy: named ? 'name' : 'holdings',
     currency,
     pieName: chosen.name.trim() || 'Parents',
-    deposits,
-    depositHint: initial != null && initial > 0 ? 'Počáteční vklad' : 'Investováno',
+    // Net family deposit is planned capital; ZISK still comes from live T212 PnL.
+    deposits: PARENTS_NET_DEPOSIT,
+    depositHint: 'Čistý vklad',
     overviewValue: overview,
     weekChange: null,
     weekReturn: null,

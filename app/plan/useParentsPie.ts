@@ -51,7 +51,8 @@ export function formatRefreshCountdown(remainingMs: number) {
 
 /**
  * Loads /api/parents-pie immediately. First paint is loading (no snapshot flash).
- * Snapshot is only applied after a failed/unauthorized/missing-key response.
+ * Snapshot is only applied after a failed/unauthorized/missing-key response
+ * (and even then only when the route has no recent live pie to prefer).
  */
 export function useParentsPie(enabled = true) {
   const [model, setModel] = useState<ParentsPieModel | null>(null);
@@ -67,13 +68,15 @@ export function useParentsPie(enabled = true) {
       if (timeoutId) clearTimeout(timeoutId);
       setNextAt(Date.now() + ms);
       timeoutId = setTimeout(() => {
-        void load();
+        void load(false);
       }, ms);
     };
 
-    async function load() {
+    async function load(fresh: boolean) {
       try {
-        const response = await fetch('/api/parents-pie', { cache: 'no-store' });
+        // Full page load bypasses the short in-memory server cache so ZISK is not a stale snapshot.
+        const url = fresh ? `/api/parents-pie?fresh=${Date.now()}` : '/api/parents-pie';
+        const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) throw new Error('route');
         const data: unknown = await response.json();
         if (cancel) return;
@@ -99,7 +102,7 @@ export function useParentsPie(enabled = true) {
       }
     }
 
-    void load();
+    void load(true);
 
     return () => {
       cancel = true;

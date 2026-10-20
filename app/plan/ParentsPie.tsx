@@ -318,7 +318,13 @@ export default function ParentsPie({
               }
             />
           )}
-          <Stat label="Zisk" value={formatSignedMoney(model.holdingsPnl, model.currency)} hint={formatPercent(model.holdingsReturn)} />
+          <Stat
+            label="Zisk"
+            value={formatSignedMoney(model.holdingsPnl, model.currency)}
+            hint={formatPercent(model.holdingsReturn)}
+            dataHoldingsPnl={model.holdingsPnl}
+            dataSource={model.source}
+          />
         </div>
         <p className="text-xs text-zinc-500 leading-relaxed -mt-4">{PARENTS_CONTRIBUTION}.</p>
       </section>
@@ -435,9 +441,25 @@ export default function ParentsPie({
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+  dataHoldingsPnl,
+  dataSource,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  dataHoldingsPnl?: number;
+  dataSource?: string;
+}) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#050505] px-4 py-4">
+    <div
+      className="rounded-2xl border border-white/10 bg-[#050505] px-4 py-4"
+      data-holdings-pnl={dataHoldingsPnl}
+      data-pie-source={dataSource}
+    >
       <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">{label}</p>
       <p className="text-lg md:text-xl font-black text-white font-mono mt-2">{value}</p>
       {hint && <p className="text-[11px] text-zinc-500 mt-1">{hint}</p>}

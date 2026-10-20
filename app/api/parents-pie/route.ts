@@ -6,11 +6,15 @@ export const runtime = 'nodejs';
 
 const LIVE = 'https://live.trading212.com/api/v0';
 const DEMO = 'https://demo.trading212.com/api/v0';
-const TTL_MS = 45_000;
+/** Short live TTL so a full page reload usually hits Trading 212 again. */
+const TTL_MS = 12_000;
+/** Keep last successful live pie briefly so a 429 does not flash hardcoded snapshot PnL. */
+const LAST_LIVE_MAX_AGE_MS = 5 * 60_000;
 
 type CacheEntry = { expires: number; model: ParentsPieModel };
 
 let cache: CacheEntry | null = null;
+let lastLive: CacheEntry | null = null;
 let inflight: Promise<ParentsPieModel> | null = null;
 
 function sleep(ms: number) {
@@ -21,6 +25,19 @@ function resetWait(reset: number | null): number {
   if (reset == null || !Number.isFinite(reset)) return 1500;
   const ms = reset > 10_000_000_000 ? reset - Date.now() : reset * 1000 - Date.now();
   return Math.min(Math.max(ms, 250), 8000);
+}
+
+function rememberLive(model: ParentsPieModel) {
+  if (model.source === 'snapshot') return;
+  const entry = { expires: Date.now() + TTL_MS, model };
+  cache = entry;
+  lastLive = { expires: Date.now() + LAST_LIVE_MAX_AGE_MS, model };
+}
+
+/** Prefer recent live numbers over PARENTS_SNAPSHOT when T212 rate-limits. */
+function preferLiveOr(snapshot: ParentsPieModel): ParentsPieModel {
+  if (lastLive && lastLive.expires > Date.now()) return lastLive.model;
+  return snapshot;
 }
 
 async function readBody(response: Response): Promise<unknown> {
@@ -62,10 +79,12 @@ async function getPath(base: string, path: string, authorization: string): Promi
 }
 
 async function getPathRetry(base: string, path: string, secret: string) {
-  const first = await getPath(base, path, secret);
-  if (first.status !== 429) return first;
-  await sleep(resetWait(first.reset));
-  return getPath(base, path, secret);
+  let attempt = await getPath(base, path, secret);
+  for (let i = 0; i < 2 && attempt.status === 429; i += 1) {
+    await sleep(resetWait(attempt.reset));
+    attempt = await getPath(base, path, secret);
+  }
+  return attempt;
 }
 
 async function openSession(secret: string): Promise<{ base: string; source: 'live' | 'demo'; authorization: string; summary: unknown } | null> {
@@ -97,7 +116,7 @@ async function readPie(session: { base: string; source: 'live' | 'demo'; authori
   ]);
   if (pies.status !== 200) {
     console.info('[parents-pie] pies rejected', { status: pies.status, environment: session.source });
-    return snapshotModel('unavailable');
+    return preferLiveOr(snapshotModel('unavailable'));
   }
   const list = Array.isArray(pies.json)
     ? pies.json
@@ -127,24 +146,29 @@ async function readPie(session: { base: string; source: 'live' | 'demo'; authori
 
 async function load(): Promise<ParentsPieModel> {
   const secret = process.env.T212_API_KEY?.trim();
-  if (!secret) return snapshotModel('missing-key');
+  if (!secret) return preferLiveOr(snapshotModel('missing-key'));
   try {
     const session = await openSession(secret);
-    if (!session) return snapshotModel('unauthorized');
-    return (await readPie(session)) ?? snapshotModel('not-found');
+    if (!session) return preferLiveOr(snapshotModel('unauthorized'));
+    return (await readPie(session)) ?? preferLiveOr(snapshotModel('not-found'));
   } catch (error) {
     console.info('[parents-pie] read failed', error instanceof Error ? error.name : 'error');
-    return snapshotModel('unavailable');
+    return preferLiveOr(snapshotModel('unavailable'));
   }
 }
 
-async function loadCached(): Promise<ParentsPieModel> {
-  if (cache && cache.expires > Date.now()) return cache.model;
+async function loadCached(fresh: boolean): Promise<ParentsPieModel> {
+  if (!fresh && cache && cache.expires > Date.now() && cache.model.source !== 'snapshot') {
+    return cache.model;
+  }
   if (!inflight) {
     inflight = load()
       .then((model) => {
-        const ttl = model.source === 'snapshot' ? 15_000 : TTL_MS;
-        cache = { expires: Date.now() + ttl, model };
+        if (model.source !== 'snapshot') {
+          rememberLive(model);
+          return model;
+        }
+        // Never long-cache hardcoded snapshot — next reload should retry T212.
         return model;
       })
       .finally(() => {
@@ -154,9 +178,14 @@ async function loadCached(): Promise<ParentsPieModel> {
   return inflight;
 }
 
-export async function GET() {
-  const model = await loadCached();
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const fresh = url.searchParams.has('fresh');
+  const model = await loadCached(fresh);
   return NextResponse.json(model, {
-    headers: { 'Cache-Control': 'private, max-age=30' },
+    headers: {
+      'Cache-Control': 'private, no-store, max-age=0',
+      'CDN-Cache-Control': 'no-store',
+    },
   });
 }
