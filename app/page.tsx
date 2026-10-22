@@ -6,6 +6,9 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
 import { clerkBrowserEnabled } from '@/lib/clerk-browser';
 import { CandlestickBackdrop } from './dashboard/CandlestickBackdrop';
+import { AlgoryMark } from './brand/AlgoryMark';
+import { AlgoryWordmark } from './brand/AlgoryWordmark';
+import { Authorship } from './brand/Authorship';
 
 export default function LandingPage() {
   if (!clerkBrowserEnabled()) {
@@ -31,7 +34,7 @@ function LandingView({
       
       {/* GLOBAL HEADER */}
       <header className="fixed top-0 left-0 w-full p-6 lg:px-12 lg:py-6 flex justify-between items-center z-[100] bg-background/50 backdrop-blur-md border-b border-edge">
-        <div className="text-xl font-black tracking-tighter text-foreground">Algory<span className="text-muted">.</span></div>
+        <AlgoryWordmark className="text-xl" markClassName="h-5 w-5" accent={false} />
         <div className="flex items-center gap-4">
           <Link href="/plan" className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-muted hover:text-foreground transition-colors">
             Q4 Plán
@@ -67,8 +70,11 @@ function LandingView({
             Quantitative Execution Engine
           </p>
           
-          <h1 className="mb-5 text-6xl font-black tracking-tighter text-foreground md:text-7xl lg:mb-6 lg:text-8xl lg:leading-[0.95]">
-            Algory<span className="text-muted">.</span>
+          <h1 className="mb-5 flex items-center justify-center gap-3 text-6xl font-black tracking-tighter text-foreground md:gap-4 md:text-7xl lg:mb-6 lg:gap-5 lg:text-8xl lg:leading-[0.95]">
+            <AlgoryMark className="h-12 w-12 md:h-14 md:w-14 lg:h-16 lg:w-16 shrink-0" accentTick />
+            <span>
+              Algory<span className="text-muted">.</span>
+            </span>
           </h1>
 
           <p className="mb-4 text-lg font-medium tracking-tight text-foreground/80 md:text-xl lg:text-2xl">
@@ -202,7 +208,8 @@ function LandingView({
       </section>
       
       {/* FOOTER */}
-      <footer className="w-full border-t border-edge py-8 mt-12 text-center relative z-10 bg-background">
+      <footer className="w-full border-t border-edge py-8 mt-12 text-center relative z-10 bg-background flex flex-col items-center gap-3">
+        <Authorship />
         <div className="text-[10px] font-bold uppercase tracking-widest text-muted">
           © 2026 ALGORY SYSTEMS. <br className="sm:hidden"/>ALL RIGHTS RESERVED.
         </div>

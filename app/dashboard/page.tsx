@@ -4,6 +4,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { CandlestickBackdrop } from './CandlestickBackdrop';
+import { AlgoryMark } from '../brand/AlgoryMark';
+import { AlgoryWordmark } from '../brand/AlgoryWordmark';
+import { Authorship } from '../brand/Authorship';
 
 const MODULES = [
   {
@@ -42,9 +45,7 @@ export default function DashboardWelcome() {
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center overflow-hidden bg-background px-6 pb-16 pt-6 font-sans text-foreground lg:px-0 lg:pb-24">
       <header className="absolute top-0 left-0 z-50 flex w-full items-center justify-between p-6 lg:px-12 lg:py-8">
-        <div className="text-xl font-black tracking-tighter text-foreground">
-          Algory<span className="text-muted">.</span>
-        </div>
+        <AlgoryWordmark className="text-xl" markClassName="h-5 w-5" accent={false} />
       </header>
 
       <CandlestickBackdrop />
@@ -60,8 +61,11 @@ export default function DashboardWelcome() {
             Welcome to Algory
           </p>
 
-          <h1 className="mb-5 text-6xl font-black tracking-tighter text-foreground md:text-8xl lg:mb-6 lg:text-[9rem] lg:leading-[0.9]">
-            Algory<span className="text-muted">.</span>
+          <h1 className="mb-5 flex items-center justify-center gap-3 text-6xl font-black tracking-tighter text-foreground md:gap-5 md:text-8xl lg:mb-6 lg:gap-6 lg:text-[9rem] lg:leading-[0.9]">
+            <AlgoryMark className="h-12 w-12 md:h-16 md:w-16 lg:h-24 lg:w-24 shrink-0" accentTick />
+            <span>
+              Algory<span className="text-muted">.</span>
+            </span>
           </h1>
 
           <p className="mb-10 max-w-xl text-sm font-light leading-relaxed tracking-wide text-muted md:text-base lg:mb-12 lg:text-lg">
@@ -133,6 +137,10 @@ export default function DashboardWelcome() {
           ))}
         </motion.div>
       </div>
+
+      <footer className="relative z-10 mt-auto pt-16 lg:pt-20">
+        <Authorship />
+      </footer>
     </div>
   );
 }
