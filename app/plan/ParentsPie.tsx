@@ -4,11 +4,26 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { PositionDetail, PositionPrompt } from './PositionDetail';
-import { displayTicker, financeQuote, formatMoney, formatPercent, formatSignedMoney, pieStatusLabel, yahooSymbol, type ParentsPieModel, type ParentsPosition } from './parentsModel';
+import {
+  displayTicker,
+  financeQuote,
+  formatHoldingList,
+  formatMoney,
+  formatPercent,
+  formatSignedMoney,
+  PARENTS_HOLDING_LABELS,
+  pieStatusLabel,
+  yahooSymbol,
+  type ParentsPieModel,
+  type ParentsPosition,
+} from './parentsModel';
 import { PARENT_REASON } from './reasons';
 import { useParentsPie } from './useParentsPie';
 
 type Position = ParentsPosition;
+
+const HOLDING_LIST = formatHoldingList(PARENTS_HOLDING_LABELS);
+const HOLDING_COUNT_WORD = 'sedmi';
 
 const SCENARIOS = [
   {
@@ -18,7 +33,7 @@ const SCENARIOS = [
     low: 0.12,
     high: 0.15,
     tone: 'emerald',
-    copy: 'Po volbách strach opadne a přijde nákupní vlna. Santa rally vytáhne retail i růstová jména.',
+    copy: 'Po volbách strach opadne a přijde nákupní vlna. Santa rally vytáhne retail, banky i růstová jména.',
   },
   {
     id: 'base',
@@ -27,7 +42,7 @@ const SCENARIOS = [
     low: 0.07,
     high: 0.1,
     tone: 'yellow',
-    copy: 'Běžný předvánoční růst s krátkou korekcí hned po volbách. Fundament pěti titulů drží.',
+    copy: 'Běžný předvánoční růst s krátkou korekcí hned po volbách. Fundament sedmi titulů v pie drží.',
   },
   {
     id: 'down',
@@ -207,7 +222,7 @@ function ParentsPieLoading({ onOpenPlan }: { onOpenPlan?: () => void }) {
               Načítám pie…
             </p>
             <p className="mt-5 text-sm md:text-base text-muted max-w-2xl leading-relaxed">
-              Účet rodice@seznam.cz drží pie Parents v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH. {PARENTS_CONTRIBUTION}.
+              Účet rodice@seznam.cz drží pie Parents v {HOLDING_COUNT_WORD} titulech: {HOLDING_LIST}. {PARENTS_CONTRIBUTION}.
             </p>
           </div>
           <PlanLink onOpenPlan={onOpenPlan} />
@@ -232,7 +247,7 @@ function ParentsPieLoading({ onOpenPlan }: { onOpenPlan?: () => void }) {
           </div>
         </div>
         <div className="lg:col-span-7 flex flex-col gap-2">
-          {Array.from({ length: 5 }, (_, i) => (
+          {Array.from({ length: PARENTS_HOLDING_LABELS.length }, (_, i) => (
             <div key={i} className="rounded-2xl border border-edge px-4 py-3">
               <div className="h-4 w-32 rounded bg-foreground/[0.06] animate-pulse" />
               <div className="mt-2 h-3 w-48 rounded bg-foreground/[0.03] animate-pulse" />
@@ -296,7 +311,7 @@ export default function ParentsPie({
               {pieStatusLabel(model)}
             </p>
             <p className="mt-5 text-sm md:text-base text-muted max-w-2xl leading-relaxed">
-              Účet rodice@seznam.cz drží pie {model.pieName}. Vklad {formatMoney(model.deposits, model.currency, depositDigits)} je v pěti titulech: Target, Visa, Pfizer, Lockheed Martin a LVMH. {PARENTS_CONTRIBUTION}.
+              Účet rodice@seznam.cz drží pie {model.pieName}. Vklad {formatMoney(model.deposits, model.currency, depositDigits)} je v {positions.length} titulech: {formatHoldingList(positions.map((position) => position.name.replace(/^LVMH.*/, 'LVMH').replace(/^PACCAR$/i, 'Paccar')))}. {PARENTS_CONTRIBUTION}.
             </p>
           </div>
           <PlanLink onOpenPlan={onOpenPlan} />

@@ -36,10 +36,22 @@ const KNOWN: Record<string, { name: string; sector: string; color: string }> = {
   PFE: { name: 'Pfizer', sector: 'Healthcare', color: '#22d3ee' },
   LMT: { name: 'Lockheed Martin', sector: 'Aerospace', color: '#a855f7' },
   MC: { name: 'LVMH Moet Hennessy Louis Vuitton', sector: 'Luxury', color: '#d4d4d8' },
+  PCAR: { name: 'PACCAR', sector: 'Trucks', color: '#f59e0b' },
+  GS: { name: 'Goldman Sachs', sector: 'Banks', color: '#10b981' },
 };
 
-const ORDER = ['TGT', 'V', 'PFE', 'LMT', 'MC'];
-const PARENT_IDS = ['TGT', 'V', 'PFE', 'LMT', 'MC'] as const;
+const ORDER = ['TGT', 'V', 'PFE', 'LMT', 'MC', 'PCAR', 'GS'];
+const PARENT_IDS = ['TGT', 'V', 'PFE', 'LMT', 'MC', 'PCAR', 'GS'] as const;
+/** Short Czech names for intro copy when live pie is still loading. */
+export const PARENTS_HOLDING_LABELS = [
+  'Target',
+  'Visa',
+  'Pfizer',
+  'Lockheed Martin',
+  'LVMH',
+  'Paccar',
+  'Goldman Sachs',
+] as const;
 /** Net cash parents put in — shown separately from live holdings PnL. */
 export const PARENTS_NET_DEPOSIT = 20_000;
 
@@ -51,21 +63,32 @@ export const PARENTS_SNAPSHOT: ParentsPieModel = {
   pieName: 'Parents',
   deposits: PARENTS_NET_DEPOSIT,
   depositHint: 'Čistý vklad',
-  overviewValue: 10_336.88,
-  weekChange: 124.44,
-  weekReturn: 1.2,
-  holdingsValue: 10_434.73,
-  holdingsPnl: 541.1,
-  holdingsReturn: 5.47,
+  overviewValue: 65_280.7,
+  weekChange: null,
+  weekReturn: null,
+  holdingsValue: 15_431.65,
+  holdingsPnl: 774.03,
+  holdingsReturn: 5.28,
   cashAvailable: null,
   positions: [
-    { id: 'TGT', name: 'Target', target: 25, actual: 23.65, value: 2468.32, pnl: 29.78, pnlPct: 1.22, color: '#ff4d4d', sector: 'Retail' },
-    { id: 'V', name: 'Visa', target: 25, actual: 26.56, value: 2771.93, pnl: 267.25, pnlPct: 10.67, color: '#3b82f6', sector: 'Payments' },
-    { id: 'PFE', name: 'Pfizer', target: 20, actual: 19.83, value: 2069.59, pnl: 156.71, pnlPct: 8.19, color: '#22d3ee', sector: 'Healthcare' },
-    { id: 'LMT', name: 'Lockheed Martin', target: 15, actual: 15.49, value: 1616.77, pnl: 89.9, pnlPct: 5.89, color: '#a855f7', sector: 'Aerospace' },
-    { id: 'MC', name: 'LVMH Moet Hennessy Louis Vuitton', target: 15, actual: 14.45, value: 1508.12, pnl: -2.54, pnlPct: -0.17, color: '#d4d4d8', sector: 'Luxury' },
+    { id: 'TGT', name: 'Target', target: 21, actual: 16.49, value: 2544.36, pnl: 105.82, pnlPct: 4.34, color: '#ff4d4d', sector: 'Retail' },
+    { id: 'V', name: 'Visa', target: 21, actual: 18.99, value: 2931.08, pnl: 426.4, pnlPct: 17.02, color: '#3b82f6', sector: 'Payments' },
+    { id: 'PFE', name: 'Pfizer', target: 17, actual: 13.49, value: 2082.08, pnl: 169.2, pnlPct: 8.85, color: '#22d3ee', sector: 'Healthcare' },
+    { id: 'LMT', name: 'Lockheed Martin', target: 13, actual: 10.86, value: 1676.4, pnl: 149.53, pnlPct: 9.79, color: '#a855f7', sector: 'Aerospace' },
+    { id: 'MC', name: 'LVMH Moet Hennessy Louis Vuitton', target: 12, actual: 10.25, value: 1581.62, pnl: 70.96, pnlPct: 4.7, color: '#d4d4d8', sector: 'Luxury' },
+    { id: 'PCAR', name: 'PACCAR', target: 8, actual: 14.39, value: 2221.22, pnl: -57.35, pnlPct: -2.52, color: '#f59e0b', sector: 'Trucks' },
+    { id: 'GS', name: 'Goldman Sachs', target: 8, actual: 15.52, value: 2394.89, pnl: -90.53, pnlPct: -3.64, color: '#10b981', sector: 'Banks' },
   ],
 };
+
+/** "Target, Visa … a Goldman Sachs" for Czech UI sentences. */
+export function formatHoldingList(names: readonly string[]): string {
+  const clean = names.map((name) => name.trim()).filter(Boolean);
+  if (clean.length === 0) return '';
+  if (clean.length === 1) return clean[0];
+  if (clean.length === 2) return `${clean[0]} a ${clean[1]}`;
+  return `${clean.slice(0, -1).join(', ')} a ${clean[clean.length - 1]}`;
+}
 
 export function snapshotModel(fallback: ParentsPieModel['fallback']): ParentsPieModel {
   return {
@@ -102,9 +125,20 @@ export function yahooSymbol(id: string): string {
 export function financeQuote(id: string): string {
   const key = id.toUpperCase().replace(/\.PA$/, '');
   if (key === 'MC') return 'EURONEXT: MC';
-  if (key === 'NEE' || key === 'TGT' || key === 'PFE' || key === 'SYM' || key === 'V' || key === 'LMT' || key === 'NVO' || key === 'LLY') {
+  if (
+    key === 'NEE' ||
+    key === 'TGT' ||
+    key === 'PFE' ||
+    key === 'SYM' ||
+    key === 'V' ||
+    key === 'LMT' ||
+    key === 'NVO' ||
+    key === 'LLY' ||
+    key === 'GS'
+  ) {
     return `NYSE: ${key}`;
   }
+  if (key === 'PCAR') return `NASDAQ: ${key}`;
   return key;
 }
 
@@ -156,6 +190,16 @@ export function canonicalId(ticker: string, name = ''): string | null {
     label.includes('LOUIS VUITTON')
   ) {
     return 'MC';
+  }
+  if (symbol === 'PCAR' || symbol.startsWith('PCAR_') || label.includes('PACCAR')) return 'PCAR';
+  if (
+    symbol === 'GS' ||
+    symbol.startsWith('GS_') ||
+    label.includes('GOLDMAN SACHS') ||
+    label === 'GOLDMAN' ||
+    label.startsWith('GOLDMAN ')
+  ) {
+    return 'GS';
   }
   return null;
 }

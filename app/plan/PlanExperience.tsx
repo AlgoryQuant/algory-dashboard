@@ -444,7 +444,7 @@ function PlanView({
             <span className="block text-foreground font-bold mt-1">
               {parentsReady ? `Parents · vklad ${parentsDeposit}` : 'Parents · načítám pie…'}
             </span>
-            <span className="block text-xs text-muted mt-1">Target, Visa, Pfizer, Lockheed, LVMH.</span>
+            <span className="block text-xs text-muted mt-1">Target, Visa, Pfizer, Lockheed, LVMH, Paccar, Goldman Sachs.</span>
           </button>
         </div>
 
