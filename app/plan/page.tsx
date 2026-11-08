@@ -5,7 +5,7 @@ import PlanExperience from './PlanExperience';
 
 export const metadata: Metadata = {
   title: 'Q4 Master Plan 2026 | Algory',
-  description: 'Taktická alokace Q4 2026 a rodičovský koláč pěti titulů.',
+  description: 'Taktická alokace Q4 2026 a rodičovský koláč sedmi titulů.',
 };
 
 export default function PlanPage() {
